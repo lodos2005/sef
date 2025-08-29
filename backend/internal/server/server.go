@@ -15,7 +15,6 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/compress"
-	"github.com/gofiber/fiber/v3/middleware/encryptcookie"
 	"github.com/gofiber/fiber/v3/middleware/logger"
 	"github.com/gofiber/fiber/v3/middleware/recover"
 
@@ -48,9 +47,9 @@ func RunServer() {
 	app.Use(logger.New())
 
 	// Key must be generated with openssl rand -base64 32
-	app.Use(encryptcookie.New(encryptcookie.Config{
-		Key: config.MustString("app.key"),
-	}))
+	// app.Use(encryptcookie.New(encryptcookie.Config{
+	// 	Key: "3t7Ca+3fFqzSpsUkqmmTMlT2eUKPlrs3+irYZ+KP0PY=",
+	// }))
 
 	app.Post("/api/v1/login", users.Login)
 	app.Use(middleware.TokenLookup)
@@ -65,7 +64,7 @@ func Protected() fiber.Handler {
 	return jwtware.New(jwtware.Config{
 		SigningKey: jwtware.SigningKey{
 			JWTAlg: "HS256",
-			Key:    []byte(config.MustString("app.key")),
+			Key:    []byte("3t7Ca+3fFqzSpsUkqmmTMlT2eUKPlrs3+irYZ+KP0PY="),
 		},
 		ErrorHandler: func(c fiber.Ctx, err error) error {
 			return error_handler.ErrorHandler(c, utils.NewAuthError())

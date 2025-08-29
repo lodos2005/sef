@@ -146,5 +146,5 @@ func Delete(c fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON("Success.")
+	return c.JSON(fiber.Map{"message": "User deleted successfully"})
 }

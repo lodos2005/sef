@@ -7,18 +7,13 @@ import (
 	"encoding/base64"
 	"errors"
 	"io"
-	"log"
 	"os"
-	"sef/internal/bootstrap"
 
-	gorandom "github.com/zekiahmetbayar/go-random"
 	"gopkg.in/yaml.v3"
 )
 
-var config, _ = bootstrap.NewConf()
-
 func Encrypt(message string) (encoded string, err error) {
-	var key = []byte(config.MustString("app.key"))
+	var key = []byte("3t7Ca+3fFqzSpsUkqmmTMlT2eUKPlrs3+irYZ+KP0PY=")
 
 	//Create byte array from the input string
 	plainText := []byte(message)
@@ -49,7 +44,7 @@ func Encrypt(message string) (encoded string, err error) {
 }
 
 func Decrypt(secure string) (decoded string, err error) {
-	var key = []byte(config.MustString("app.key"))
+	var key = []byte("3t7Ca+3fFqzSpsUkqmmTMlT2eUKPlrs3+irYZ+KP0PY=")
 
 	//Remove base64 encoding:
 	cipherText, err := base64.RawStdEncoding.DecodeString(secure)
@@ -81,26 +76,6 @@ func Decrypt(secure string) (decoded string, err error) {
 	stream.XORKeyStream(cipherText, cipherText)
 
 	return string(cipherText), err
-}
-
-func init() {
-	random, err := gorandom.String(true, false, false, 32)
-	if err != nil {
-		log.Printf("error when creating random string, got err %s", err.Error())
-		return
-	}
-	// Check is key exists
-	if config.Exists("app.key") {
-		log.Println("app key already exists")
-		return
-	}
-
-	if err := updateConfigFile(random); err != nil {
-		log.Printf("error when setting app key, got err %s", err.Error())
-		return
-	}
-
-	return
 }
 
 func updateConfigFile(key string) error {

@@ -202,6 +202,11 @@ func (cfg *Config) getExtractors() []jwtExtractor {
 	for _, rootPart := range rootParts {
 		parts := strings.Split(strings.TrimSpace(rootPart), ":")
 
+		// Ensure we have at least 2 parts (method and value)
+		if len(parts) < 2 {
+			continue
+		}
+
 		switch parts[0] {
 		case "header":
 			extractors = append(extractors, jwtFromHeader(parts[1], cfg.AuthScheme))

@@ -50,7 +50,7 @@ sef/
 ## Development Workflow
 1. **Setup Environment**: Use Docker Compose for local development
 2. **Backend Development**: Implement API endpoints, database models, provider abstraction
-3. **Frontend Development**: Build UI components, integrate with Vercel AI SDK
+3. **Frontend Development**: Build UI components, integrate with Vercel AI SDK. Use relative path with @/ always when importing packages.
 4. **Testing**: Unit tests, integration tests
 5. **Deployment**: Docker-based deployment
 
