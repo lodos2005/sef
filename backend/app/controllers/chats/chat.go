@@ -61,11 +61,54 @@ func GetSessionByID(c fiber.Ctx) error {
 func CreateSessionAdmin(c fiber.Ctx) error {
 	var payload *entities.ChatSession
 	if err := c.Bind().JSON(&payload); err != nil {
-		return err
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body",
+		})
+	}
+
+	// Get current user (admin)
+	currentUser, err := utils.GetUserFromContext(c)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Unauthorized",
+		})
+	}
+
+	// If user_id is not provided, use current user's ID
+	if payload.UserID == 0 {
+		payload.UserID = currentUser.ID
+	}
+
+	// Validate required fields
+	if payload.ChatbotID == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "chatbot_id is required",
+		})
+	}
+
+	// Verify user exists
+	_, err = utils.GetUserByID(payload.UserID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "User not found",
+			"hint": "The specified user_id does not exist in the database",
+		})
+	}
+
+	// Verify chatbot exists
+	var chatbot entities.Chatbot
+	if err := database.Connection().Where("id = ?", payload.ChatbotID).First(&chatbot).Error; err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Chatbot not found",
+			"hint": "The specified chatbot_id does not exist in the database",
+		})
 	}
 
 	if err := database.Connection().Create(&payload).Error; err != nil {
-		return err
+		log.Error("Failed to create chat session:", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to create chat session",
+		})
 	}
 
 	return c.JSON(payload)
@@ -75,15 +118,59 @@ func CreateSessionAdmin(c fiber.Ctx) error {
 func UpdateSessionAdmin(c fiber.Ctx) error {
 	var item *entities.ChatSession
 	if err := database.Connection().First(&item, c.Params("id")).Error; err != nil {
-		return err
+		if err == gorm.ErrRecordNotFound {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "Chat session not found",
+			})
+		}
+		log.Error("Failed to fetch chat session:", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to fetch chat session",
+		})
 	}
 
-	if err := c.Bind().JSON(&item); err != nil {
-		return err
+	var payload *entities.ChatSession
+	if err := c.Bind().JSON(&payload); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body",
+		})
+	}
+
+	// Validate user_id if provided
+	if payload.UserID != 0 {
+		_, err := utils.GetUserByID(payload.UserID)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "User not found",
+			})
+		}
+		item.UserID = payload.UserID
+	}
+
+	// Validate chatbot_id if provided
+	if payload.ChatbotID != 0 {
+		var chatbot entities.Chatbot
+		if err := database.Connection().Where("id = ?", payload.ChatbotID).First(&chatbot).Error; err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Chatbot not found",
+			})
+		}
+		item.ChatbotID = payload.ChatbotID
+	}
+
+	// Update other fields
+	if payload.Title != "" {
+		item.Title = payload.Title
+	}
+	if payload.IsActive != item.IsActive {
+		item.IsActive = payload.IsActive
 	}
 
 	if err := database.Connection().Save(&item).Error; err != nil {
-		return err
+		log.Error("Failed to update chat session:", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to update chat session",
+		})
 	}
 
 	return c.JSON(item)
@@ -100,11 +187,22 @@ func DeleteSessionAdmin(c fiber.Ctx) error {
 
 // GetUserSessions returns all chat sessions for the authenticated user
 func GetUserSessions(c fiber.Ctx) error {
-	userID := utils.GetClaimFromContext(c).ID
+	// Verify user exists in database
+	user, err := utils.VerifyUserFromContext(c)
+	if err != nil {
+		if err.Error() == "user account is deactivated" {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "User account is deactivated",
+			})
+		}
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "User not found",
+		})
+	}
 
 	var sessions []entities.ChatSession
 	if err := database.Connection().
-		Where("user_id = ?", userID).
+		Where("user_id = ?", user.ID).
 		Preload("Chatbot").
 		Preload("Chatbot.Provider").
 		Order("created_at DESC").
@@ -129,11 +227,22 @@ func GetSession(c fiber.Ctx) error {
 		})
 	}
 
-	userID := utils.GetClaimFromContext(c).ID
+	// Verify user exists in database
+	user, err := utils.VerifyUserFromContext(c)
+	if err != nil {
+		if err.Error() == "user account is deactivated" {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "User account is deactivated",
+			})
+		}
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "User not found",
+		})
+	}
 
 	var session entities.ChatSession
 	if err := database.Connection().
-		Where("id = ? AND user_id = ?", sessionID, userID).
+		Where("id = ? AND user_id = ?", sessionID, user.ID).
 		Preload("Chatbot").
 		Preload("Chatbot.Provider").
 		Preload("Messages", func(db *gorm.DB) *gorm.DB {
@@ -171,12 +280,22 @@ func CreateSession(c fiber.Ctx) error {
 		})
 	}
 
-	userID := utils.GetClaimFromContext(c).ID
+	// Verify user exists in database
+	user, err := utils.VerifyUserFromContext(c)
+	if err != nil {
+		if err.Error() == "user account is deactivated" {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "User account is deactivated",
+			})
+		}
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "User not found",
+		})
+	}
 
-	// Verify chatbot exists and user has access
 	var chatbot entities.Chatbot
 	if err := database.Connection().
-		Where("id = ? AND (is_public = ? OR user_id = ?)", req.ChatbotID, true, userID).
+		Where("id = ? AND (is_public = ? OR user_id = ?)", req.ChatbotID, true, user.ID).
 		First(&chatbot).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -190,7 +309,7 @@ func CreateSession(c fiber.Ctx) error {
 	}
 
 	session := entities.ChatSession{
-		UserID:    userID,
+		UserID:    user.ID,
 		ChatbotID: req.ChatbotID,
 		Title:     req.Title,
 		IsActive:  true,
@@ -218,11 +337,22 @@ func UpdateSession(c fiber.Ctx) error {
 		})
 	}
 
-	userID := utils.GetClaimFromContext(c).ID
+	// Verify user exists in database
+	user, err := utils.VerifyUserFromContext(c)
+	if err != nil {
+		if err.Error() == "user account is deactivated" {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "User account is deactivated",
+			})
+		}
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "User not found",
+		})
+	}
 
 	var session entities.ChatSession
 	if err := database.Connection().
-		Where("id = ? AND user_id = ?", sessionID, userID).
+		Where("id = ? AND user_id = ?", sessionID, user.ID).
 		First(&session).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -278,11 +408,22 @@ func DeleteSession(c fiber.Ctx) error {
 		})
 	}
 
-	userID := utils.GetClaimFromContext(c).ID
+	// Verify user exists in database
+	user, err := utils.VerifyUserFromContext(c)
+	if err != nil {
+		if err.Error() == "user account is deactivated" {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "User account is deactivated",
+			})
+		}
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "User not found",
+		})
+	}
 
 	var session entities.ChatSession
 	if err := database.Connection().
-		Where("id = ? AND user_id = ?", sessionID, userID).
+		Where("id = ? AND user_id = ?", sessionID, user.ID).
 		First(&session).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -316,12 +457,23 @@ func SendMessage(c fiber.Ctx) error {
 		})
 	}
 
-	userID := utils.GetClaimFromContext(c).ID
+	// Verify user exists in database
+	user, err := utils.VerifyUserFromContext(c)
+	if err != nil {
+		if err.Error() == "user account is deactivated" {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "User account is deactivated",
+			})
+		}
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "User not found",
+		})
+	}
 
 	// Verify session ownership
 	var session entities.ChatSession
 	if err := database.Connection().
-		Where("id = ? AND user_id = ?", sessionID, userID).
+		Where("id = ? AND user_id = ?", sessionID, user.ID).
 		First(&session).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -395,12 +547,23 @@ func GetSessionMessages(c fiber.Ctx) error {
 		})
 	}
 
-	userID := utils.GetClaimFromContext(c).ID
+	// Verify user exists in database
+	user, err := utils.VerifyUserFromContext(c)
+	if err != nil {
+		if err.Error() == "user account is deactivated" {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "User account is deactivated",
+			})
+		}
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "User not found",
+		})
+	}
 
 	// Verify session ownership
 	var session entities.ChatSession
 	if err := database.Connection().
-		Where("id = ? AND user_id = ?", sessionID, userID).
+		Where("id = ? AND user_id = ?", sessionID, user.ID).
 		First(&session).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{

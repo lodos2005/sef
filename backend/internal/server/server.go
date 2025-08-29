@@ -76,6 +76,10 @@ func Protected() fiber.Handler {
 			if err != nil {
 				return error_handler.ErrorHandler(c, utils.NewAuthError())
 			}
+			// Check if user is deleted (soft delete)
+			if user.DeletedAt.Valid {
+				return error_handler.ErrorHandler(c, utils.NewAuthError())
+			}
 			user.Password = ""
 			c.Locals("user", user)
 			return c.Next()

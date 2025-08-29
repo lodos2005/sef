@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"errors"
 	"sef/app/entities"
 	"time"
 
@@ -57,4 +58,19 @@ func GetClaimFromContext(c fiber.Ctx) Claim {
 func GetUserFromContext(c fiber.Ctx) (*entities.User, error) {
 	claim := GetClaimFromContext(c)
 	return GetUserByID(claim.ID)
+}
+
+// VerifyUserFromContext verifies that the user from JWT context exists and is not deleted
+func VerifyUserFromContext(c fiber.Ctx) (*entities.User, error) {
+	user, err := GetUserFromContext(c)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check if user is deleted (soft delete)
+	if user.DeletedAt.Valid {
+		return nil, errors.New("user account is deactivated")
+	}
+
+	return user, nil
 }
