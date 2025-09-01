@@ -1,9 +1,7 @@
 package entities
 
-import "gorm.io/gorm"
-
 type ChatSession struct {
-	gorm.Model
+	Base
 	UserID    uint      `json:"user_id" gorm:"not null"`
 	ChatbotID uint      `json:"chatbot_id" gorm:"not null"`
 	Title     string    `json:"title" gorm:"size:255"`
@@ -14,7 +12,7 @@ type ChatSession struct {
 }
 
 type Message struct {
-	gorm.Model
+	Base
 	SessionID   uint        `json:"session_id" gorm:"not null"`
 	Role        string      `json:"role" gorm:"size:50;not null"` // user, assistant
 	Content     string      `json:"content" gorm:"type:text;not null"`

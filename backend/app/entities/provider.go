@@ -1,9 +1,7 @@
 package entities
 
-import "gorm.io/gorm"
-
 type Provider struct {
-	gorm.Model
+	Base
 	Name        string `json:"name" gorm:"not null"`
 	Type        string `json:"type" gorm:"not null"` // ollama, openai, etc.
 	Description string `json:"description"`

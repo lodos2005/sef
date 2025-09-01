@@ -1,9 +1,7 @@
 package entities
 
-import "gorm.io/gorm"
-
 type Chatbot struct {
-	gorm.Model
+	Base
 	Name         string        `json:"name" gorm:"not null;size:255"`
 	Description  string        `json:"description" gorm:"type:text"`
 	ProviderID   uint          `json:"provider_id" gorm:"not null"`
@@ -19,7 +17,7 @@ type Chatbot struct {
 }
 
 type Tool struct {
-	gorm.Model
+	Base
 	Name        string `json:"name" gorm:"not null;size:255"`
 	Description string `json:"description" gorm:"type:text"`
 	Type        string `json:"type" gorm:"not null;size:50"` // builtin, custom_script, api_call

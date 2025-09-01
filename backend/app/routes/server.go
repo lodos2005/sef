@@ -65,6 +65,9 @@ func Server(app *fiber.App) {
 		chatGroup.Get("/:id/messages", chats.GetSessionMessages)
 	}
 
+	// Vercel AI SDK compatible endpoint
+	apiV1.Post("/chat", chats.VercelChatCompletion)
+
 	// Admin routes
 	adminGroup := apiV1.Group("/admin")
 	{

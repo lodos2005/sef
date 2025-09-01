@@ -4,6 +4,7 @@ import (
 	"sef/app/entities"
 	"sef/internal/database"
 	"sef/internal/validation"
+	"sef/pkg/providers"
 	"strconv"
 
 	"github.com/gofiber/fiber/v3"
@@ -13,7 +14,7 @@ import (
 
 type CreateProviderRequest struct {
 	Name        string `json:"name" validate:"required,min=2,max=100"`
-	Type        string `json:"type" validate:"required,oneof=ollama openai anthropic"`
+	Type        string `json:"type" validate:"required,oneof=ollama"`
 	Description string `json:"description" validate:"max=500"`
 	Config      string `json:"config" validate:"required,json"`
 }
@@ -203,21 +204,37 @@ func Delete(c fiber.Ctx) error {
 func GetModels(c fiber.Ctx) error {
 	providerType := c.Params("type")
 
-	// This would integrate with actual LLM providers
-	// For now, return mock data based on provider type
-	var models []string
+	if providerType != "ollama" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Only Ollama provider is supported",
+		})
+	}
 
-	switch providerType {
-	case "ollama":
-		models = []string{"llama2", "mistral", "codellama", "vicuna"}
-	case "openai":
-		models = []string{"gpt-3.5-turbo", "gpt-4", "gpt-4-turbo"}
-	case "anthropic":
-		models = []string{"claude-3-haiku", "claude-3-sonnet", "claude-3-opus"}
-	default:
+	// Create provider with default config
+	config := map[string]interface{}{
+		"base_url": "http://localhost:11434",
+	}
+
+	factory := &providers.ProviderFactory{}
+	provider, err := factory.NewProvider(providerType, config)
+	if err != nil {
+		log.Error("Failed to create provider:", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to create provider",
+		})
+	}
+
+	if provider == nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Unsupported provider type",
 		})
+	}
+
+	models, err := provider.ListModels()
+	if err != nil {
+		log.Error("Failed to list models:", err)
+		// Return empty list instead of mock data
+		models = []string{}
 	}
 
 	return c.JSON(fiber.Map{

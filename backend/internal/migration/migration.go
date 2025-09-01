@@ -1,11 +1,17 @@
 package migration
 
 import (
+	"log"
 	"sef/app/entities"
 	"sef/internal/database"
 )
 
 func Init() error {
+	if database.Connection() == nil {
+		log.Fatalln("database connection is nil")
+		return nil
+	}
+
 	if err := database.Connection().AutoMigrate(&entities.User{}); err != nil {
 		return err
 	}
