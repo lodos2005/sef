@@ -16,7 +16,7 @@ interface Provider {
   name: string;
   type: string;
   description: string;
-  config: string;
+  config: Record<string, any>;
   is_active: boolean;
 }
 
@@ -88,7 +88,10 @@ export default function ProvidersPage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          config: JSON.parse(formData.config),
+        }),
       });
 
       if (response.ok) {

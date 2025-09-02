@@ -9,7 +9,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data1:/var/lib/postgresql/data
     networks:
       - sef_network
 
@@ -66,7 +66,7 @@ services:
   #   command: npm run dev
 
 volumes:
-  postgres_data:
+  postgres_data1:
   redis_data:
 
 networks:

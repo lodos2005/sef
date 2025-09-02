@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"encoding/json"
 	"sef/app/entities"
 	"sef/internal/database"
 	"sef/internal/validation"
@@ -13,17 +14,17 @@ import (
 )
 
 type CreateProviderRequest struct {
-	Name        string `json:"name" validate:"required,min=2,max=100"`
-	Type        string `json:"type" validate:"required,oneof=ollama"`
-	Description string `json:"description" validate:"max=500"`
-	Config      string `json:"config" validate:"required,json"`
+	Name        string          `json:"name" validate:"required,min=2,max=100"`
+	Type        string          `json:"type" validate:"required,oneof=ollama"`
+	Description string          `json:"description" validate:"max=500"`
+	Config      json.RawMessage `json:"config" validate:"required"`
 }
 
 type UpdateProviderRequest struct {
-	Name        *string `json:"name,omitempty" validate:"omitempty,min=2,max=100"`
-	Description *string `json:"description,omitempty" validate:"omitempty,max=500"`
-	IsActive    *bool   `json:"is_active,omitempty"`
-	Config      *string `json:"config,omitempty" validate:"omitempty,json"`
+	Name        *string          `json:"name,omitempty" validate:"omitempty,min=2,max=100"`
+	Description *string          `json:"description,omitempty" validate:"omitempty,max=500"`
+	IsActive    *bool            `json:"is_active,omitempty"`
+	Config      *json.RawMessage `json:"config,omitempty"`
 }
 
 // Index returns all providers
@@ -83,11 +84,22 @@ func Create(c fiber.Ctx) error {
 		})
 	}
 
+	// Validate config JSON if provided
+	var config entities.SingleJSONB
+	if len(req.Config) > 0 {
+		if !json.Valid(req.Config) {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Invalid JSON in config field",
+			})
+		}
+		json.Unmarshal(req.Config, &config)
+	}
+
 	provider := entities.Provider{
 		Name:        req.Name,
 		Type:        req.Type,
 		Description: req.Description,
-		Config:      req.Config,
+		Config:      config,
 		IsActive:    true,
 	}
 
@@ -139,6 +151,17 @@ func Update(c fiber.Ctx) error {
 		})
 	}
 
+	// Validate config JSON if provided
+	var config entities.SingleJSONB
+	if req.Config != nil && len(*req.Config) > 0 {
+		if !json.Valid(*req.Config) {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Invalid JSON in config field",
+			})
+		}
+		json.Unmarshal(*req.Config, &config)
+	}
+
 	updates := make(map[string]interface{})
 	if req.Name != nil {
 		updates["name"] = *req.Name
@@ -150,7 +173,7 @@ func Update(c fiber.Ctx) error {
 		updates["is_active"] = *req.IsActive
 	}
 	if req.Config != nil {
-		updates["config"] = *req.Config
+		updates["config"] = config
 	}
 
 	if err := database.Connection().Model(&provider).Updates(updates).Error; err != nil {

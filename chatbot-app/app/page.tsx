@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Login } from '@/components/Login';
-import { ChatInterface } from '@/components/ChatInterface';
+import ChatPage from './chat/page';
 
 export default function Home() {
   const [token, setToken] = useState<string | null>(null);
@@ -26,7 +26,7 @@ export default function Home() {
   }, []);
 
   if (token) {
-    return <ChatInterface token={token} onLogout={handleLogout} />;
+    return <ChatPage token={token} onLogout={handleLogout} />;
   }
 
   return <Login onLogin={handleLogin} />;

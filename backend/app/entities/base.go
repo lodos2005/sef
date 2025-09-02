@@ -3,7 +3,7 @@ package entities
 import (
 	"database/sql/driver"
 	"encoding/json"
-	"errors"
+	"fmt"
 	"time"
 
 	"gorm.io/gorm"
@@ -27,11 +27,27 @@ func (a SingleJSONB) Value() (driver.Value, error) {
 
 // Scan Unmarshal
 func (a *SingleJSONB) Scan(value interface{}) error {
-	b, ok := value.([]byte)
-	if !ok {
-		return errors.New("type assertion to []byte failed")
+	if value == nil {
+		*a = make(SingleJSONB)
+		return nil
 	}
-	return json.Unmarshal(b, &a)
+
+	switch v := value.(type) {
+	case []byte:
+		if len(v) == 0 {
+			*a = make(SingleJSONB)
+			return nil
+		}
+		return json.Unmarshal(v, &a)
+	case string:
+		if v == "" {
+			*a = make(SingleJSONB)
+			return nil
+		}
+		return json.Unmarshal([]byte(v), &a)
+	default:
+		return fmt.Errorf("unsupported type for SingleJSONB: %T", value)
+	}
 }
 
 // Value Marshal
@@ -41,9 +57,25 @@ func (a JSONB) Value() (driver.Value, error) {
 
 // Scan Unmarshal
 func (a *JSONB) Scan(value interface{}) error {
-	b, ok := value.([]byte)
-	if !ok {
-		return errors.New("type assertion to []byte failed")
+	if value == nil {
+		*a = make(JSONB, 0)
+		return nil
 	}
-	return json.Unmarshal(b, &a)
+
+	switch v := value.(type) {
+	case []byte:
+		if len(v) == 0 {
+			*a = make(JSONB, 0)
+			return nil
+		}
+		return json.Unmarshal(v, &a)
+	case string:
+		if v == "" {
+			*a = make(JSONB, 0)
+			return nil
+		}
+		return json.Unmarshal([]byte(v), &a)
+	default:
+		return fmt.Errorf("unsupported type for JSONB: %T", value)
+	}
 }

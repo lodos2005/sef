@@ -27,7 +27,7 @@ interface Chatbot {
   is_active: boolean;
   is_public: boolean;
   system_prompt: string;
-  config: string;
+  config: Record<string, any>;
 }
 
 export default function ChatbotsPage() {
@@ -129,6 +129,7 @@ export default function ChatbotsPage() {
       const submitData = {
         ...formData,
         provider_id: parseInt(formData.provider_id),
+        config: JSON.parse(formData.config),
       };
 
       const response = await fetch('/api/v1/chatbots', {

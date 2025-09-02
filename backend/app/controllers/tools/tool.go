@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"encoding/json"
 	"sef/app/entities"
 	"sef/internal/database"
 	"sef/internal/validation"
@@ -11,20 +12,20 @@ import (
 )
 
 type CreateToolRequest struct {
-	Name        string `json:"name" validate:"required,min=2,max=255"`
-	Description string `json:"description" validate:"max=1000"`
-	Type        string `json:"type" validate:"required,oneof=builtin custom_script api_call"`
-	Script      string `json:"script" validate:"max=10000"`
-	Config      string `json:"config" validate:"json"`
+	Name        string          `json:"name" validate:"required,min=2,max=255"`
+	Description string          `json:"description" validate:"max=1000"`
+	Type        string          `json:"type" validate:"required,oneof=builtin custom_script api_call"`
+	Script      string          `json:"script" validate:"max=10000"`
+	Config      json.RawMessage `json:"config"`
 }
 
 type UpdateToolRequest struct {
-	Name        *string `json:"name,omitempty" validate:"omitempty,min=2,max=255"`
-	Description *string `json:"description,omitempty" validate:"omitempty,max=1000"`
-	Type        *string `json:"type,omitempty" validate:"omitempty,oneof=builtin custom_script api_call"`
-	Script      *string `json:"script,omitempty" validate:"omitempty,max=10000"`
-	Config      *string `json:"config,omitempty" validate:"omitempty,json"`
-	IsActive    *bool   `json:"is_active,omitempty"`
+	Name        *string          `json:"name,omitempty" validate:"omitempty,min=2,max=255"`
+	Description *string          `json:"description,omitempty" validate:"omitempty,max=1000"`
+	Type        *string          `json:"type,omitempty" validate:"omitempty,oneof=builtin custom_script api_call"`
+	Script      *string          `json:"script,omitempty" validate:"omitempty,max=10000"`
+	Config      *json.RawMessage `json:"config,omitempty"`
+	IsActive    *bool            `json:"is_active,omitempty"`
 }
 
 // Index returns all tools
@@ -84,12 +85,23 @@ func Create(c fiber.Ctx) error {
 		})
 	}
 
+	// Validate config JSON if provided
+	var config entities.SingleJSONB
+	if len(req.Config) > 0 {
+		if !json.Valid(req.Config) {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Invalid JSON in config field",
+			})
+		}
+		json.Unmarshal(req.Config, &config)
+	}
+
 	tool := entities.Tool{
 		Name:        req.Name,
 		Description: req.Description,
 		Type:        req.Type,
 		Script:      req.Script,
-		Config:      req.Config,
+		Config:      config,
 		IsActive:    true,
 	}
 
@@ -141,6 +153,17 @@ func Update(c fiber.Ctx) error {
 		})
 	}
 
+	// Validate config JSON if provided
+	var config entities.SingleJSONB
+	if req.Config != nil && len(*req.Config) > 0 {
+		if !json.Valid(*req.Config) {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Invalid JSON in config field",
+			})
+		}
+		json.Unmarshal(*req.Config, &config)
+	}
+
 	// Update fields
 	if req.Name != nil {
 		tool.Name = *req.Name
@@ -155,7 +178,7 @@ func Update(c fiber.Ctx) error {
 		tool.Script = *req.Script
 	}
 	if req.Config != nil {
-		tool.Config = *req.Config
+		tool.Config = config
 	}
 	if req.IsActive != nil {
 		tool.IsActive = *req.IsActive

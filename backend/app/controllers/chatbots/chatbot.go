@@ -126,10 +126,14 @@ func Create(c fiber.Ctx) error {
 	}
 
 	// Validate config JSON if provided
-	if len(req.Config) > 0 && !json.Valid(req.Config) {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid JSON in config field",
-		})
+	var config entities.SingleJSONB
+	if len(req.Config) > 0 {
+		if !json.Valid(req.Config) {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Invalid JSON in config field",
+			})
+		}
+		json.Unmarshal(req.Config, &config)
 	}
 
 	user, err := utils.GetUserFromContext(c)
@@ -178,7 +182,7 @@ func Create(c fiber.Ctx) error {
 		IsActive:     true,
 		IsPublic:     req.IsPublic,
 		SystemPrompt: req.SystemPrompt,
-		Config:       string(req.Config),
+		Config:       config,
 		Tools:        tools,
 	}
 
@@ -251,10 +255,14 @@ func Update(c fiber.Ctx) error {
 	}
 
 	// Validate config JSON if provided
-	if req.Config != nil && len(*req.Config) > 0 && !json.Valid(*req.Config) {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid JSON in config field",
-		})
+	var config entities.SingleJSONB
+	if req.Config != nil && len(*req.Config) > 0 {
+		if !json.Valid(*req.Config) {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Invalid JSON in config field",
+			})
+		}
+		json.Unmarshal(*req.Config, &config)
 	}
 
 	// Update fields
@@ -274,7 +282,7 @@ func Update(c fiber.Ctx) error {
 		chatbot.SystemPrompt = *req.SystemPrompt
 	}
 	if req.Config != nil {
-		chatbot.Config = string(*req.Config)
+		chatbot.Config = config
 	}
 
 	// Update tools if provided

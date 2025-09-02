@@ -38,7 +38,7 @@ sef/
 │   │   └── validation/
 │   ├── pkg/
 │   └── utils/
-├── frontend/
+├── chatbot-app/
 │   ├── app/
 │   ├── components/
 │   ├── hooks/
