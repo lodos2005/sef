@@ -3,7 +3,6 @@ package chats
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"sef/app/entities"
 	"sef/internal/database"
 	"sef/internal/paginator"
@@ -19,11 +18,6 @@ import (
 	"gorm.io/gorm"
 )
 
-type VercelPart struct {
-	Type string `json:"type"`
-	Text string `json:"text"`
-}
-
 type CreateSessionRequest struct {
 	Title     string `json:"title" validate:"required,min=1,max=255"`
 	ChatbotID uint   `json:"chatbot_id" validate:"required"`
@@ -32,11 +26,6 @@ type CreateSessionRequest struct {
 type UpdateSessionRequest struct {
 	Title    *string `json:"title,omitempty" validate:"omitempty,min=1,max=255"`
 	IsActive *bool   `json:"is_active,omitempty"`
-}
-
-type SendMessageRequest struct {
-	ID       string         `json:"id"`
-	Messages []VercelMessage `json:"messages" validate:"required,min=1"`
 }
 
 // Admin functions for managing all chat sessions (not user-specific)
@@ -484,7 +473,23 @@ func SendMessage(c fiber.Ctx) error {
 		})
 	}
 
-	// Verify session ownership and preload chatbot with provider
+	// Parse request body
+	var req struct {
+		Content string `json:"content" validate:"required,min=1"`
+	}
+	if err := c.Bind().Body(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body",
+		})
+	}
+
+	if err := validation.Validate(req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"errors": err,
+		})
+	}
+
+	// Verify session ownership and get session with chatbot
 	var session entities.ChatSession
 	if err := database.Connection().
 		Where("id = ? AND user_id = ?", sessionID, user.ID).
@@ -502,63 +507,12 @@ func SendMessage(c fiber.Ctx) error {
 		})
 	}
 
-	var req SendMessageRequest
-	// Check Content-Type
-	contentType := c.Get("Content-Type")
-	log.Info("Content-Type:", contentType)
-	body := c.Body()
-	log.Info("Request body:", string(body))
-	if err := json.Unmarshal(body, &req); err != nil {
-		log.Error("Failed to unmarshal request body:", err)
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid request body",
-		})
-	}
-
-	if err := validation.Validate(req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"errors": err,
-		})
-	}
-
-	// Get the last user message content
-	if len(req.Messages) == 0 {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "No messages provided",
-		})
-	}
-
-	lastMessage := req.Messages[len(req.Messages)-1]
-	if lastMessage.Role != "user" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Last message must be from user",
-		})
-	}
-
-	content := lastMessage.Content
-	if content == "" && len(lastMessage.Parts) > 0 {
-		// If content empty, use parts
-		for _, part := range lastMessage.Parts {
-			if part.Type == "text" {
-				content += part.Text
-			}
-		}
-	}
-
-	if content == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "No content in user message",
-		})
-	}
-
 	// Save user message
 	userMessage := entities.Message{
-		SessionID:  uint(sessionID),
-		Role:       "user",
-		Content:    content,
-		TokenCount: len(content) / 4, // Rough estimation
+		SessionID: uint(sessionID),
+		Role:      "user",
+		Content:   req.Content,
 	}
-
 	if err := database.Connection().Create(&userMessage).Error; err != nil {
 		log.Error("Failed to save user message:", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -566,257 +520,95 @@ func SendMessage(c fiber.Ctx) error {
 		})
 	}
 
-	// Check if streaming is requested
-	stream := c.Query("stream") == "true"
-
-	if stream {
-		return streamVercelResponse(c, session.Chatbot, content, session)
-	}
-
-	// Non-streaming response
-	aiResponse, err := generateAIResponse(session.Chatbot, content)
+	// Create provider instance
+	factory := &providers.ProviderFactory{}
+	provider, err := factory.NewProvider(session.Chatbot.Provider.Type, session.Chatbot.Provider.Config)
 	if err != nil {
-		log.Error("Failed to generate AI response:", err)
-		aiResponse = "Üzgünüm, şu anda yanıt oluşturamıyorum. Lütfen daha sonra tekrar deneyin."
-	}
-
-	aiMessage := entities.Message{
-		SessionID:  uint(sessionID),
-		Role:       "assistant",
-		Content:    aiResponse,
-		TokenCount: len(aiResponse) / 4,
-	}
-
-	if err := database.Connection().Create(&aiMessage).Error; err != nil {
-		log.Error("Failed to save AI message:", err)
+		log.Error("Failed to create provider:", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to save AI response",
+			"error": "Failed to initialize provider",
 		})
 	}
 
-	return c.JSON(fiber.Map{
-		"user_message": userMessage,
-		"ai_message":   aiMessage,
-		"message":      "Message sent successfully",
-	})
-}
-
-// generateAIResponse generates AI response using the chatbot's provider
-func generateAIResponse(chatbot entities.Chatbot, prompt string) (string, error) {
-	// Parse provider config
-	var providerConfig map[string]interface{}
-	if len(chatbot.Provider.Config) > 0 {
-		log.Info("Provider config from DB:", chatbot.Provider.Config)
-		providerConfig = chatbot.Provider.Config
-	} else {
-		log.Info("Provider config is empty")
-		providerConfig = make(map[string]interface{})
+	// Get chat history for context
+	var messages []entities.Message
+	if err := database.Connection().
+		Where("session_id = ?", sessionID).
+		Order("created_at ASC").
+		Find(&messages).Error; err != nil {
+		log.Error("Failed to fetch chat history:", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to fetch chat history",
+		})
 	}
 
-	// Parse chatbot config for model and other settings
-	var chatbotConfig map[string]interface{}
-	if len(chatbot.Config) > 0 {
-		log.Info("Chatbot config from DB:", chatbot.Config)
-		chatbotConfig = chatbot.Config
-	} else {
-		log.Info("Chatbot config is empty")
-		chatbotConfig = make(map[string]interface{})
+	// Build conversation context
+	var conversationContext string
+	if session.Chatbot.SystemPrompt != "" {
+		conversationContext = session.Chatbot.SystemPrompt + "\n\n"
 	}
-
-	// Create provider instance using factory
-	factory := &providers.ProviderFactory{}
-	provider, err := factory.NewProvider(chatbot.Provider.Type, providerConfig)
-	if err != nil {
-		return "", fmt.Errorf("failed to create provider: %w", err)
-	}
-	if provider == nil {
-		return "", fmt.Errorf("unsupported provider type: %s", chatbot.Provider.Type)
-	}
-
-	// Prepare options for generation
-	options := make(map[string]interface{})
-
-	// Get model from chatbot config
-	if model, ok := chatbotConfig["model"].(string); ok && model != "" {
-		options["model"] = model
-	}
-
-	// Add system prompt if available
-	if chatbot.SystemPrompt != "" {
-		// For Ollama, we can include system prompt in the prompt
-		if chatbot.Provider.Type == "ollama" {
-			prompt = fmt.Sprintf("System: %s\n\nUser: %s", chatbot.SystemPrompt, prompt)
-		}
-	}
-
-	// Generate response
-	ctx := context.Background()
-	responseChan, err := provider.Generate(ctx, prompt, options)
-	if err != nil {
-		return "", fmt.Errorf("failed to generate response: %w", err)
-	}
-
-	// Collect response from channel
-	var response strings.Builder
-	for chunk := range responseChan {
-		response.WriteString(chunk)
-	}
-
-	return response.String(), nil
-}
-
-// convertVercelMessagesToPrompt converts Vercel AI SDK messages to a single prompt
-func convertVercelMessagesToPrompt(messages []VercelMessage) string {
-	var prompt strings.Builder
 
 	for _, msg := range messages {
-		content := msg.Content
-		if content == "" && len(msg.Parts) > 0 {
-			// If content empty, use parts
-			for _, part := range msg.Parts {
-				if part.Type == "text" {
-					content += part.Text
-				}
-			}
-		}
-
-		switch msg.Role {
-		case "system":
-			prompt.WriteString(fmt.Sprintf("System: %s\n\n", content))
-		case "user":
-			prompt.WriteString(fmt.Sprintf("User: %s\n\n", content))
-		case "assistant":
-			prompt.WriteString(fmt.Sprintf("Assistant: %s\n\n", content))
+		if msg.Role == "user" {
+			conversationContext += "User: " + msg.Content + "\n"
+		} else if msg.Role == "assistant" {
+			conversationContext += "Assistant: " + msg.Content + "\n"
 		}
 	}
+	conversationContext += "User: " + req.Content + "\nAssistant:"
 
-	prompt.WriteString("Assistant: ")
-	return prompt.String()
-}
-
-// streamVercelResponse streams response in Vercel AI SDK v4 format
-func streamVercelResponse(c fiber.Ctx, chatbot entities.Chatbot, prompt string, session entities.ChatSession) error {
-	// Set headers for SSE
-	c.Set("Content-Type", "text/event-stream")
+	// Set headers for streaming response
+	c.Set("Content-Type", "text/plain")
 	c.Set("Cache-Control", "no-cache")
 	c.Set("Connection", "keep-alive")
-	c.Set("Access-Control-Allow-Origin", "*")
 
-	// Parse provider config
-	var providerConfig map[string]interface{}
-	if len(chatbot.Provider.Config) > 0 {
-		log.Info("Provider config from DB:", chatbot.Provider.Config)
-		providerConfig = chatbot.Provider.Config
-	} else {
-		log.Info("Provider config is empty")
-		providerConfig = make(map[string]interface{})
+	// Create assistant message record
+	assistantMessage := entities.Message{
+		SessionID: uint(sessionID),
+		Role:      "assistant",
+		Content:   "",
 	}
-
-	// Parse chatbot config for model and other settings
-	var chatbotConfig map[string]interface{}
-	if len(chatbot.Config) > 0 {
-		log.Info("Chatbot config from DB:", chatbot.Config)
-		chatbotConfig = chatbot.Config
-	} else {
-		log.Info("Chatbot config is empty")
-		chatbotConfig = make(map[string]interface{})
+	if err := database.Connection().Create(&assistantMessage).Error; err != nil {
+		log.Error("Failed to create assistant message:", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to create message record",
+		})
 	}
-
-	// Create provider instance using factory
-	factory := &providers.ProviderFactory{}
-	provider, err := factory.NewProvider(chatbot.Provider.Type, providerConfig)
-	if err != nil {
-		c.Write([]byte("event: error\ndata: " + err.Error() + "\n\n"))
-		return nil
-	}
-	if provider == nil {
-		c.Write([]byte("event: error\ndata: Unsupported provider type: " + chatbot.Provider.Type + "\n\n"))
-		return nil
-	}
-
-	// Prepare options for generation
-	options := make(map[string]interface{})
-
-	// Get model from chatbot config, default to gpt-3.5-turbo if not set
-	model := "gpt-3.5-turbo"
-	if m, ok := chatbotConfig["model"].(string); ok && m != "" {
-		model = m
-	}
-	options["model"] = model
-
-	// Add system prompt if available
-	if chatbot.SystemPrompt != "" {
-		// For Ollama, we can include system prompt in the prompt
-		if chatbot.Provider.Type == "ollama" {
-			prompt = fmt.Sprintf("System: %s\n\nUser: %s", chatbot.SystemPrompt, prompt)
-		}
-	}
-
-	// Generate messageId
-	messageId := fmt.Sprintf("msg-%d", session.ID)
-
-	// Send initial message event
-	initialData := fiber.Map{
-		"messageId": messageId,
-	}
-	initialJSON, _ := json.Marshal(initialData)
-	c.Write([]byte("f:" + string(initialJSON) + "\n"))
 
 	// Generate streaming response
-	ctx := context.Background()
-	responseChan, err := provider.Generate(ctx, prompt, options)
+	options := map[string]interface{}{
+		"model": session.Chatbot.Config["model"], // Use model from chatbot config
+	}
+
+	stream, err := provider.Generate(context.Background(), conversationContext, options)
 	if err != nil {
-		c.Write([]byte("event: error\ndata: " + err.Error() + "\n\n"))
-		return nil
+		log.Error("Failed to generate response:", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to generate response",
+		})
 	}
 
-	// Stream response chunks in Vercel AI SDK v4 format
-	fullResponse := ""
-	for chunk := range responseChan {
-		if chunk != "" {
-			fullResponse += chunk
-			// Send chunk as simple string
-			c.Write([]byte("0:\"" + chunk + "\"\n"))
+	var fullResponse strings.Builder
+
+	// Stream the response
+	for chunk := range stream {
+		if chunk == "" {
+			continue
 		}
+
+		// Write chunk to response
+		if _, err := c.Write([]byte(chunk)); err != nil {
+			log.Error("Failed to write chunk:", err)
+			break
+		}
+
+		fullResponse.WriteString(chunk)
 	}
 
-	// Calculate token counts (rough estimation)
-	promptTokens := len(prompt) / 4
-	completionTokens := len(fullResponse) / 4
-
-	// Send finish event
-	finishData := fiber.Map{
-		"finishReason": "stop",
-		"usage": fiber.Map{
-			"promptTokens":     promptTokens,
-			"completionTokens": completionTokens,
-		},
-		"isContinued": false,
-	}
-	finishJSON, _ := json.Marshal(finishData)
-	c.Write([]byte("e:" + string(finishJSON) + "\n"))
-
-	// Send done event
-	doneData := fiber.Map{
-		"finishReason": "stop",
-		"usage": fiber.Map{
-			"promptTokens":     promptTokens,
-			"completionTokens": completionTokens,
-		},
-	}
-	doneJSON, _ := json.Marshal(doneData)
-	c.Write([]byte("d:" + string(doneJSON) + "\n"))
-
-	// Save AI message to database
-	aiMessage := entities.Message{
-		SessionID:  session.ID,
-		Role:       "assistant",
-		Content:    fullResponse,
-		TokenCount: completionTokens,
-	}
-
-	if err := database.Connection().Create(&aiMessage).Error; err != nil {
-		log.Error("Failed to save AI message:", err)
+	// Update the assistant message with full content
+	assistantMessage.Content = fullResponse.String()
+	if err := database.Connection().Save(&assistantMessage).Error; err != nil {
+		log.Error("Failed to update assistant message:", err)
 	}
 
 	return nil
@@ -873,143 +665,5 @@ func GetSessionMessages(c fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"messages": messages,
-	})
-}
-
-// VercelChatRequest represents the request format expected by Vercel AI SDK
-type VercelChatRequest struct {
-	Messages []VercelMessage `json:"messages" validate:"required,min=1"`
-	Model    string          `json:"model,omitempty"`
-	Stream   bool            `json:"stream,omitempty"`
-}
-
-// VercelMessage represents a message in Vercel AI SDK format
-type VercelMessage struct {
-	Role    string       `json:"role" validate:"required,oneof=system user assistant"`
-	Content string       `json:"content"`
-	Parts   []VercelPart `json:"parts,omitempty"`
-}
-
-// VercelChatCompletion handles chat completion requests compatible with Vercel AI SDK
-func VercelChatCompletion(c fiber.Ctx) error {
-	var req VercelChatRequest
-	body := c.Body()
-	log.Info("VercelChatCompletion request body:", string(body))
-	if err := json.Unmarshal(body, &req); err != nil {
-		log.Error("Failed to unmarshal VercelChatCompletion request body:", err)
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid request body",
-		})
-	}
-
-	if err := validation.Validate(req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"errors": err,
-		})
-	}
-
-	// Get current user
-	user, err := utils.GetUserFromContext(c)
-	if err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Unauthorized",
-		})
-	}
-
-	// For now, use the first available chatbot of the user
-	// In production, you might want to specify which chatbot to use
-	var chatbot entities.Chatbot
-	if err := database.Connection().
-		Where("user_id = ? AND is_active = ?", user.ID, true).
-		Preload("Provider").
-		First(&chatbot).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": "No active chatbot found. Please create a chatbot first.",
-			})
-		}
-		log.Error("Failed to fetch chatbot:", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to fetch chatbot",
-		})
-	}
-
-	// Convert Vercel messages to prompt
-	prompt := convertVercelMessagesToPrompt(req.Messages)
-
-	// Create a temporary chat session for this request
-	session := entities.ChatSession{
-		UserID:    user.ID,
-		ChatbotID: chatbot.ID,
-		Title:     "Vercel AI SDK Chat",
-		IsActive:  false, // Temporary session
-	}
-
-	if err := database.Connection().Create(&session).Error; err != nil {
-		log.Error("Failed to create temporary session:", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to create session",
-		})
-	}
-
-	// Save user messages to database
-	for _, msg := range req.Messages {
-		if msg.Role == "user" {
-			userMessage := entities.Message{
-				SessionID:  session.ID,
-				Role:       msg.Role,
-				Content:    msg.Content,
-				TokenCount: len(msg.Content) / 4,
-			}
-			if err := database.Connection().Create(&userMessage).Error; err != nil {
-				log.Error("Failed to save user message:", err)
-			}
-		}
-	}
-
-	// Handle streaming response
-	if req.Stream {
-		return streamVercelResponse(c, chatbot, prompt, session)
-	}
-
-	// Handle non-streaming response
-	aiResponse, err := generateAIResponse(chatbot, prompt)
-	if err != nil {
-		log.Error("Failed to generate AI response:", err)
-		aiResponse = "Üzgünüm, şu anda yanıt oluşturamıyorum. Lütfen daha sonra tekrar deneyin."
-	}
-
-	// Save AI response
-	aiMessage := entities.Message{
-		SessionID:  session.ID,
-		Role:       "assistant",
-		Content:    aiResponse,
-		TokenCount: len(aiResponse) / 4,
-	}
-
-	if err := database.Connection().Create(&aiMessage).Error; err != nil {
-		log.Error("Failed to save AI message:", err)
-	}
-
-	return c.JSON(fiber.Map{
-		"id":      fmt.Sprintf("chatcmpl-%d", session.ID),
-		"object":  "chat.completion",
-		"created": session.CreatedAt.Unix(),
-		"model":   req.Model,
-		"choices": []fiber.Map{
-			{
-				"index": 0,
-				"message": fiber.Map{
-					"role":    "assistant",
-					"content": aiResponse,
-				},
-				"finish_reason": "stop",
-			},
-		},
-		"usage": fiber.Map{
-			"prompt_tokens":     len(prompt) / 4,
-			"completion_tokens": len(aiResponse) / 4,
-			"total_tokens":      (len(prompt) + len(aiResponse)) / 4,
-		},
 	})
 }
