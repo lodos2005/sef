@@ -498,6 +498,7 @@ func SendMessage(c fiber.Ctx) error {
 		Where("id = ? AND user_id = ?", sessionID, user.ID).
 		Preload("Chatbot").
 		Preload("Chatbot.Provider").
+		Preload("Messages").
 		First(&session).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -520,33 +521,40 @@ func SendMessage(c fiber.Ctx) error {
 		})
 	}
 
-	// Get chat history for context
-	var messages []entities.Message
-	if err := database.Connection().
-		Where("session_id = ?", sessionID).
-		Order("created_at ASC").
-		Find(&messages).Error; err != nil {
-		log.Error("Failed to fetch chat history:", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to fetch chat history",
+	// Build messages array for chat API
+	var messages []providers.ChatMessage
+
+	// Add system message if system prompt exists
+	if session.Chatbot.SystemPrompt != "" {
+		messages = append(messages, providers.ChatMessage{
+			Role:    "system",
+			Content: session.Chatbot.SystemPrompt,
 		})
 	}
 
-	// Build conversation context
-	var conversationContext string
-	if session.Chatbot.SystemPrompt != "" {
-		conversationContext = session.Chatbot.SystemPrompt + "\n\n"
+	// Add current chat session messages
+	for _, msg := range session.Messages {
+		messages = append(messages, providers.ChatMessage{
+			Role:    msg.Role,
+			Content: msg.Content,
+		})
 	}
 
-	for _, msg := range messages {
-		switch msg.Role {
-		case "user":
-			conversationContext += "User: " + msg.Content + "\n"
-		case "assistant":
-			conversationContext += "Assistant: " + msg.Content + "\n"
-		}
+	// Add current user message
+	messages = append(messages, providers.ChatMessage{
+		Role:    "user",
+		Content: req.Content,
+	})
+
+	// Save user message
+	userMessage := entities.Message{
+		SessionID: uint(sessionID),
+		Role:      "user",
+		Content:   req.Content,
 	}
-	conversationContext += "User: " + req.Content + "\nAssistant:"
+	if err := database.Connection().Create(&userMessage).Error; err != nil {
+		log.Error("Failed to save user message:", err)
+	}
 
 	// Set headers for SSE streaming response
 	c.Set("Content-Type", "text/event-stream")
@@ -576,7 +584,7 @@ func SendMessage(c fiber.Ctx) error {
 		log.Info("Using default model")
 	}
 
-	stream, err := provider.Generate(context.Background(), conversationContext, options)
+	stream, err := provider.GenerateChat(context.Background(), messages, options)
 	if err != nil {
 		log.Error("Failed to generate response:", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -638,17 +646,6 @@ func SendMessage(c fiber.Ctx) error {
 			assistantMessage.Content = fullResponse.String()
 			if err := database.Connection().Save(&assistantMessage).Error; err != nil {
 				log.Error("Failed to update assistant message:", err)
-			}
-
-			// Save user message
-			userMessage := entities.Message{
-				SessionID: uint(sessionID),
-				Role:      "user",
-				Content:   req.Content,
-			}
-			if err := database.Connection().Create(&userMessage).Error; err != nil {
-				log.Error("Failed to save user message:", err)
-
 			}
 		}()
 	}))

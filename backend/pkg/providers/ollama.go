@@ -34,6 +34,26 @@ func (o *OllamaProvider) Generate(ctx context.Context, prompt string, options ma
 	return o.client.GenerateTextStream(ctx, model, prompt, options)
 }
 
+// GenerateChat generates a response using Ollama's chat API with proper message roles
+func (o *OllamaProvider) GenerateChat(ctx context.Context, messages []ChatMessage, options map[string]interface{}) (<-chan string, error) {
+	model := "gpt-oss:20b" // Default model
+	if m, ok := options["model"].(string); ok {
+		model = m
+	}
+
+	// Convert to Ollama chat messages
+	ollamaMessages := make([]ollama.OllamaChatMessage, len(messages))
+	for i, msg := range messages {
+		ollamaMessages[i] = ollama.OllamaChatMessage{
+			Role:    msg.Role,
+			Content: msg.Content,
+		}
+	}
+
+	// Use streaming chat from Ollama client
+	return o.client.GenerateChatStream(ctx, model, ollamaMessages, options)
+}
+
 // ListModels returns available models from Ollama
 func (o *OllamaProvider) ListModels() ([]string, error) {
 	return o.client.ListModels()

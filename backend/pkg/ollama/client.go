@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 )
@@ -22,6 +23,26 @@ type OllamaGenerateRequest struct {
 	Prompt  string                 `json:"prompt"`
 	Stream  bool                   `json:"stream"`
 	Options map[string]interface{} `json:"options,omitempty"`
+}
+
+// OllamaChatRequest represents the request for chat completion
+type OllamaChatRequest struct {
+	Model    string                 `json:"model"`
+	Messages []OllamaChatMessage    `json:"messages"`
+	Stream   bool                   `json:"stream"`
+	Options  map[string]interface{} `json:"options,omitempty"`
+}
+
+// OllamaChatMessage represents a message in chat format
+type OllamaChatMessage struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
+// OllamaChatResponse represents the response from chat
+type OllamaChatResponse struct {
+	Message OllamaChatMessage `json:"message"`
+	Done    bool              `json:"done"`
 }
 
 // OllamaGenerateResponse represents the response from generation
@@ -134,6 +155,61 @@ func (oc *OllamaClient) GenerateTextStream(ctx context.Context, model, prompt st
 			}
 
 			ch <- ollamaResp.Response
+
+			if ollamaResp.Done {
+				return
+			}
+		}
+	}()
+
+	return ch, nil
+}
+
+// GenerateChatStream generates text using Ollama's chat API with proper message roles
+func (oc *OllamaClient) GenerateChatStream(ctx context.Context, model string, messages []OllamaChatMessage, options map[string]interface{}) (<-chan string, error) {
+	req := OllamaChatRequest{
+		Model:    model,
+		Messages: messages,
+		Stream:   true,
+		Options:  options,
+	}
+
+	reqBody, err := json.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	log.Println(string(reqBody))
+
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", oc.baseURL+"/api/chat", bytes.NewBuffer(reqBody))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	resp, err := oc.client.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request: %w", err)
+	}
+
+	ch := make(chan string)
+
+	go func() {
+		defer resp.Body.Close()
+		defer close(ch)
+
+		decoder := json.NewDecoder(resp.Body)
+		for {
+			var ollamaResp OllamaChatResponse
+			if err := decoder.Decode(&ollamaResp); err != nil {
+				if err != io.EOF {
+					// Send error as message
+					ch <- fmt.Sprintf("Error: %v", err)
+				}
+				return
+			}
+
+			ch <- ollamaResp.Message.Content
 
 			if ollamaResp.Done {
 				return
