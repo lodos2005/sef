@@ -133,11 +133,12 @@ export default function ChatPage() {
         throw new Error("Failed to send message")
       }
 
-      // Handle SSE streaming response
+      // Handle JSON streaming response
       const reader = response.body?.getReader()
       const decoder = new TextDecoder()
       let assistantContent = ""
       let assistantMessageId = (Date.now() + 1).toString()
+      let buffer = ""
 
       // Add empty assistant message
       const assistantMessage: Message = {
@@ -153,25 +154,28 @@ export default function ChatPage() {
           const { done, value } = await reader.read()
           if (done) break
 
-          const chunk = decoder.decode(value, { stream: true })
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n')
+          buffer = lines.pop() || "" // Keep incomplete line in buffer
 
-          // Parse SSE format
-          const lines = chunk.split('\n')
           for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = line.slice(6) // Remove 'data: ' prefix
-              if (data === '[DONE]') {
+            if (line.trim() === "") continue
+            try {
+              const parsed = JSON.parse(line)
+              if (parsed.type === "chunk") {
+                assistantContent += parsed.data
+                // Update the assistant message in real-time
+                setMessages(prev => prev.map(msg =>
+                  msg.id === assistantMessageId
+                    ? { ...msg, content: assistantContent }
+                    : msg
+                ))
+              } else if (parsed.type === "done") {
                 console.log("Stream completed")
                 break
               }
-              assistantContent += data
-
-              // Update the assistant message in real-time
-              setMessages(prev => prev.map(msg =>
-                msg.id === assistantMessageId
-                  ? { ...msg, content: assistantContent }
-                  : msg
-              ))
+            } catch (e) {
+              console.error("Failed to parse JSON line:", e, "Line:", line)
             }
           }
         }

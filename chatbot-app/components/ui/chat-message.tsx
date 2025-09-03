@@ -180,9 +180,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
         ) : null}
 
         <div className={cn(chatBubbleVariants({ isUser, animation }))}>
-          {/* Temporarily disable MarkdownRenderer for testing */}
-          <div style={{ whiteSpace: 'pre-wrap' }}>{content}</div>
-          {/* <MarkdownRenderer>{content}</MarkdownRenderer> */}
+          <MarkdownRenderer key={content}>{content}</MarkdownRenderer>
         </div>
 
         {showTimeStamp && createdAt ? (
@@ -212,7 +210,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
             key={`text-${index}`}
           >
             <div className={cn(chatBubbleVariants({ isUser, animation }))}>
-              <MarkdownRenderer>{part.text}</MarkdownRenderer>
+              <MarkdownRenderer key={part.text}>{part.text}</MarkdownRenderer>
               {actions ? (
                 <div className="absolute -bottom-4 right-2 flex space-x-1 rounded-lg border bg-background p-1 text-foreground opacity-0 transition-opacity group-hover/message:opacity-100">
                   {actions}
@@ -254,7 +252,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   return (
     <div className={cn("flex flex-col", isUser ? "items-end" : "items-start")}>
       <div className={cn(chatBubbleVariants({ isUser, animation }))}>
-        <MarkdownRenderer>{content}</MarkdownRenderer>
+        <MarkdownRenderer key={content}>{content}</MarkdownRenderer>
         {actions ? (
           <div className="absolute -bottom-4 right-2 flex space-x-1 rounded-lg border bg-background p-1 text-foreground opacity-0 transition-opacity group-hover/message:opacity-100">
             {actions}

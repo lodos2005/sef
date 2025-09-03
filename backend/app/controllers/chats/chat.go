@@ -520,19 +520,6 @@ func SendMessage(c fiber.Ctx) error {
 		})
 	}
 
-	// Save user message
-	userMessage := entities.Message{
-		SessionID: uint(sessionID),
-		Role:      "user",
-		Content:   req.Content,
-	}
-	if err := database.Connection().Create(&userMessage).Error; err != nil {
-		log.Error("Failed to save user message:", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to save message",
-		})
-	}
-
 	// Get chat history for context
 	var messages []entities.Message
 	if err := database.Connection().
@@ -552,9 +539,10 @@ func SendMessage(c fiber.Ctx) error {
 	}
 
 	for _, msg := range messages {
-		if msg.Role == "user" {
+		switch msg.Role {
+		case "user":
 			conversationContext += "User: " + msg.Content + "\n"
-		} else if msg.Role == "assistant" {
+		case "assistant":
 			conversationContext += "Assistant: " + msg.Content + "\n"
 		}
 	}
@@ -600,24 +588,31 @@ func SendMessage(c fiber.Ctx) error {
 	c.Response().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
 		var fullResponse strings.Builder
 
-		// Stream the response using SSE format
+		// Stream the response using JSON format
 		for chunk := range stream {
 			if chunk == "" {
 				continue
 			}
 
-			log.Info("Received chunk from Ollama:", chunk)
 			fullResponse.WriteString(chunk)
 
-			// Send SSE formatted chunk
-			sseData := fmt.Sprintf("data: %s\n\n", chunk)
-			log.Info("Sending SSE data:", sseData)
+			// Send JSON formatted chunk
+			data := map[string]interface{}{
+				"type": "chunk",
+				"data": chunk,
+			}
+			jsonBytes, err := json.Marshal(data)
+			if err != nil {
+				log.Error("Failed to marshal chunk to JSON:", err)
+				break
+			}
+			jsonData := string(jsonBytes) + "\n"
 
 			// Write to stream
-			fmt.Fprint(w, sseData)
+			fmt.Fprint(w, jsonData)
 
 			// Flush to send immediately
-			err := w.Flush()
+			err = w.Flush()
 			if err != nil {
 				log.Error("Error while flushing:", err)
 				break
@@ -625,16 +620,35 @@ func SendMessage(c fiber.Ctx) error {
 		}
 
 		// Send end event
-		endEvent := "data: [DONE]\n\n"
-		log.Info("Sending end event:", endEvent)
-		fmt.Fprint(w, endEvent)
-		w.Flush()
+		endData := map[string]interface{}{
+			"type": "done",
+		}
+		endBytes, err := json.Marshal(endData)
+		if err != nil {
+			log.Error("Failed to marshal end event to JSON:", err)
+		} else {
+			endJson := string(endBytes) + "\n"
+			log.Info("Sending end event:", endJson)
+			fmt.Fprint(w, endJson)
+			w.Flush()
+		}
 
 		// Update the assistant message with full content (async, don't block response)
 		go func() {
 			assistantMessage.Content = fullResponse.String()
 			if err := database.Connection().Save(&assistantMessage).Error; err != nil {
 				log.Error("Failed to update assistant message:", err)
+			}
+
+			// Save user message
+			userMessage := entities.Message{
+				SessionID: uint(sessionID),
+				Role:      "user",
+				Content:   req.Content,
+			}
+			if err := database.Connection().Create(&userMessage).Error; err != nil {
+				log.Error("Failed to save user message:", err)
+
 			}
 		}()
 	}))
