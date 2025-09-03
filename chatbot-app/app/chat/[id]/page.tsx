@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useParams } from "next/navigation"
 import { Chat } from "@/components/ui/chat"
 import { Message } from "@/components/ui/chat-message"
@@ -36,31 +36,48 @@ export default function ChatPage() {
   const [error, setError] = useState<string | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [input, setInput] = useState("")
+  
+  // Use ref to track current assistant message content
+  const currentAssistantContent = useRef<string>("")
+  const currentAssistantId = useRef<string>("")
 
   // Load session and messages
   useEffect(() => {
-    loadSession()
-    loadMessages()
+    const loadData = async () => {
+      await Promise.all([loadSession(), loadMessages()])
+    }
+    loadData()
   }, [sessionId])
+
+  // Use effect to track content changes
+  useEffect(() => {
+    const assistantMessage = messages.find(msg => msg.role === 'assistant' && msg.content)
+  }, [messages])
 
   const loadSession = async () => {
     try {
+      console.log("Loading session for ID:", sessionId)
       const response = await fetch(`/api/v1/chats/${sessionId}`)
+      console.log("Session response status:", response.status)
       if (!response.ok) {
-        throw new Error("Failed to load session")
+        throw new Error(`Failed to load session: ${response.status}`)
       }
       const data = await response.json()
+      console.log("Session data:", data)
       setSession(data.session)
     } catch (err) {
+      console.error("Session load error:", err)
       setError(err instanceof Error ? err.message : "Failed to load session")
     }
   }
 
   const loadMessages = async () => {
     try {
+      console.log("Loading messages for session ID:", sessionId)
       const response = await fetch(`/api/v1/chats/${sessionId}/messages`)
+      console.log("Messages response status:", response.status)
       if (!response.ok) {
-        throw new Error("Failed to load messages")
+        throw new Error(`Failed to load messages: ${response.status}`)
       }
       const data = await response.json()
       const formattedMessages: Message[] = data.messages.map((msg: ApiMessage) => ({
@@ -71,6 +88,7 @@ export default function ChatPage() {
       }))
       setMessages(formattedMessages)
     } catch (err) {
+      console.error("Messages load error:", err)
       setError(err instanceof Error ? err.message : "Failed to load messages")
     } finally {
       setIsLoading(false)
@@ -104,6 +122,7 @@ export default function ChatPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem('token')}`,
         },
         body: JSON.stringify({
           content: messageContent,
@@ -114,39 +133,52 @@ export default function ChatPage() {
         throw new Error("Failed to send message")
       }
 
-      // Handle streaming response
+      // Handle SSE streaming response
       const reader = response.body?.getReader()
-      if (!reader) {
-        throw new Error("No response stream available")
-      }
-
       const decoder = new TextDecoder()
       let assistantContent = ""
+      let assistantMessageId = (Date.now() + 1).toString()
 
+      // Add empty assistant message
       const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: assistantMessageId,
         role: "assistant",
         content: "",
         createdAt: new Date(),
       }
-
       setMessages(prev => [...prev, assistantMessage])
 
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
 
-        const chunk = decoder.decode(value, { stream: true })
-        assistantContent += chunk
+          const chunk = decoder.decode(value, { stream: true })
 
-        setMessages(prev => prev.map(msg =>
-          msg.id === assistantMessage.id
-            ? { ...msg, content: assistantContent }
-            : msg
-        ))
+          // Parse SSE format
+          const lines = chunk.split('\n')
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6) // Remove 'data: ' prefix
+              if (data === '[DONE]') {
+                console.log("Stream completed")
+                break
+              }
+              assistantContent += data
+
+              // Update the assistant message in real-time
+              setMessages(prev => prev.map(msg =>
+                msg.id === assistantMessageId
+                  ? { ...msg, content: assistantContent }
+                  : msg
+              ))
+            }
+          }
+        }
       }
 
     } catch (err) {
+      console.error("Error in handleSubmit:", err)
       setError(err instanceof Error ? err.message : "Failed to send message")
       // Remove the failed assistant message
       setMessages(prev => prev.filter(msg => msg.id !== (Date.now() + 1).toString()))

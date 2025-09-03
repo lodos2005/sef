@@ -13,7 +13,7 @@ type OllamaProvider struct {
 
 // NewOllamaProvider creates a new Ollama provider instance
 func NewOllamaProvider(config map[string]interface{}) *OllamaProvider {
-	baseURL := "http://localhost:11434"
+	baseURL := "http://10.67.10.12:11434"
 	if url, ok := config["base_url"].(string); ok {
 		baseURL = url
 	}
@@ -25,7 +25,7 @@ func NewOllamaProvider(config map[string]interface{}) *OllamaProvider {
 
 // Generate generates a response from Ollama with streaming support
 func (o *OllamaProvider) Generate(ctx context.Context, prompt string, options map[string]interface{}) (<-chan string, error) {
-	model := "llama2" // Default model
+	model := "gpt-oss:20b" // Default model
 	if m, ok := options["model"].(string); ok {
 		model = m
 	}

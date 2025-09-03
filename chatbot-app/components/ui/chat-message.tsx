@@ -180,7 +180,9 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
         ) : null}
 
         <div className={cn(chatBubbleVariants({ isUser, animation }))}>
-          <MarkdownRenderer>{content}</MarkdownRenderer>
+          {/* Temporarily disable MarkdownRenderer for testing */}
+          <div style={{ whiteSpace: 'pre-wrap' }}>{content}</div>
+          {/* <MarkdownRenderer>{content}</MarkdownRenderer> */}
         </div>
 
         {showTimeStamp && createdAt ? (

@@ -1,8 +1,10 @@
 package chats
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
+	"fmt"
 	"sef/app/entities"
 	"sef/internal/database"
 	"sef/internal/paginator"
@@ -15,6 +17,7 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/log"
+	"github.com/valyala/fasthttp"
 	"gorm.io/gorm"
 )
 
@@ -507,6 +510,16 @@ func SendMessage(c fiber.Ctx) error {
 		})
 	}
 
+	// Create provider instance
+	factory := &providers.ProviderFactory{}
+	provider, err := factory.NewProvider(session.Chatbot.Provider.Type, session.Chatbot.Provider.Config)
+	if err != nil {
+		log.Error("Failed to create provider:", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to initialize provider",
+		})
+	}
+
 	// Save user message
 	userMessage := entities.Message{
 		SessionID: uint(sessionID),
@@ -517,16 +530,6 @@ func SendMessage(c fiber.Ctx) error {
 		log.Error("Failed to save user message:", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to save message",
-		})
-	}
-
-	// Create provider instance
-	factory := &providers.ProviderFactory{}
-	provider, err := factory.NewProvider(session.Chatbot.Provider.Type, session.Chatbot.Provider.Config)
-	if err != nil {
-		log.Error("Failed to create provider:", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to initialize provider",
 		})
 	}
 
@@ -557,10 +560,11 @@ func SendMessage(c fiber.Ctx) error {
 	}
 	conversationContext += "User: " + req.Content + "\nAssistant:"
 
-	// Set headers for streaming response
-	c.Set("Content-Type", "text/plain")
+	// Set headers for SSE streaming response
+	c.Set("Content-Type", "text/event-stream")
 	c.Set("Cache-Control", "no-cache")
 	c.Set("Connection", "keep-alive")
+	c.Set("Transfer-Encoding", "chunked")
 
 	// Create assistant message record
 	assistantMessage := entities.Message{
@@ -576,8 +580,12 @@ func SendMessage(c fiber.Ctx) error {
 	}
 
 	// Generate streaming response
-	options := map[string]interface{}{
-		"model": session.Chatbot.Config["model"], // Use model from chatbot config
+	options := make(map[string]interface{})
+	if model, ok := session.Chatbot.Config["model"].(string); ok && model != "" {
+		options["model"] = model
+		log.Info("Using model from chatbot config:", model)
+	} else {
+		log.Info("Using default model")
 	}
 
 	stream, err := provider.Generate(context.Background(), conversationContext, options)
@@ -588,28 +596,48 @@ func SendMessage(c fiber.Ctx) error {
 		})
 	}
 
-	var fullResponse strings.Builder
+	// Use Fiber v3 streaming with SetBodyStreamWriter
+	c.Response().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
+		var fullResponse strings.Builder
 
-	// Stream the response
-	for chunk := range stream {
-		if chunk == "" {
-			continue
+		// Stream the response using SSE format
+		for chunk := range stream {
+			if chunk == "" {
+				continue
+			}
+
+			log.Info("Received chunk from Ollama:", chunk)
+			fullResponse.WriteString(chunk)
+
+			// Send SSE formatted chunk
+			sseData := fmt.Sprintf("data: %s\n\n", chunk)
+			log.Info("Sending SSE data:", sseData)
+
+			// Write to stream
+			fmt.Fprint(w, sseData)
+
+			// Flush to send immediately
+			err := w.Flush()
+			if err != nil {
+				log.Error("Error while flushing:", err)
+				break
+			}
 		}
 
-		// Write chunk to response
-		if _, err := c.Write([]byte(chunk)); err != nil {
-			log.Error("Failed to write chunk:", err)
-			break
-		}
+		// Send end event
+		endEvent := "data: [DONE]\n\n"
+		log.Info("Sending end event:", endEvent)
+		fmt.Fprint(w, endEvent)
+		w.Flush()
 
-		fullResponse.WriteString(chunk)
-	}
-
-	// Update the assistant message with full content
-	assistantMessage.Content = fullResponse.String()
-	if err := database.Connection().Save(&assistantMessage).Error; err != nil {
-		log.Error("Failed to update assistant message:", err)
-	}
+		// Update the assistant message with full content (async, don't block response)
+		go func() {
+			assistantMessage.Content = fullResponse.String()
+			if err := database.Connection().Save(&assistantMessage).Error; err != nil {
+				log.Error("Failed to update assistant message:", err)
+			}
+		}()
+	}))
 
 	return nil
 }
