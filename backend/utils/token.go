@@ -1,8 +1,7 @@
 package utils
 
 import (
-	"errors"
-	"sef/app/entities"
+	"sef/internal/bootstrap"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
@@ -27,7 +26,12 @@ func CreateToken(username string, id uint) (string, error) {
 	claims["user_id"] = id
 	claims["exp"] = time.Now().Add(time.Hour * 72).Unix()
 
-	appKey := "3t7Ca+3fFqzSpsUkqmmTMlT2eUKPlrs3+irYZ+KP0PY="
+	config, err := bootstrap.NewConf()
+	if err != nil {
+		return "", err
+	}
+
+	appKey := config.MustString("app.key")
 	if appKey == "" {
 		appKey = "sef"
 	}
@@ -38,39 +42,8 @@ func CreateToken(username string, id uint) (string, error) {
 func GetClaimFromContext(c fiber.Ctx) Claim {
 	user := c.Locals("token").(*jwt.Token)
 	claims := user.Claims.(jwt.MapClaims)
-
-	username, ok := claims["username"].(string)
-	if !ok {
-		username = ""
-	}
-
-	userID, ok := claims["user_id"].(float64)
-	if !ok {
-		userID = 0
-	}
-
 	return Claim{
-		Username: username,
-		ID:       uint(userID),
+		Username: claims["username"].(string),
+		ID:       uint(claims["user_id"].(float64)),
 	}
-}
-
-func GetUserFromContext(c fiber.Ctx) (*entities.User, error) {
-	claim := GetClaimFromContext(c)
-	return GetUserByID(claim.ID)
-}
-
-// VerifyUserFromContext verifies that the user from JWT context exists and is not deleted
-func VerifyUserFromContext(c fiber.Ctx) (*entities.User, error) {
-	user, err := GetUserFromContext(c)
-	if err != nil {
-		return nil, err
-	}
-
-	// Check if user is deleted (soft delete)
-	if user.DeletedAt.Valid {
-		return nil, errors.New("user account is deactivated")
-	}
-
-	return user, nil
 }

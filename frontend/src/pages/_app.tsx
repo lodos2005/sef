@@ -1,0 +1,68 @@
+import { ThemeProvider } from "@/providers/theme-provider"
+
+import "@/styles/fontawesome.css"
+import "@/styles/globals.css"
+import "@/styles/nprogress.css"
+import "@/styles/radial-progress.css"
+
+import { NextPage } from "next"
+import { AppProps, AppType } from "next/app"
+import Head from "next/head"
+import { useRouter } from "next/router"
+import { appWithI18Next, useSyncLanguage } from "ni18n"
+import { ni18nConfig } from "ni18n.config"
+import { ReactElement, ReactNode } from "react"
+import { useTranslation } from "react-i18next"
+import { z } from "zod"
+import { makeZodI18nMap } from "zod-i18n-map"
+
+import { Toaster } from "@/components/ui/sonner"
+import { cn } from "@/lib/utils"
+
+import Layout from "../components/_layout/app_layout"
+
+const RootLayout: AppType = ({ Component, pageProps }: AppPropsWithLayout) => {
+  const router = useRouter()
+
+  useSyncLanguage("tr")
+
+  const { t, ready } = useTranslation("common")
+  const { t: tfull } = useTranslation()
+  z.setErrorMap(makeZodI18nMap({ t: tfull, ns: "zod" }))
+
+  return (
+    <>
+      <Head>
+        <title>{t("page_title", "Liman Merkezi Yönetim Sistemi")}</title>
+        <link rel="icon" type="image/png" href="/favicon.png"></link>
+      </Head>
+
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="light"
+        enableSystem={false}
+      >
+        <div className={cn("font-inter h-screen bg-background antialiased")}>
+          {!router.asPath.includes("/auth") ? (
+            <>
+              {ready && <Layout Component={Component} pageProps={pageProps} />}
+            </>
+          ) : (
+            <Component {...pageProps} key={router.route} />
+          )}
+        </div>
+        <Toaster />
+      </ThemeProvider>
+    </>
+  )
+}
+
+export type NextPageWithLayout<P = {}, IP = P> = NextPage<P, IP> & {
+  getLayout?: (page: ReactElement<any>) => ReactNode
+}
+
+export type AppPropsWithLayout = AppProps & {
+  Component: NextPageWithLayout
+}
+
+export default appWithI18Next(RootLayout, ni18nConfig)

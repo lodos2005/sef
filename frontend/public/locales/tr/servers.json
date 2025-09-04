@@ -1,0 +1,548 @@
+{
+    "error": "Hata",
+    "success": "Başarılı",
+    "information": "Bilgilendirme",
+    "warning": "Uyarı",
+    "not_supported": "Windows sunucuların detayları henüz desteklenmemektedir.",
+    "ssh": "SSH (Şifreli)",
+    "ssh_certificate": "SSH (Sertifikalı)",
+    "winrm": "WinRM",
+    "winrm_insecure": "WinRM (Güvensiz)",
+    "no_key": "Anahtarsız Giriş",
+    "yes": "Evet",
+    "no": "Hayır",
+    "index": {
+        "title": "Sunucular",
+        "description": "Liman Merkezi Yönetim Sistemine bağlı sunucularınızı bu sayfa üzerinden yönetebilirsiniz.",
+        "create": "Sunucu Ekle",
+        "table": {
+            "name": "Sunucu Adı",
+            "ip_address": "IP Adresi",
+            "port": "Kontrol Portu",
+            "extension_count": "Eklenti Sayısı"
+        }
+    },
+    "create_type": {
+        "title": "Kaynak Türü Seçimi",
+        "description": "Liman Merkezi Yönetim Sistemine eklemek istediğiniz kaynak türünü seçiniz.",
+        "back": "Geri Dön",
+        "server": {
+            "title": "Sunucu",
+            "description": "Geleneksel fiziksel veya sanal sunucularınızı ekleyin",
+            "button": "Sunucu Ekle",
+            "features": {
+                "ssh": "SSH ve WinRM desteği",
+                "winrm": "Windows ve Linux uyumluluğu",
+                "traditional": "Geleneksel sunucu yönetimi"
+            }
+        },
+        "kubernetes": {
+            "title": "Kubernetes",
+            "description": "Kubernetes servisinizi Liman'a yönetilebilir olarak ekleyin",
+            "button": "Kubernetes Servisi Ekle",
+            "features": {
+                "deployment": "Deployment yönetimi",
+                "scaling": "Pod izleme ve yönetim",
+                "monitoring": "Kubernetes kaynak görüntüleme"
+            }
+        }
+    },
+    "create_server": {
+        "title": "Sunucu Ekle",
+        "description": "Liman Merkezi Yönetim Sistemine halihazırda kurmuş olduğunuz Windows ve Linux sunucularınızı ekleyebilirsiniz."
+    },
+    "create": {
+        "title": "Sunucu Ekle",
+        "description": "Liman Merkezi Yönetim Sistemine halihazırda kurmuş olduğunuz Windows ve Linux sunucularınızı ekleyebilirsiniz.",
+        "servers": "Sunucular",
+        "back": "Geri",
+        "next": "İleri",
+        "create": "Ekle",
+        "steps": {
+            "connection_information": {
+                "name": "Bağlantı Bilgileri",
+                "description": "Sunucu bağlantısını kontrol edin.",
+                "validation": {
+                    "ip_address": "Sunucu adresi boş bırakılamaz.",
+                    "port": {
+                        "max": "Bağlantı portu 5 karakterden uzun olamaz.",
+                        "nonempty": "Bağlantı portu boş bırakılamaz."
+                    }
+                },
+                "ip_address": {
+                    "label": "Sunucunuzun Adresi",
+                    "information": "Bağlanmak istediğiniz sunucunun IP adresini ya da hostname'ini giriniz."
+                },
+                "port": {
+                    "label": "Bağlantı Portu"
+                }
+            },
+            "general_settings": {
+                "name": "Genel Ayarlar",
+                "description": "Sunucu adını ve işletim sistemini seçin.",
+                "validation": {
+                    "name": "Sunucu adı boş bırakılamaz.",
+                    "os_type": "Lütfen bir işletim sistemi seçiniz."
+                },
+                "sname": {
+                    "label": "Sunucu Adı",
+                    "information": "Görünmesini istediğiniz sunucu adını yazınız."
+                },
+                "os_type": {
+                    "label": "İşletim Sistemi"
+                }
+            },
+            "key_selection": {
+                "name": "Anahtar Seçimi",
+                "description": "Sunucunuza bağlantı kurulabilmesi için bir anahtar türü seçiniz.",
+                "validation": {
+                    "key_type": "Lütfen bir anahtar türü seçiniz."
+                },
+                "key_type": {
+                    "label": "Anahtar Türü"
+                }
+            },
+            "key_inputs": {
+                "name": "Anahtar",
+                "description": "Sunucunuza bağlantı kurmak için anahtar sağlayın.",
+                "validation": {
+                    "username": "Kullanıcı adı boş bırakılamaz.",
+                    "password": "Şifre boş bırakılamaz."
+                },
+                "username": {
+                    "label": "Kullanıcı Adı",
+                    "information": "{{key_type}} bağlantı türü için kullanıcı adı sağlayın."
+                },
+                "password": {
+                    "label": "Parola",
+                    "information": "{{key_type}} bağlantı türü için parola sağlayın."
+                },
+                "shared": {
+                    "label": "Paylaşımlı",
+                    "information": "{{key_type}} bağlantı türü için girdiğiniz anahtarın tüm kullanıcılar tarafından kullanılmasını istiyorsanız işaretleyiniz."
+                }
+            },
+            "summary": {
+                "name": "Özet",
+                "description": "Sunucu bilgilerinizi kontrol edin ve onaylayın.",
+                "shared_key": "Anahtar Paylaşımı"
+            }
+        },
+        "errors": {
+            "validation": "Lütfen devam etmeden önce girdinizi kontrol edin.",
+            "success": "Sunucu başarıyla oluşturuldu.",
+            "error": "Sunucu oluşturulurken hata oluştu."
+        }
+    },
+    "create_kubernetes": {
+        "title": "Kubernetes Servisi Ekle",
+        "description": "Kubernetes servisinizi Liman'a ekleyin ve yönetin.",
+        "back": "Geri",
+        "next": "İleri",
+        "create": "Ekle",
+        "steps": {
+            "connection_information": {
+                "name": "Bağlantı Bilgileri",
+                "description": "Kubernetes kümesi bağlantısını kontrol edin."
+            },
+            "namespace_deployment": {
+                "name": "Namespace ve Deployment",
+                "description": "Eklenecek servisin namespace ve deployment bilgilerini girin.",
+                "title": "Namespace ve Deployment Seçimi",
+                "service_name": {
+                    "label": "Servis Adı",
+                    "placeholder": "Liman'da görünecek servis adını girin",
+                    "information": "Servisin Liman'da görünecek özel ismi"
+                },
+                "namespace": {
+                    "label": "Namespace",
+                    "placeholder": "Namespace seçin",
+                    "information": "Kubernetes servisinizin bulunduğu namespace'i seçin."
+                },
+                "deployment": {
+                    "label": "Deployment",
+                    "placeholder": "Deployment seçin",
+                    "information": "Yönetmek istediğiniz servisin bulunduğu deployment'i seçin."
+                }
+            },
+            "summary": {
+                "name": "Özet",
+                "description": "Girdiğiniz bilgileri kontrol edin ve onaylayın."
+            }
+        },
+        "connection": {
+            "kubeconfig": {
+                "title": "Kubeconfig",
+                "label": "Kubeconfig",
+                "description": "Kubernetes kümenize erişmek için kubeconfig dosyası yükleyin.",
+                "placeholder": "Kubeconfig içeriğini buraya yapıştırın...",
+                "file_upload": "Dosya Yükle",
+                "manual_input": "Manuel Giriş",
+                "drag_drop_text": "Dosyayı buraya sürükleyin veya",
+                "click_to_select": "dosya seçmek için tıklayın",
+                "supported_formats": "Desteklenen formatlar: .yaml, .yml, .txt",
+                "switch_to_manual": "Manuel girişe geç"
+            }
+        },
+        "errors": {
+            "validation": "Lütfen devam etmeden önce girdinizi kontrol edin.",
+            "success": "Kubernetes servisi başarıyla eklendi.",
+            "error": "Kubernetes servisi eklenirken hata oluştu."
+        }
+    },
+    "system_status": {
+        "details": "Sunucu Detayları",
+        "name": "Sunucu Adı",
+        "hostname": "Hostname",
+        "os": "İşletim Sistemi",
+        "ip_address": "IP Adresi",
+        "uptime": "Açık Kalma Süresi",
+        "user": "Giriş Yapmış Kullanıcı",
+        "service_count": "Servis Sayısı",
+        "process_count": "İşlem Sayısı",
+        "specs": "Sunucu Özellikleri",
+        "cpu": "CPU",
+        "ram_size": "Bellek Boyutu",
+        "vendor": "Üretici",
+        "model": "Model",
+        "resource_usage": "Kaynak Kullanımı",
+        "cpu_usage": "CPU Kullanımı",
+        "ram_usage": "Bellek Kullanımı",
+        "io_usage": "IO Kullanımı",
+        "network_usage": "Ağ Kullanımı",
+        "disk_status": "Disk Durumu",
+        "most_5_cpu_usage_process": "En çok CPU kullanan 5 işlem",
+        "most_5_ram_usage_process": "En çok bellek kullanan 5 işlem",
+        "disk_status_desc": "Sisteme mount edilmiş disk kullanım durumları",
+        "user_title": "Kullanıcı",
+        "process": "İşlem",
+        "usage": "Kullanım",
+        "disk": "Disk",
+        "size": "Boyut",
+        "full": "Dolu"
+    },
+    "extensions": {
+        "title": "Eklentiler",
+        "description": "Sunucunuzda kullanılan eklentileri bu sayfa aracılığıyla yönetebilirsiniz.",
+        "add": "Ekle",
+        "remove": "Çıkar",
+        "upload": "Eklenti Yükle",
+        "name": "Eklenti Adı",
+        "version": "Versiyon",
+        "updated_at": "Güncellenme Tarihi",
+        "toasts": {
+            "assign": "Seçtiğiniz eklentiler sunucuya başarıyla atandı.",
+            "unassign": "Seçtiğiniz eklentiler sunucudan başarıyla kaldırıldı."
+        },
+        "unassign": {
+            "title": "Emin misiniz?",
+            "description": "Bu işlem geri alınamaz. Seçilen eklentiler sunucudan kaldırılacaktır, devam etmek istiyor musunuz?",
+            "no": "Vazgeç",
+            "yes": "Onayla"
+        },
+        "assign": {
+            "button": "Ekle",
+            "title": "Eklenti Ekle",
+            "description": "Bu pencereyi kullanarak sunucunuza eklenti ekleyebilirsiniz.",
+            "name": "Eklenti Adı",
+            "version": "Versiyon"
+        },
+        "settings": {
+            "toast": {
+                "title": "Başarılı",
+                "description": "Ayarlar başarıyla güncellendi."
+            },
+            "page_header": {
+                "title": "Eklenti Ayarları",
+                "description": "Bu sayfa aracılığı ile eklentinin girmenizi istediği zorunlu ve gelişmiş ayarları yönetebilirsiniz."
+            },
+            "alert_title": "Hata",
+            "card": {
+                "obligatory_settings_h3": "Zorunlu Ayarlar",
+                "obligatory_settings_p": "Eklentinin çalışması için girilmesi zorunlu olan ayarlar.",
+                "advanced_settings_h3": "Gelişmiş Ayarlar",
+                "advanced_settings_p": "Eklentinin çalışması için girilmesi zorunlu olmayan ancak eklentinin çalışma biçimini değiştiren ayarlar."
+            },
+            "no_need_settings": "Eklenti ayara ihtiyaç duymamaktadır.",
+            "save": "Kaydet"
+        }
+    },
+    "services": {
+        "name": {
+            "title": "Servis Adı"
+        },
+        "description": {
+            "title": "Açıklama"
+        },
+        "status": {
+            "title": "Durum",
+            "running": {
+                "title": "Çalışma Durumu",
+                "yes": "Çalışıyor",
+                "no": "Çalışmıyor"
+            },
+            "active": {
+                "title": "Aktiflik Durumu",
+                "yes": "Aktif",
+                "no": "Devre Dışı"
+            }
+        },
+        "toast": {
+            "title": "Başarılı",
+            "description": "İşlem istekleri karşı sunucuya başarıyla iletildi."
+        },
+        "page_header": {
+            "title": "Servisler",
+            "description": "Sunucunuzda üzerinde çalışan servisleri başlatma, durdurma gibi işlemleri yapabilirsiniz."
+        },
+        "start": "Başlat",
+        "stop": "Durdur",
+        "restart": "Yeniden Başlat",
+        "activate": "Etkinleştir",
+        "deactivate": "Devre Dışı Bırak",
+        "alert_dialog": {
+            "title": "Emin misiniz?",
+            "description": "Bu servis işlemi geri alınamaz, devam etmek istiyor musunuz?",
+            "cancel": "Vazgeç",
+            "confirm": "Onayla"
+        },
+        "dialog_description": "servisinin servis detayları aşağıdaki gibidir."
+    },
+    "access_logs": {
+        "extension_id": {
+            "title": "Eklenti Adı"
+        },
+        "view": {
+            "title": "Çalıştırılan Fonksiyon"
+        },
+        "user_id": {
+            "title": "İşlem Yapan Kullanıcı"
+        },
+        "ts": {
+            "title": "İşlem Tarihi"
+        },
+        "page_header": {
+            "title": "Erişim Kayıtları",
+            "description": "Liman üzerinden sunucunuza yapılan son 500 isteği bu sayfa üzerinden görüntüleyebilir, detaylı şekilde inceleyebilirsiniz."
+        },
+        "dialog": {
+            "title": "Erişim Kaydı Detayları",
+            "description": "Erişim kaydının detaylı içeriğini görüntüleyebilirsiniz."
+        }
+    },
+    "open_ports": {
+        "accessor_name_title": "Program Adı",
+        "accessor_username_title": "Kullanıcı Adı",
+        "accessor_ip_type_title": "IP Türü",
+        "accessor_packet_type_title": "Paket Türü",
+        "accessor_port_title": "Port",
+        "page_header": {
+            "title": "Açık Portlar",
+            "description": "Sunucunuzda aktif yayın yapan portları ve o portu yöneten aktif işlemi görüntüleyebilirsiniz."
+        }
+    },
+    "packages": {
+        "accessor_name_title": "Eklenti Adı",
+        "accessor_version_title": "Versiyon",
+        "accessor_type_title": "Mimari Uyumluluğu",
+        "upload": "Paket Yükle",
+        "go_back": "Paket listesine geri dön",
+        "accessor_path_title": "Paket Adı",
+        "accessor_status_title": "Durum",
+        "accessor_error_title": "Hatalar",
+        "accessor_last_changed_title": "Son Değişiklik",
+        "status_pending": "Beklemede",
+        "status_done": "Tamamlandı",
+        "status_failed": "Hata",
+        "status_processing": "İşlemde",
+        "no_error": "Hata oluşmadı",
+        "upload_description": ".deb ve .rpm uzantılı paketlerinizi bu kısımdan yükleyebilirsiniz.",
+        "upload_success": "Paket yükleme isteğiniz alındı. Sayfa üzerinden canlı durumu takip edebilirsiniz.",
+        "page_header": {
+            "title": "Paketler",
+            "description": "Sunucunuzda yüklü olan paketleri bu sayfa aracılığı ile yönetebilir, yeni paketler ekleyebilirsiniz."
+        }
+    },
+    "updates": {
+        "accessor_name_title": "Eklenti Adı",
+        "accessor_version_title": "Güncellenecek Versiyon",
+        "accessor_type_title": "Mimari Uyumluluğu",
+        "accessor_status_title": "Durum",
+        "update": {
+            "title": "Güncellemeler | Liman",
+            "h2": "Güncellemeler",
+            "p": "Sunucunuzdaki güncellemeleri bu sayfa aracılığı ile görüntüleyebilir ve güncelleme işlemlerini yapabilirsiniz."
+        }
+    },
+    "users": {
+        "groups": {
+            "accessor_group_title": "Grup Adı",
+            "page_header": {
+                "title": "Yerel Gruplar",
+                "description": "Sunucunuzda mevcut bulunan yerel grupları görüntüleyebilir, bu sayfa aracılığı ile yenisini ekleyebilir ve gruplara yeni üyeler dahil edebilirsiniz."
+            },
+            "form_message": {
+                "min": "Grup adı en az 2 karakter olmalıdır.",
+                "max": "Grup adı en fazla 50 karakter olmalıdır."
+            },
+            "toasts": {
+                "success": {
+                    "title": "Başarılı",
+                    "description": "Yerel grup başarıyla oluşturuldu."
+                },
+                "fail": {
+                    "title": "Hata",
+                    "description": "Yerel grup oluşturulurken bir hata oluştu."
+                }
+            },
+            "dialog": {
+                "add_btn": "Ekle",
+                "title": "Yerel Grup Oluştur",
+                "description": " Bu işlem sonucu sisteminizde yerel bir grup oluşturulacaktır.",
+                "form_label": "Grup Adı",
+                "create_btn": "Oluştur"
+            }
+        },
+        "local": {
+            "accessor_user_title": "Kullanıcı Adı",
+            "page_header": {
+                "title": "Yerel Kullanıcılar",
+                "description": "Sunucunuzda mevcut bulunan yerel kullanıcıları görüntüleyebilir, bu sayfa aracılığı ile yenisini ekleyebilirsiniz."
+            },
+            "form_message": {
+                "username": {
+                    "min": "Kullanıcı adı en az 2 karakter olmalıdır.",
+                    "max": "Kullanıcı adı en fazla 50 karakter olmalıdır."
+                },
+                "password": {
+                    "min": "Şifre en az 8 karakter olmalıdır.",
+                    "max": "Şifre en fazla 50 karakter olmalıdır."
+                },
+                "error_message": "Şifreler eşleşmiyor."
+            },
+            "toasts": {
+                "success": {
+                    "title": "Başarılı",
+                    "description": "Yerel kullanıcı başarıyla oluşturuldu."
+                },
+                "fail": {
+                    "title": "Hata",
+                    "description": "Yerel kullanıcı oluşturulurken bir hata oluştu."
+                }
+            },
+            "dialog": {
+                "add_btn": "Ekle",
+                "title": "Yerel Kullanıcı Oluştur",
+                "description": "Bu işlem sonucu sisteminizde yerel bir kullanıcı oluşturulacaktır.",
+                "form_labels": {
+                    "username": "Kullanıcı Adı",
+                    "password": "Şifre",
+                    "confirm_password": "Şifreyi Onayla"
+                },
+                "create_btn": "Oluştur"
+            }
+        },
+        "sudoers": {
+            "accessor_name_title": "Kural Adı",
+            "accessor_access_title": "Erişim Yetkileri",
+            "toasts": {
+                "delete": {
+                    "success": {
+                        "title": "Başarılı",
+                        "description": "Yetkili kullanıcı başarıyla silindi."
+                    },
+                    "fail": {
+                        "title": "Hata",
+                        "description": "Yetkili kullanıcı silinirken bir hata oluştu."
+                    }
+                },
+                "add": {
+                    "success": {
+                        "title": "Başarılı",
+                        "description": "Yetkili kullanıcı başarıyla eklendi."
+                    },
+                    "fail": {
+                        "title": "Hata",
+                        "description": "Yetkili kullanıcı eklenirken bir hata oluştu."
+                    }
+                },
+                "success": {
+                    "title": "Başarılı",
+                    "description": "Yetkili kullanıcı başarıyla silindi."
+                },
+                "fail": {
+                    "title": "Hata",
+                    "description": "Yetkili kullanıcı silinirken bir hata oluştu."
+                }
+            },
+            "page_header": {
+                "title": "Yetkili Kullanıcılar",
+                "description": "Sunucunuzda mevcut bulunan yetkili kullanıcı izinlerini görüntüleyebilir ve ekleme, çıkartma işlemleri yapabilirsiniz."
+            },
+            "alert_dialog": {
+                "delete_btn": "Sil",
+                "title": "Emin misiniz?",
+                "description": " Bu işlem geri alınamaz. Seçilen yetkili kullanıcılar sunucudan kaldırılacaktır, devam etmek istiyor musunuz?",
+                "cancel": "Vazgeç",
+                "confirm": "Onayla"
+            },
+            "form_message": {
+                "min": "Kullanıcı adı en az 2 karakter olmalıdır.",
+                "max": "Kullanıcı adı en fazla 50 karakter olmalıdır."
+            },
+            "dialog": {
+                "add_btn": "Ekle",
+                "title": "Yetkili Kullanıcı Oluştur",
+                "description": "Bu işlem sonucu sisteminizde yetkili bir kullanıcı oluşturulacaktır.",
+                "form": {
+                    "username": "Kullanıcı Adı",
+                    "create_btn": "Oluştur"
+                }
+            }
+        }
+    },
+    "kubernetes": {
+        "deployment_specs": "Deployment Özellikleri",
+        "deployment_details": "Deployment Detayları",
+        "replicas": "Replikalar",
+        "ready_replicas": "Hazır Replikalar",
+        "containers": "Konteynerler",
+        "container_count": "Konteyner Sayısı",
+        "pods": "Podlar",
+        "pods_count": "Pod",
+        "running_pods": "Çalışan Podlar",
+        "status": "Durum",
+        "deployment_status": "Deployment Durumu",
+        "healthy": "Sağlıklı",
+        "degraded": "Sorunlu",
+        "basic_info": "Temel Bilgiler",
+        "name": "İsim",
+        "namespace": "Namespace",
+        "uid": "UID",
+        "created": "Oluşturulma",
+        "strategy": "Strateji",
+        "strategy_type": "Strateji Türü",
+        "desired_replicas": "İstenilen Replikalar",
+        "observed_generation": "Gözlemlenen Nesil",
+        "unavailable_replicas": "Kullanılamayan Replikalar",
+        "labels": "Etiketler",
+        "no_labels": "Etiket bulunamadı",
+        "annotations": "Açıklamalar",
+        "no_annotations": "Açıklama bulunamadı",
+        "no_pods": "Pod bulunamadı",
+        "ready": "Hazır",
+        "not_ready": "Hazır Değil",
+        "container_configuration": "Konteyner Yapılandırması",
+        "ports": "Portlar",
+        "environment_variables": "Ortam Değişkenleri",
+        "command_args": "Komut ve Argümanlar",
+        "no_containers": "Konteyner bulunamadı",
+        "replica_sets": "Replica Setler",
+        "replica_sets_count": "Replica Set",
+        "scaling": "Ölçekleniyor",
+        "owner_references": "Sahip Referansları",
+        "controller": "Kontrolör",
+        "no_replica_sets": "Replica Set bulunamadı",
+        "additional_information": "Ek Bilgiler"
+    }
+}

@@ -1,0 +1,548 @@
+{
+    "error": "Fehler",
+    "success": "Erfolg",
+    "information": "Information",
+    "warning": "Warnung",
+    "not_supported": "Windows-Serverdetails werden noch nicht unterstützt.",
+    "ssh": "SSH (verschlüsselt)",
+    "ssh_certificate": "SSH (Zertifikat)",
+    "winrm": "WinRM",
+    "winrm_insecure": "WinRM (unsicher)",
+    "no_key": "Kein Schlüssel",
+    "yes": "Ja",
+    "no": "Nein",
+    "index": {
+        "title": "Diener",
+        "description": "Auf dieser Seite können Sie Ihre Server, die mit dem Liman Center Management System verbunden sind, verwalten.",
+        "create": "Server hinzufügen",
+        "table": {
+            "name": "Servername",
+            "ip_address": "IP-Adresse",
+            "port": "Steuer-Port",
+            "extension_count": "Anzahl der Erweiterungen"
+        }
+    },
+    "create_type": {
+        "title": "Ressourcentyp-Auswahl",
+        "description": "Wählen Sie den Ressourcentyp aus, den Sie zum Liman Center Management System hinzufügen möchten.",
+        "back": "Zurück gehen",
+        "server": {
+            "title": "Server",
+            "description": "Fügen Sie Ihre traditionellen physischen oder virtuellen Server hinzu",
+            "button": "Server hinzufügen",
+            "features": {
+                "ssh": "SSH- und WinRM-Unterstützung",
+                "winrm": "Windows- und Linux-Kompatibilität",
+                "traditional": "Traditionelle Serververwaltung"
+            }
+        },
+        "kubernetes": {
+            "title": "Kubernetes",
+            "description": "Fügen Sie Ihre Kubernetes-Bereitstellung als verwaltbaren Service zu Liman hinzu",
+            "button": "Kubernetes hinzufügen",
+            "features": {
+                "deployment": "Bereitstellungsverwaltung",
+                "scaling": "Pod-Überwachung und -Verwaltung",
+                "monitoring": "Kubernetes-Ressourcen-Anzeige"
+            }
+        }
+    },
+    "create_server": {
+        "title": "Server hinzufügen",
+        "description": "Sie können Ihre Windows- und Linux-Server, die Sie bereits installiert haben, zum Liman Center Management System hinzufügen."
+    },
+    "create": {
+        "title": "Server hinzufügen",
+        "description": "Sie können Ihre Windows- und Linux-Server, die Sie bereits installiert haben, zum Liman Center Management System hinzufügen.",
+        "servers": "Diener",
+        "back": "Vorhergehend",
+        "next": "Nächster",
+        "create": "Hinzufügen",
+        "steps": {
+            "connection_information": {
+                "name": "Verbindungsinformationen",
+                "description": "Überprüfen Sie die Serververbindung.",
+                "validation": {
+                    "ip_address": "Die Serveradresse darf nicht leer gelassen werden.",
+                    "port": {
+                        "max": "Der Verbindungsport darf nicht länger als 5 Zeichen sein.",
+                        "nonempty": "Der Verbindungsport darf nicht leer gelassen werden."
+                    }
+                },
+                "ip_address": {
+                    "label": "Die Adresse Ihres Servers",
+                    "information": "Geben Sie die IP-Adresse oder den Hostnamen des Servers ein, mit dem Sie eine Verbindung herstellen möchten."
+                },
+                "port": {
+                    "label": "Anschluss der Verbindung"
+                }
+            },
+            "general_settings": {
+                "name": "Allgemeine Einstellungen",
+                "description": "Wählen Sie den Servernamen und das Betriebssystem aus.",
+                "validation": {
+                    "name": "Der Servername darf nicht leer gelassen werden.",
+                    "os_type": "Bitte wählen Sie ein Betriebssystem aus."
+                },
+                "sname": {
+                    "label": "Servername",
+                    "information": "Geben Sie den Servernamen ein, der angezeigt werden soll."
+                },
+                "os_type": {
+                    "label": "Betriebssystem"
+                }
+            },
+            "key_selection": {
+                "name": "Auswahl des Schlüssels",
+                "description": "Wählen Sie einen Schlüsseltyp aus, um eine Verbindung zu Ihrem Server herzustellen.",
+                "validation": {
+                    "key_type": "Bitte wählen Sie einen Schlüsseltyp aus."
+                },
+                "key_type": {
+                    "label": "Typ des Schlüssels"
+                }
+            },
+            "key_inputs": {
+                "name": "Schlüssel",
+                "description": "Geben Sie einen Schlüssel an, um eine Verbindung zu Ihrem Server herzustellen.",
+                "validation": {
+                    "username": "Der Benutzername darf nicht leer gelassen werden.",
+                    "password": "Das Kennwort darf nicht leer gelassen werden."
+                },
+                "username": {
+                    "label": "Nutzername",
+                    "information": "Geben Sie einen Benutzernamen für {{key_type}} Verbindungstyp an."
+                },
+                "password": {
+                    "label": "Passwort",
+                    "information": "Geben Sie ein Kennwort für {{key_type}} Verbindungstyp an."
+                },
+                "shared": {
+                    "label": "Geteilt",
+                    "information": "Wenn Sie möchten, dass der Schlüssel, den Sie für {{key_type}} Verbindungstyp eingegeben haben, von allen Benutzern verwendet wird, aktivieren Sie dieses Kontrollkästchen."
+                }
+            },
+            "summary": {
+                "name": "Zusammenfassung",
+                "description": "Überprüfen und bestätigen Sie Ihre Serverinformationen.",
+                "shared_key": "Gemeinsame Nutzung von Schlüsseln"
+            }
+        },
+        "errors": {
+            "validation": "Bitte überprüfen Sie Ihre Eingaben, bevor Sie fortfahren.",
+            "success": "Der Server wurde erfolgreich erstellt.",
+            "error": "Beim Erstellen des Servers ist ein Fehler aufgetreten."
+        }
+    },
+    "create_kubernetes": {
+        "title": "Kubernetes hinzufügen",
+        "description": "Fügen Sie Ihren Kubernetes-Cluster zu Liman hinzu und verwalten Sie ihn.",
+        "back": "Zurück",
+        "next": "Weiter",
+        "create": "Hinzufügen",
+        "steps": {
+            "connection_information": {
+                "name": "Verbindungsinformationen",
+                "description": "Überprüfen Sie die Kubernetes-Cluster-Verbindung."
+            },
+            "namespace_deployment": {
+                "name": "Namespace & Deployment",
+                "description": "Namespace und Deployment auswählen.",
+                "title": "Namespace- und Deployment-Auswahl",
+                "service_name": {
+                    "label": "Service-Name",
+                    "placeholder": "Geben Sie den Service-Namen ein, der in Liman angezeigt wird",
+                    "information": "Benutzerdefinierter Name für den Service, der in Liman angezeigt wird"
+                },
+                "namespace": {
+                    "label": "Namespace",
+                    "placeholder": "Namespace auswählen",
+                    "information": "Wählen Sie den Namespace aus, in dem sich Ihr Kubernetes-Deployment befindet."
+                },
+                "deployment": {
+                    "label": "Deployment",
+                    "placeholder": "Deployment auswählen",
+                    "information": "Wählen Sie das Deployment aus, das Sie verwalten möchten."
+                }
+            },
+            "summary": {
+                "name": "Zusammenfassung",
+                "description": "Überprüfen und bestätigen Sie Ihre Kubernetes-Informationen."
+            }
+        },
+        "connection": {
+            "kubeconfig": {
+                "title": "Kubeconfig",
+                "label": "Kubeconfig",
+                "description": "Laden Sie die Kubeconfig-Datei hoch, um auf Ihren Kubernetes-Cluster zuzugreifen.",
+                "placeholder": "Kubeconfig-Inhalt hier einfügen...",
+                "file_upload": "Datei hochladen",
+                "manual_input": "Manuelle Eingabe",
+                "drag_drop_text": "Datei hier ablegen oder",
+                "click_to_select": "Klicken Sie, um eine Datei auszuwählen",
+                "supported_formats": "Unterstützte Formate: .yaml, .yml, .txt",
+                "switch_to_manual": "Zur manuellen Eingabe wechseln"
+            }
+        },
+        "errors": {
+            "validation": "Bitte überprüfen Sie Ihre Eingaben, bevor Sie fortfahren.",
+            "success": "Kubernetes-Service wurde erfolgreich erstellt.",
+            "error": "Beim Erstellen des Kubernetes-Services ist ein Fehler aufgetreten."
+        }
+    },
+    "system_status": {
+        "details": "Server Details",
+        "name": "Servername",
+        "hostname": "Hostname",
+        "os": "Betriebssystem",
+        "ip_address": "IP-Adresse",
+        "uptime": "Betriebszeit",
+        "user": "Angemeldeter Benutzer",
+        "service_count": "Anzahl der Dienste",
+        "process_count": "Anzahl der Prozesse",
+        "specs": "Server-Spezifikationen",
+        "cpu": "CPU",
+        "ram_size": "RAM-Größe",
+        "vendor": "Verkäufer",
+        "model": "Modell",
+        "resource_usage": "Ressourcenverbrauch",
+        "cpu_usage": "CPU-Auslastung",
+        "ram_usage": "RAM-Verbrauch",
+        "io_usage": "E/A-Nutzung",
+        "network_usage": "Netzwerknutzung",
+        "disk_status": "Status des Datenträgers",
+        "most_5_cpu_usage_process": "Top 5 CPU-Auslastungsprozesse",
+        "most_5_ram_usage_process": "Die 5 wichtigsten RAM-Nutzungsprozesse",
+        "disk_status_desc": "Status der Datenträgernutzung von bereitgestellten Datenträgern",
+        "user_title": "Benutzer",
+        "process": "Prozess",
+        "usage": "Verwendung",
+        "disk": "Scheibe",
+        "size": "Größe",
+        "full": "Voll"
+    },
+    "extensions": {
+        "title": "Erweiterungen",
+        "description": "Auf dieser Seite können Sie die auf Ihrem Server verwendeten Erweiterungen verwalten.",
+        "add": "Hinzufügen",
+        "remove": "Entfernen",
+        "upload": "Erweiterung hochladen",
+        "name": "Name der Erweiterung",
+        "version": "Version",
+        "updated_at": "Aktualisiert am",
+        "toasts": {
+            "assign": "Die ausgewählten Nebenstellen wurden dem Server erfolgreich zugewiesen.",
+            "unassign": "Die Zuweisung der ausgewählten Erweiterungen zum Server wurde erfolgreich aufgehoben."
+        },
+        "unassign": {
+            "title": "Bist du sicher?",
+            "description": "Diese Aktion kann nicht rückgängig gemacht werden. Die ausgewählten Erweiterungen werden vom Server entfernt. Möchten Sie fortfahren?",
+            "no": "Abbrechen",
+            "yes": "Bestätigen"
+        },
+        "assign": {
+            "button": "Hinzufügen",
+            "title": "Erweiterung hinzufügen",
+            "description": "In diesem Fenster können Sie Ihrem Server eine Erweiterung hinzufügen.",
+            "name": "Name der Erweiterung",
+            "version": "Version"
+        },
+        "settings": {
+            "toast": {
+                "title": "Erfolgreich",
+                "description": "Die Einstellungen wurden erfolgreich aktualisiert."
+            },
+            "page_header": {
+                "title": "Erweiterungs-Einstellungen",
+                "description": "Auf dieser Seite können Sie die obligatorischen und erweiterten Einstellungen, die für die Erweiterung erforderlich sind, verwalten."
+            },
+            "alert_title": "Fehler",
+            "card": {
+                "obligatory_settings_h3": "Obligatorische Einstellungen",
+                "obligatory_settings_p": "Einstellungen, die eingegeben werden müssen, damit die Erweiterung funktioniert.",
+                "advanced_settings_h3": "Erweiterte Einstellungen",
+                "advanced_settings_p": "Einstellungen, die nicht obligatorisch sind, aber die Funktionsweise der Erweiterung ändern."
+            },
+            "no_need_settings": "Die Erweiterung erfordert keine Einstellungen.",
+            "save": "Retten"
+        }
+    },
+    "services": {
+        "name": {
+            "title": "Name des Dienstes"
+        },
+        "description": {
+            "title": "Beschreibung"
+        },
+        "status": {
+            "title": "Status",
+            "running": {
+                "title": "Läuft?",
+                "yes": "Ausgeführte",
+                "no": "Läuft nicht"
+            },
+            "active": {
+                "title": "Ist aktiv?",
+                "yes": "Aktiv",
+                "no": "Inaktiv"
+            }
+        },
+        "toast": {
+            "title": "Erfolgreich",
+            "description": "Vorgangsanforderungen wurden erfolgreich an den Server übermittelt."
+        },
+        "page_header": {
+            "title": "Dienste",
+            "description": "Auf dieser Seite können Sie Vorgänge wie das Starten und Beenden von Diensten, die auf Ihrem Server ausgeführt werden, ausführen."
+        },
+        "start": "Anfangen",
+        "stop": "Aufhören",
+        "restart": "Neustarten",
+        "activate": "Aktivieren",
+        "deactivate": "Deaktivieren",
+        "alert_dialog": {
+            "title": "Bist du sicher?",
+            "description": "Dieser Dienstvorgang kann nicht rückgängig gemacht werden. Möchten Sie fortfahren?",
+            "cancel": "Abbrechen",
+            "confirm": "Bestätigen"
+        },
+        "dialog_description": "Die Servicedetails für den Service lauten wie folgt."
+    },
+    "access_logs": {
+        "extension_id": {
+            "title": "Name der Erweiterung"
+        },
+        "view": {
+            "title": "Ausgeführte Funktion"
+        },
+        "user_id": {
+            "title": "Benutzer, der den Vorgang ausführt"
+        },
+        "ts": {
+            "title": "Datum des Vorgangs"
+        },
+        "page_header": {
+            "title": "Zugriffsprotokolle",
+            "description": "Auf dieser Seite können Sie die letzten 500 Anforderungen an Ihren Server anzeigen und untersuchen."
+        },
+        "dialog": {
+            "title": "Details zum Zugriffsprotokoll",
+            "description": "Sie können den detaillierten Inhalt des Zugriffsprotokolls anzeigen."
+        }
+    },
+    "open_ports": {
+        "accessor_name_title": "Name des Programms",
+        "accessor_username_title": "Nutzername",
+        "accessor_ip_type_title": "IP-Typ",
+        "accessor_packet_type_title": "Paket-Typ",
+        "accessor_port_title": "Hafen",
+        "page_header": {
+            "title": "Offene Ports",
+            "description": "Auf dieser Seite können Sie die aktiven Ports, die auf Ihrem Server übertragen werden, und den aktiven Prozess, der diesen Port verwaltet, anzeigen."
+        }
+    },
+    "packages": {
+        "accessor_name_title": "Name der Erweiterung",
+        "accessor_version_title": "Version",
+        "accessor_type_title": "Architektur-Kompatibilität",
+        "upload": "Paket hochladen",
+        "go_back": "Zurück zur Paketliste",
+        "accessor_path_title": "Paketname",
+        "accessor_status_title": "Status",
+        "accessor_error_title": "Fehler",
+        "accessor_last_changed_title": "Zuletzt geändert",
+        "status_pending": "Ausstehend",
+        "status_done": "Abgeschlossen",
+        "status_failed": "Fehlgeschlagen",
+        "status_processing": "In Bearbeitung",
+        "no_error": "Keine Fehler",
+        "upload_description": "Sie können Ihre Pakete mit den Erweiterungen .deb und .rpm von diesem Abschnitt aus hochladen.",
+        "upload_success": "Ihre Paket-Upload-Anforderung wurde erhalten. Sie können den Live-Status über die Seite verfolgen.",
+        "page_header": {
+            "title": "Pakete",
+            "description": "Auf dieser Seite können Sie neue Pakete, die auf Ihrem Server installiert sind, verwalten und hinzufügen."
+        }
+    },
+    "updates": {
+        "accessor_name_title": "Name der Erweiterung",
+        "accessor_version_title": "Zu aktualisierende Version",
+        "accessor_type_title": "Architektur-Kompatibilität",
+        "accessor_status_title": "Status",
+        "update": {
+            "title": "Aktualisierungen | Liman",
+            "h2": "Aktualisierungen",
+            "p": "Auf dieser Seite können Sie Aktualisierungsvorgänge für Updates auf Ihrem Server anzeigen und ausführen."
+        }
+    },
+    "users": {
+        "groups": {
+            "accessor_group_title": "Name der Gruppe",
+            "page_header": {
+                "title": "Lokale Gruppen",
+                "description": "Auf dieser Seite können Sie die auf Ihrem Server verfügbaren lokalen Gruppen anzeigen, neue Gruppen hinzufügen und Mitglieder zu Gruppen hinzufügen."
+            },
+            "form_message": {
+                "min": "Der Gruppenname muss mindestens 2 Zeichen lang sein.",
+                "max": "Der Gruppenname darf maximal 50 Zeichen lang sein."
+            },
+            "toasts": {
+                "success": {
+                    "title": "Erfolg",
+                    "description": "Die lokale Gruppe wurde erfolgreich erstellt."
+                },
+                "fail": {
+                    "title": "Fehler",
+                    "description": "Beim Erstellen der lokalen Gruppe ist ein Fehler aufgetreten."
+                }
+            },
+            "dialog": {
+                "add_btn": "Hinzufügen",
+                "title": "Lokale Gruppe erstellen",
+                "description": "Durch diesen Vorgang wird eine lokale Gruppe auf Ihrem System erstellt.",
+                "form_label": "Name der Gruppe",
+                "create_btn": "Schaffen"
+            }
+        },
+        "local": {
+            "accessor_user_title": "Nutzername",
+            "page_header": {
+                "title": "Lokale Benutzer",
+                "description": "Auf dieser Seite können Sie die lokalen Benutzer anzeigen, die auf Ihrem Server verfügbar sind, und neue Benutzer hinzufügen."
+            },
+            "form_message": {
+                "username": {
+                    "min": "Der Benutzername muss mindestens 2 Zeichen lang sein.",
+                    "max": "Der Benutzername darf maximal 50 Zeichen lang sein."
+                },
+                "password": {
+                    "min": "Das Passwort muss mindestens 8 Zeichen lang sein.",
+                    "max": "Das Passwort darf maximal 50 Zeichen lang sein."
+                },
+                "error_message": "Passwörter stimmen nicht überein."
+            },
+            "toasts": {
+                "success": {
+                    "title": "Erfolg",
+                    "description": "Der lokale Benutzer wurde erfolgreich erstellt."
+                },
+                "fail": {
+                    "title": "Fehler",
+                    "description": "Beim Erstellen des lokalen Benutzers ist ein Fehler aufgetreten."
+                }
+            },
+            "dialog": {
+                "add_btn": "Hinzufügen",
+                "title": "Lokalen Benutzer erstellen",
+                "description": "Durch diesen Vorgang wird ein lokaler Benutzer auf Ihrem System erstellt.",
+                "form_labels": {
+                    "username": "Nutzername",
+                    "password": "Passwort",
+                    "confirm_password": "Passwort bestätigen"
+                },
+                "create_btn": "Schaffen"
+            }
+        },
+        "sudoers": {
+            "accessor_name_title": "Name der Regel",
+            "accessor_access_title": "Zugriffsberechtigungen",
+            "toasts": {
+                "delete": {
+                    "success": {
+                        "title": "Erfolg",
+                        "description": "Der autorisierte Benutzer wurde erfolgreich gelöscht."
+                    },
+                    "fail": {
+                        "title": "Fehler",
+                        "description": "Beim Löschen des autorisierten Benutzers ist ein Fehler aufgetreten."
+                    }
+                },
+                "add": {
+                    "success": {
+                        "title": "Erfolg",
+                        "description": "Der autorisierte Benutzer wurde erfolgreich hinzugefügt."
+                    },
+                    "fail": {
+                        "title": "Fehler",
+                        "description": "Beim Hinzufügen des autorisierten Benutzers ist ein Fehler aufgetreten."
+                    }
+                },
+                "success": {
+                    "title": "Erfolg",
+                    "description": "Der autorisierte Benutzer wurde erfolgreich gelöscht."
+                },
+                "fail": {
+                    "title": "Fehler",
+                    "description": "Beim Löschen des autorisierten Benutzers ist ein Fehler aufgetreten."
+                }
+            },
+            "page_header": {
+                "title": "Autorisierte Benutzer",
+                "description": "Sie können die auf Ihrem Server verfügbaren Berechtigungen für autorisierte Benutzer anzeigen und Vorgänge zum Hinzufügen und Entfernen ausführen."
+            },
+            "alert_dialog": {
+                "delete_btn": "Löschen",
+                "title": "Bist du sicher?",
+                "description": "Dieser Vorgang kann nicht rückgängig gemacht werden. Die ausgewählten autorisierten Benutzer werden vom Server entfernt. Möchten Sie fortfahren?",
+                "cancel": "Abbrechen",
+                "confirm": "Bestätigen"
+            },
+            "form_message": {
+                "min": "Der Benutzername muss mindestens 2 Zeichen lang sein.",
+                "max": "Der Benutzername darf maximal 50 Zeichen lang sein."
+            },
+            "dialog": {
+                "add_btn": "Hinzufügen",
+                "title": "Autorisierten Benutzer erstellen",
+                "description": "Durch diesen Vorgang wird ein autorisierter Benutzer auf Ihrem System erstellt.",
+                "form": {
+                    "username": "Nutzername",
+                    "create_btn": "Schaffen"
+                }
+            }
+        }
+    },
+    "kubernetes": {
+        "deployment_specs": "Deployment-Spezifikationen",
+        "deployment_details": "Deployment-Details",
+        "replicas": "Replikas",
+        "ready_replicas": "Bereite Replikas",
+        "containers": "Container",
+        "container_count": "Container-Anzahl",
+        "pods": "Pods",
+        "pods_count": "Pods",
+        "running_pods": "Laufende Pods",
+        "status": "Status",
+        "deployment_status": "Deployment-Status",
+        "healthy": "Gesund",
+        "degraded": "Beeinträchtigt",
+        "basic_info": "Grundinformationen",
+        "name": "Name",
+        "namespace": "Namespace",
+        "uid": "UID",
+        "created": "Erstellt",
+        "strategy": "Strategie",
+        "strategy_type": "Strategie-Typ",
+        "desired_replicas": "Gewünschte Replikas",
+        "observed_generation": "Beobachtete Generation",
+        "unavailable_replicas": "Nicht verfügbare Replikas",
+        "labels": "Labels",
+        "no_labels": "Keine Labels gefunden",
+        "annotations": "Anmerkungen",
+        "no_annotations": "Keine Anmerkungen gefunden",
+        "no_pods": "Keine Pods gefunden",
+        "ready": "Bereit",
+        "not_ready": "Nicht bereit",
+        "container_configuration": "Container-Konfiguration",
+        "ports": "Ports",
+        "environment_variables": "Umgebungsvariablen",
+        "command_args": "Befehl & Argumente",
+        "no_containers": "Keine Container gefunden",
+        "replica_sets": "Replica Sets",
+        "replica_sets_count": "Replica Sets",
+        "scaling": "Skalierung",
+        "owner_references": "Besitzer-Referenzen",
+        "controller": "Controller",
+        "no_replica_sets": "Keine Replica Sets gefunden",
+        "additional_information": "Zusätzliche Informationen"
+    }
+}

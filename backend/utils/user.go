@@ -8,7 +8,7 @@ import (
 )
 
 func CreateHash(password string) (string, error) {
-	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 6)
 	return string(bytes), err
 }
 

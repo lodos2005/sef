@@ -2,76 +2,22 @@ package users
 
 import (
 	"sef/app/entities"
-	"sef/internal/database"
 	"sef/internal/paginator"
 	"sef/internal/search"
-	"sef/internal/validation"
 	"sef/utils"
-	"time"
 
 	"github.com/gofiber/fiber/v3"
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
-type LoginRequest struct {
-	Username string `json:"username" validate:"required"`
-	Password string `json:"password" validate:"required"`
+type Controller struct {
+	DB *gorm.DB
 }
 
-func Login(c fiber.Ctx) error {
-	var payload *LoginRequest
-	if err := c.Bind().JSON(&payload); err != nil {
-		return err
-	}
-
-	if err := validation.Validate(payload); err != nil {
-		return err
-	}
-
-	user, err := utils.GetByUsername(payload.Username)
-	if err != nil {
-		return utils.NewAuthError()
-	}
-
-	if !utils.CheckPasswordHash(payload.Password, user.Password) {
-		return utils.NewAuthError()
-	}
-
-	t, err := utils.CreateToken(user.Username, user.ID)
-	if err != nil {
-		return err
-	}
-
-	// Add Http-Only cookie to response
-	c.Cookie(&fiber.Cookie{
-		Name:     "token",
-		Value:    t,
-		HTTPOnly: true,
-		Expires:  time.Now().Add(4 * time.Hour), // 4 hours
-	})
-
-	return c.JSON(fiber.Map{"token": t})
-}
-
-func Logout(c fiber.Ctx) error {
-	// Clear the HTTP-only cookie by setting an expired cookie
-	c.Cookie(&fiber.Cookie{
-		Name:     "token",
-		Value:    "",
-		HTTPOnly: true,
-		Expires:  time.Now().Add(-time.Hour), // Expired
-	})
-
-	return c.JSON(fiber.Map{"message": "Logged out successfully"})
-}
-
-func CurrentUser(c fiber.Ctx) error {
-	return c.JSON(c.Locals("user").(*entities.User))
-}
-
-func Index(c fiber.Ctx) error {
+func (h *Controller) Index(c fiber.Ctx) error {
 	var items []*entities.User
-	db := database.Connection().Model(&entities.User{}).Omit("password")
+	db := h.DB.Model(&entities.User{})
 
 	if c.Query("search") != "" {
 		search.Search(c.Query("search"), db)
@@ -85,16 +31,16 @@ func Index(c fiber.Ctx) error {
 	return c.JSON(page)
 }
 
-func Show(c fiber.Ctx) error {
+func (h *Controller) Show(c fiber.Ctx) error {
 	var item *entities.User
-	if err := database.Connection().Omit("password").Preload("AccessibleCategories").First(&item, c.Params("id")).Error; err != nil {
+	if err := h.DB.First(&item, c.Params("id")).Error; err != nil {
 		return err
 	}
 
 	return c.JSON(item)
 }
 
-func Create(c fiber.Ctx) error {
+func (h *Controller) Create(c fiber.Ctx) error {
 	var payload *entities.User
 	if err := c.Bind().JSON(&payload); err != nil {
 		return err
@@ -107,14 +53,16 @@ func Create(c fiber.Ctx) error {
 	}
 
 	payload.Password = hashed
-	if err := database.Connection().Clauses(clause.Returning{}).Create(&payload).Error; err != nil {
+	if err := h.DB.
+		Clauses(clause.Returning{}).
+		Create(&payload).Error; err != nil {
 		return err
 	}
 
 	return c.JSON(payload)
 }
 
-func Update(c fiber.Ctx) error {
+func (h *Controller) Update(c fiber.Ctx) error {
 	var payload *entities.User
 	if err := c.Bind().JSON(&payload); err != nil {
 		return err
@@ -130,19 +78,23 @@ func Update(c fiber.Ctx) error {
 	}
 
 	var user *entities.User
-	if err := database.Connection().First(&user, c.Params("id")).Error; err != nil {
+	if err := h.DB.First(&user, c.Params("id")).Error; err != nil {
 		return err
 	}
 
-	if err := database.Connection().Model(&entities.User{}).Where("id = ?", c.Params("id")).Updates(&payload).Error; err != nil {
+	if err := h.DB.
+		Clauses(clause.Returning{}).
+		Model(&entities.User{}).
+		Where("id = ?", c.Params("id")).
+		Updates(&payload).Error; err != nil {
 		return err
 	}
 
 	return c.JSON(payload)
 }
 
-func Delete(c fiber.Ctx) error {
-	if err := database.Connection().Delete(&entities.User{}, c.Params("id")).Error; err != nil {
+func (h *Controller) Delete(c fiber.Ctx) error {
+	if err := h.DB.Delete(&entities.User{}, c.Params("id")).Error; err != nil {
 		return err
 	}
 

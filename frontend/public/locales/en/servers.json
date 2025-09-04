@@ -1,0 +1,540 @@
+{
+    "error": "Error",
+    "success": "Success",
+    "information": "Information",
+    "warning": "Warning",
+    "not_supported": "Windows server details is not supported yet.",
+    "ssh": "SSH (Encrypted)",
+    "ssh_certificate": "SSH (Certificate)",
+    "winrm": "WinRM",
+    "winrm_insecure": "WinRM (Insecure)",
+    "no_key": "No Key",
+    "yes": "Yes",
+    "no": "No",
+    "index": {
+        "title": "Servers",
+        "description": "You can manage your servers connected to Liman Center Management System through this page.",
+        "create": "Add Server",
+        "table": {
+            "name": "Server Name",
+            "ip_address": "IP Address",
+            "port": "Control Port",
+            "extension_count": "Extension Count"
+        }
+    },
+    "create_type": {
+        "title": "Resource Type Selection",
+        "description": "Select the type of resource you want to add to Liman Center Management System.",
+        "back": "Go Back",
+        "server": {
+            "title": "Server",
+            "description": "Add your traditional physical or virtual servers",
+            "button": "Add Server",
+            "features": {
+                "ssh": "SSH and WinRM support",
+                "winrm": "Windows and Linux compatibility",
+                "traditional": "Traditional server management"
+            }
+        },
+        "kubernetes": {
+            "title": "Kubernetes",
+            "description": "Add your Kubernetes deployment as a managable service to Liman",
+            "button": "Add Kubernetes",
+            "features": {
+                "deployment": "Deployment management",
+                "scaling": "Pod monitoring and management",
+                "monitoring": "Kubernetes resource viewing"
+            }
+        }
+    },
+    "create_server": {
+        "title": "Add Server",
+        "description": "You can add your Windows and Linux servers that you have already installed to Liman Center Management System."
+    },
+    "create": {
+        "title": "Add Server",
+        "description": "You can add your Windows and Linux servers that you have already installed to Liman Center Management System.",
+        "servers": "Servers",
+        "back": "Previous",
+        "next": "Next",
+        "create": "Add",
+        "steps": {
+            "connection_information": {
+                "name": "Connection Information",
+                "description": "Check the server connection.",
+                "validation": {
+                    "ip_address": "Server address cannot be left blank.",
+                    "port": {
+                        "max": "Connection port cannot be longer than 5 characters.",
+                        "nonempty": "Connection port cannot be left blank."
+                    }
+                },
+                "ip_address": {
+                    "label": "Your Server's Address",
+                    "information": "Enter the IP address or hostname of the server you want to connect to."
+                },
+                "port": {
+                    "label": "Connection Port"
+                }
+            },
+            "general_settings": {
+                "name": "General Settings",
+                "description": "Select the server name and operating system.",
+                "validation": {
+                    "name": "Server name cannot be left blank.",
+                    "os_type": "Please select an operating system."
+                },
+                "sname": {
+                    "label": "Server Name",
+                    "information": "Write the server name you want to appear."
+                },
+                "os_type": {
+                    "label": "Operating System"
+                }
+            },
+            "key_selection": {
+                "name": "Key Selection",
+                "description": "Select a key type to connect to your server.",
+                "validation": {
+                    "key_type": "Please select a key type."
+                },
+                "key_type": {
+                    "label": "Key Type"
+                }
+            },
+            "key_inputs": {
+                "name": "Key",
+                "description": "Provide a key to connect to your server.",
+                "validation": {
+                    "username": "Username cannot be left blank.",
+                    "password": "Password cannot be left blank."
+                },
+                "username": {
+                    "label": "Username",
+                    "information": "Provide a username for {{key_type}} connection type."
+                },
+                "password": {
+                    "label": "Password",
+                    "information": "Provide a password for {{key_type}} connection type."
+                },
+                "shared": {
+                    "label": "Shared",
+                    "information": "If you want the key you entered for {{key_type}} connection type to be used by all users, check this box."
+                }
+            },
+            "summary": {
+                "name": "Summary",
+                "description": "Check and confirm your server information.",
+                "shared_key": "Key Sharing"
+            }
+        },
+        "errors": {
+            "validation": "Please check your input before proceeding.",
+            "success": "Server created successfully.",
+            "error": "An error occurred while creating the server."
+        }
+    },
+    "create_kubernetes": {
+        "title": "Add Kubernetes Service",
+        "description": "Add and manage your Kubernetes service in Liman.",
+        "back": "Back",
+        "next": "Next",
+        "create": "Add",
+        "steps": {
+            "connection_information": {
+                "name": "Connection Information",
+                "description": "Check the Kubernetes cluster connection."
+            },
+            "namespace_deployment": {
+                "name": "Namespace & Deployment",
+                "description": "Select namespace and deployment for desired service.",
+                "title": "Namespace and Deployment Selection",
+                "service_name": {
+                    "label": "Service Name",
+                    "placeholder": "Enter the service name to display in Liman",
+                    "information": "Custom name for the service to be displayed in Liman"
+                },
+                "namespace": {
+                    "label": "Namespace",
+                    "placeholder": "Select namespace",
+                    "information": "Select the namespace where your Kubernetes deployment is located."
+                },
+                "deployment": {
+                    "label": "Deployment",
+                    "placeholder": "Select deployment",
+                    "information": "Select the deployment you want to manage."
+                }
+            },
+            "summary": {
+                "name": "Summary",
+                "description": "Check and confirm your Kubernetes information."
+            }
+        },
+        "connection": {
+            "kubeconfig": {
+                "title": "Kubeconfig",
+                "label": "Kubeconfig",
+                "description": "Upload kubeconfig file to access your Kubernetes cluster.",
+                "placeholder": "Paste kubeconfig content here...",
+                "file_upload": "Upload File",
+                "manual_input": "Manual Input",
+                "drag_drop_text": "Drag and drop file here or",
+                "click_to_select": "click to select file",
+                "supported_formats": "Supported formats: .yaml, .yml, .txt",
+                "switch_to_manual": "Switch to manual input"
+            }
+        },
+        "errors": {
+            "validation": "Please check your input before proceeding.",
+            "success": "Kubernetes service created successfully.",
+            "error": "An error occurred while creating the Kubernetes service."
+        }
+    },
+    "system_status": {
+        "details": "Server Details",
+        "name": "Server Name",
+        "hostname": "Hostname",
+        "os": "Operating System",
+        "ip_address": "IP Address",
+        "uptime": "Uptime",
+        "user": "Logged In User",
+        "service_count": "Service Count",
+        "process_count": "Process Count",
+        "specs": "Server Specs",
+        "cpu": "CPU",
+        "ram_size": "RAM Size",
+        "vendor": "Vendor",
+        "model": "Model",
+        "resource_usage": "Resource Usage",
+        "cpu_usage": "CPU Usage",
+        "ram_usage": "RAM Usage",
+        "io_usage": "IO Usage",
+        "network_usage": "Network Usage",
+        "disk_status": "Disk Status",
+        "most_5_cpu_usage_process": "Top 5 CPU Usage Processes",
+        "most_5_ram_usage_process": "Top 5 RAM Usage Processes",
+        "disk_status_desc": "Disk usage status of mounted disks",
+        "user_title": "User",
+        "process": "Process",
+        "usage": "Usage",
+        "disk": "Disk",
+        "size": "Size",
+        "full": "Full"
+    },
+    "extensions": {
+        "title": "Extensions",
+        "description": "You can manage the extensions used on your server through this page.",
+        "add": "Add",
+        "remove": "Remove",
+        "upload": "Upload Extension",
+        "name": "Extension Name",
+        "version": "Version",
+        "updated_at": "Updated At",
+        "toasts": {
+            "assign": "The selected extensions have been successfully assigned to the server.",
+            "unassign": "The selected extensions have been successfully unassigned from the server."
+        },
+        "unassign": {
+            "title": "Are you sure?",
+            "description": "This action cannot be undone. The selected extensions will be removed from the server. Do you want to continue?",
+            "no": "Cancel",
+            "yes": "Confirm"
+        },
+        "assign": {
+            "button": "Add",
+            "title": "Add Extension",
+            "description": "You can add an extension to your server using this window.",
+            "name": "Extension Name",
+            "version": "Version"
+        },
+        "settings": {
+            "toast": {
+                "title": "Successful",
+                "description": "Settings have been successfully updated."
+            },
+            "page_header": {
+                "title": "Extension Settings",
+                "description": "You can manage the mandatory and advanced settings that the extension requires through this page."
+            },
+            "alert_title": "Error",
+            "card": {
+                "obligatory_settings_h3": "Mandatory Settings",
+                "obligatory_settings_p": "Settings that must be entered for the extension to work.",
+                "advanced_settings_h3": "Advanced Settings",
+                "advanced_settings_p": "Settings that are not mandatory but change the way the extension works."
+            },
+            "no_need_settings": "The extension does not require any settings.",
+            "save": "Save"
+        }
+    },
+    "services": {
+        "name": {
+            "title": "Service Name"
+        },
+        "description": {
+            "title": "Description"
+        },
+        "status": {
+            "title": "Status",
+            "running": {
+                "title": "Is Running?",
+                "yes": "Running",
+                "no": "Not Running"
+            },
+            "active": {
+                "title": "Is Active?",
+                "yes": "Active",
+                "no": "Inactive"
+            }
+        },
+        "toast": {
+            "title": "Successful",
+            "description": "Operation requests have been successfully delivered to the server."
+        },
+        "page_header": {
+            "title": "Services",
+            "description": "You can perform operations such as starting and stopping services running on your server through this page."
+        },
+        "start": "Start",
+        "stop": "Stop",
+        "restart": "Restart",
+        "activate": "Activate",
+        "deactivate": "Deactivate",
+        "alert_dialog": {
+            "title": "Are you sure?",
+            "description": "This service operation cannot be undone. Do you want to continue?",
+            "cancel": "Cancel",
+            "confirm": "Confirm"
+        },
+        "dialog_description": "The service details for the service are as follows."
+    },
+    "access_logs": {
+        "extension_id": {
+            "title": "Extension Name"
+        },
+        "view": {
+            "title": "Executed Function"
+        },
+        "user_id": {
+            "title": "User Performing the Operation"
+        },
+        "ts": {
+            "title": "Operation Date"
+        },
+        "page_header": {
+            "title": "Access Logs",
+            "description": "You can view and examine the last 500 requests made to your server through this page."
+        },
+        "dialog": {
+            "title": "Access Log Details",
+            "description": "You can view the detailed content of the access log."
+        }
+    },
+    "open_ports": {
+        "accessor_name_title": "Program Name",
+        "accessor_username_title": "Username",
+        "accessor_ip_type_title": "IP Type",
+        "accessor_packet_type_title": "Packet Type",
+        "accessor_port_title": "Port",
+        "page_header": {
+            "title": "Open Ports",
+            "description": "You can view the active ports broadcasting on your server and the active process managing that port through this page."
+        }
+    },
+    "packages": {
+        "accessor_name_title": "Extension Name",
+        "accessor_version_title": "Version",
+        "accessor_type_title": "Architecture Compatibility",
+        "upload": "Upload Package",
+        "go_back": "Go back to package list",
+        "accessor_path_title": "Package Name",
+        "accessor_status_title": "Status",
+        "accessor_error_title": "Errors",
+        "accessor_last_changed_title": "Last Changed",
+        "status_pending": "Pending",
+        "status_done": "Done",
+        "status_failed": "Failed",
+        "status_processing": "Processing",
+        "no_error": "No errors",
+        "upload_description": "You can upload your packages with .deb and .rpm extensions from this section.",
+        "upload_success": "Your package upload request has been received. You can track the live status through the page.",
+        "page_header": {
+            "title": "Packages",
+            "description": "You can manage and add new packages installed on your server through this page."
+        }
+    },
+    "updates": {
+        "accessor_name_title": "Extension Name",
+        "accessor_version_title": "Version to be Updated",
+        "accessor_type_title": "Architecture Compatibility",
+        "accessor_status_title": "Status",
+        "update": {
+            "title": "Updates | Liman",
+            "h2": "Updates",
+            "p": "You can view and perform update operations for updates on your server through this page."
+        }
+    },
+    "users": {
+        "groups": {
+            "accessor_group_title": "Group Name",
+            "page_header": {
+                "title": "Local Groups",
+                "description": "You can view the local groups available on your server, add new ones, and add members to groups through this page."
+            },
+            "form_message": {
+                "min": "Group name must be at least 2 characters.",
+                "max": "Group name must be at most 50 characters."
+            },
+            "toasts": {
+                "success": {
+                    "title": "Success",
+                    "description": "Local group created successfully."
+                },
+                "fail": {
+                    "title": "Error",
+                    "description": "An error occurred while creating the local group."
+                }
+            },
+            "dialog": {
+                "add_btn": "Add",
+                "title": "Create Local Group",
+                "description": "This operation will create a local group on your system.",
+                "form_label": "Group Name",
+                "create_btn": "Create"
+            }
+        },
+        "local": {
+            "accessor_user_title": "Username",
+            "page_header": {
+                "title": "Local Users",
+                "description": "You can view the local users available on your server and add new ones through this page."
+            },
+            "form_message": {
+                "username": {
+                    "min": "Username must be at least 2 characters.",
+                    "max": "Username must be at most 50 characters."
+                },
+                "password": {
+                    "min": "Password must be at least 8 characters.",
+                    "max": "Password must be at most 50 characters."
+                },
+                "error_message": "Passwords do not match."
+            },
+            "toasts": {
+                "success": {
+                    "title": "Success",
+                    "description": "Local user created successfully."
+                },
+                "fail": {
+                    "title": "Error",
+                    "description": "An error occurred while creating the local user."
+                }
+            },
+            "dialog": {
+                "add_btn": "Add",
+                "title": "Create Local User",
+                "description": "This operation will create a local user on your system.",
+                "form_labels": {
+                    "username": "Username",
+                    "password": "Password",
+                    "confirm_password": "Confirm Password"
+                },
+                "create_btn": "Create"
+            }
+        },
+        "sudoers": {
+            "accessor_name_title": "Rule Name",
+            "accessor_access_title": "Access Permissions",
+            "toasts": {
+                "delete": {
+                    "success": {
+                        "title": "Success",
+                        "description": "Authorized user deleted successfully."
+                    },
+                    "fail": {
+                        "title": "Error",
+                        "description": "An error occurred while deleting the authorized user."
+                    }
+                },
+                "add": {
+                    "success": {
+                        "title": "Success",
+                        "description": "Authorized user added successfully."
+                    },
+                    "fail": {
+                        "title": "Error",
+                        "description": "An error occurred while adding the authorized user."
+                    }
+                }
+            },
+            "page_header": {
+                "title": "Authorized Users",
+                "description": "You can view the authorized user permissions available on your server and perform add and remove operations."
+            },
+            "alert_dialog": {
+                "delete_btn": "Delete",
+                "title": "Are you sure?",
+                "description": "This operation cannot be undone. The selected authorized users will be removed from the server. Do you want to continue?",
+                "cancel": "Cancel",
+                "confirm": "Confirm"
+            },
+            "form_message": {
+                "min": "Username must be at least 2 characters.",
+                "max": "Username must be at most 50 characters."
+            },
+            "dialog": {
+                "add_btn": "Add",
+                "title": "Create Authorized User",
+                "description": "This operation will create an authorized user on your system.",
+                "form": {
+                    "username": "Username",
+                    "create_btn": "Create"
+                }
+            }
+        }
+    },
+    "kubernetes": {
+        "deployment_specs": "Deployment Specs",
+        "deployment_details": "Deployment Details",
+        "replicas": "Replicas",
+        "ready_replicas": "Ready Replicas",
+        "containers": "Containers",
+        "container_count": "Container Count",
+        "pods": "Pods",
+        "pods_count": "Pods",
+        "running_pods": "Running Pods",
+        "status": "Status",
+        "deployment_status": "Deployment Status",
+        "healthy": "Healthy",
+        "degraded": "Degraded",
+        "basic_info": "Basic Information",
+        "name": "Name",
+        "namespace": "Namespace",
+        "uid": "UID",
+        "created": "Created",
+        "strategy": "Strategy",
+        "strategy_type": "Strategy Type",
+        "desired_replicas": "Desired Replicas",
+        "observed_generation": "Observed Generation",
+        "unavailable_replicas": "Unavailable Replicas",
+        "labels": "Labels",
+        "no_labels": "No labels found",
+        "annotations": "Annotations",
+        "no_annotations": "No annotations found",
+        "no_pods": "No pods found",
+        "ready": "Ready",
+        "not_ready": "Not Ready",
+        "container_configuration": "Container Configuration",
+        "ports": "Ports",
+        "environment_variables": "Environment Variables",
+        "command_args": "Command & Arguments",
+        "no_containers": "No containers found",
+        "replica_sets": "Replica Sets",
+        "replica_sets_count": "Replica Sets",
+        "scaling": "Scaling",
+        "owner_references": "Owner References",
+        "controller": "Controller",
+        "no_replica_sets": "No replica sets found",
+        "additional_information": "Additional Information"
+    }
+}

@@ -30,12 +30,12 @@ func initialize() *gorm.DB {
 	}
 
 	dsn := fmt.Sprintf(
-		"host=%s port=%d user=%s password=%s dbname=%s sslmode=disable timezone=Europe/Istanbul",
-		conf.Database.Host,
-		conf.Database.Port,
-		conf.Database.User,
-		conf.Database.Password,
-		conf.Database.Name,
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable timezone=Europe/Istanbul",
+		conf.MustString("database.host"),
+		conf.MustString("database.port"),
+		conf.MustString("database.user"),
+		conf.MustString("database.password"),
+		conf.MustString("database.name"),
 	)
 
 	connection, err := gorm.Open(postgres.Open(dsn), &gorm.Config{

@@ -7,13 +7,13 @@ import (
 	"encoding/base64"
 	"errors"
 	"io"
-	"os"
-
-	"gopkg.in/yaml.v3"
+	"sef/internal/bootstrap"
 )
 
+var config, _ = bootstrap.NewConf()
+
 func Encrypt(message string) (encoded string, err error) {
-	var key = []byte("3t7Ca+3fFqzSpsUkqmmTMlT2eUKPlrs3+irYZ+KP0PY=")
+	var key = []byte(config.MustString("app.key"))
 
 	//Create byte array from the input string
 	plainText := []byte(message)
@@ -44,7 +44,7 @@ func Encrypt(message string) (encoded string, err error) {
 }
 
 func Decrypt(secure string) (decoded string, err error) {
-	var key = []byte("3t7Ca+3fFqzSpsUkqmmTMlT2eUKPlrs3+irYZ+KP0PY=")
+	var key = []byte(config.MustString("app.key"))
 
 	//Remove base64 encoding:
 	cipherText, err := base64.RawStdEncoding.DecodeString(secure)
@@ -76,36 +76,4 @@ func Decrypt(secure string) (decoded string, err error) {
 	stream.XORKeyStream(cipherText, cipherText)
 
 	return string(cipherText), err
-}
-
-func updateConfigFile(key string) error {
-	configPath := "config/config.yml" // adjust path as needed
-
-	// Read existing YAML
-	yamlFile, err := os.ReadFile(configPath)
-	if err != nil {
-		return err
-	}
-
-	// Parse YAML
-	var configMap map[string]interface{}
-	if err := yaml.Unmarshal(yamlFile, &configMap); err != nil {
-		return err
-	}
-
-	// Update app.key
-	configMap["app"].(map[string]interface{})["key"] = key
-
-	// Convert back to YAML
-	newYaml, err := yaml.Marshal(configMap)
-	if err != nil {
-		return err
-	}
-
-	// Write atomically
-	tempFile := configPath + ".tmp"
-	if err := os.WriteFile(tempFile, newYaml, 0644); err != nil {
-		return err
-	}
-	return os.Rename(tempFile, configPath)
 }

@@ -1,11 +1,14 @@
 package routes
 
 import (
+	"sef/app/controllers/auth"
 	"sef/app/controllers/chatbots"
-	"sef/app/controllers/chats"
+	"sef/app/controllers/messages"
 	"sef/app/controllers/providers"
-	"sef/app/controllers/tools"
+	"sef/app/controllers/sessions"
 	"sef/app/controllers/users"
+	"sef/app/middleware"
+	"sef/internal/database"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -13,91 +16,84 @@ import (
 func Server(app *fiber.App) {
 	apiV1 := app.Group("/api/v1")
 
-	// Authentication routes
-	apiV1.Post("/login", users.Login)
-
-	userGroup := apiV1.Group("/users")
+	authGroup := apiV1.Group("/auth")
 	{
-		userGroup.Get("/me", users.CurrentUser)
-		userGroup.Get("/", users.Index)
-		userGroup.Post("/", users.Create)
-		userGroup.Get("/:id", users.Show)
-		userGroup.Patch("/:id", users.Update)
-		userGroup.Delete("/:id", users.Delete)
+		authGroup.Post("/login", auth.Login)
 	}
 
-	providerGroup := apiV1.Group("/providers")
-	{
-		providerGroup.Get("/", providers.Index)
-		providerGroup.Post("/", providers.Create)
-		providerGroup.Get("/:id", providers.Show)
-		providerGroup.Patch("/:id", providers.Update)
-		providerGroup.Delete("/:id", providers.Delete)
-		providerGroup.Get("/:type/models", providers.GetModels)
-	}
+	apiV1.Use(middleware.TokenLookup)
+	apiV1.Use(middleware.Authenticated())
 
-	chatbotGroup := apiV1.Group("/chatbots")
+	authGroup = apiV1.Group("/auth")
 	{
-		chatbotGroup.Get("/", chatbots.Index)
-		chatbotGroup.Post("/", chatbots.Create)
-		chatbotGroup.Get("/:id", chatbots.Show)
-		chatbotGroup.Patch("/:id", chatbots.Update)
-		chatbotGroup.Delete("/:id", chatbots.Delete)
-	}
-
-	toolGroup := apiV1.Group("/tools")
-	{
-		toolGroup.Get("/", tools.Index)
-		toolGroup.Post("/", tools.Create)
-		toolGroup.Get("/:id", tools.Show)
-		toolGroup.Patch("/:id", tools.Update)
-		toolGroup.Delete("/:id", tools.Delete)
-	}
-
-	chatGroup := apiV1.Group("/chats")
-	{
-		chatGroup.Get("/", chats.GetUserSessions)
-		chatGroup.Post("/", chats.CreateSession)
-		chatGroup.Get("/:id", chats.GetSession)
-		chatGroup.Patch("/:id", chats.UpdateSession)
-		chatGroup.Delete("/:id", chats.DeleteSession)
-		chatGroup.Post("/:id/messages", chats.SendMessage)
-		chatGroup.Get("/:id/messages", chats.GetSessionMessages)
+		authGroup.Get("/me", auth.CurrentUser)
 	}
 
 	// Admin routes
-	adminGroup := apiV1.Group("/admin")
+	apiV1.Use(middleware.IsSuperAdmin())
+
+	userGroup := apiV1.Group("/users")
 	{
-		adminGroup.Get("/users", users.Index)
-		adminGroup.Get("/users/:id", users.Show)
-		adminGroup.Post("/users", users.Create)
-		adminGroup.Patch("/users/:id", users.Update)
-		adminGroup.Delete("/users/:id", users.Delete)
+		controller := &users.Controller{
+			DB: database.Connection(),
+		}
 
-		adminGroup.Get("/providers", providers.Index)
-		adminGroup.Get("/providers/:id", providers.Show)
-		adminGroup.Post("/providers", providers.Create)
-		adminGroup.Patch("/providers/:id", providers.Update)
-		adminGroup.Delete("/providers/:id", providers.Delete)
-
-		adminGroup.Get("/chatbots", chatbots.Index)
-		adminGroup.Get("/chatbots/:id", chatbots.Show)
-		adminGroup.Post("/chatbots", chatbots.Create)
-		adminGroup.Patch("/chatbots/:id", chatbots.Update)
-		adminGroup.Delete("/chatbots/:id", chatbots.Delete)
-
-		adminGroup.Get("/tools", tools.Index)
-		adminGroup.Get("/tools/:id", tools.Show)
-		adminGroup.Post("/tools", tools.Create)
-		adminGroup.Patch("/tools/:id", tools.Update)
-		adminGroup.Delete("/tools/:id", tools.Delete)
-
-		adminGroup.Get("/chats", chats.GetAllSessions)
-		adminGroup.Get("/chats/:id", chats.GetSessionByID)
-		adminGroup.Post("/chats", chats.CreateSessionAdmin)
-		adminGroup.Patch("/chats/:id", chats.UpdateSessionAdmin)
-		adminGroup.Delete("/chats/:id", chats.DeleteSessionAdmin)
+		userGroup.Get("/", controller.Index)
+		userGroup.Post("/", controller.Create)
+		userGroup.Get("/:id", controller.Show)
+		userGroup.Patch("/:id", controller.Update)
+		userGroup.Delete("/:id", controller.Delete)
 	}
 
-	apiV1.Post("/logout", users.Logout)
+	chatbotsGroup := apiV1.Group("/chatbots")
+	{
+		controller := &chatbots.Controller{
+			DB: database.Connection(),
+		}
+
+		chatbotsGroup.Get("/", controller.Index)
+		chatbotsGroup.Post("/", controller.Create)
+		chatbotsGroup.Get("/:id", controller.Show)
+		chatbotsGroup.Patch("/:id", controller.Update)
+		chatbotsGroup.Delete("/:id", controller.Delete)
+	}
+
+	messagesGroup := apiV1.Group("/messages")
+	{
+		controller := &messages.Controller{
+			DB: database.Connection(),
+		}
+
+		messagesGroup.Get("/", controller.Index)
+		messagesGroup.Post("/", controller.Create)
+		messagesGroup.Get("/:id", controller.Show)
+		messagesGroup.Patch("/:id", controller.Update)
+		messagesGroup.Delete("/:id", controller.Delete)
+	}
+
+	providersGroup := apiV1.Group("/providers")
+	{
+		controller := &providers.Controller{
+			DB: database.Connection(),
+		}
+
+		providersGroup.Get("/", controller.Index)
+		providersGroup.Post("/", controller.Create)
+		providersGroup.Get("/:id", controller.Show)
+		providersGroup.Patch("/:id", controller.Update)
+		providersGroup.Delete("/:id", controller.Delete)
+	}
+
+	sessionsGroup := apiV1.Group("/sessions")
+	{
+		controller := &sessions.Controller{
+			DB: database.Connection(),
+		}
+
+		sessionsGroup.Get("/", controller.Index)
+		sessionsGroup.Post("/", controller.Create)
+		sessionsGroup.Get("/:id", controller.Show)
+		sessionsGroup.Patch("/:id", controller.Update)
+		sessionsGroup.Delete("/:id", controller.Delete)
+	}
 }
