@@ -6,6 +6,7 @@ import { IUser } from "@/types/user"
 
 const defaultUserObject: IUser = {
   id: -1,
+  name: "",
   username: "guest",
   super_admin: false,
 } as IUser

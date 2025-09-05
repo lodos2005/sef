@@ -70,5 +70,115 @@
             "no": "Cancel",
             "yes": "Confirm"
         }
+    },
+    "chatbots": {
+        "title": "Chatbots",
+        "description": "Manage chatbots in the system.",
+        "name": "Name",
+        "description_field": "Description",
+        "provider": "Provider",
+        "user": "User",
+        "model_name": "Model Name",
+        "toasts": {
+            "success_msg": "The chatbot has been created successfully.",
+            "edit_success_msg": "The chatbot has been edited successfully.",
+            "error_msg": "An error occurred while creating the chatbot.",
+            "edit_error_msg": "An error occurred while editing the chatbot."
+        },
+        "validation": {
+            "name_min": "Name must be at least 2 characters.",
+            "name_max": "Name must be at most 255 characters.",
+            "description_max": "Description must be at most 1000 characters."
+        },
+        "create": {
+            "button": "Add",
+            "title": "Add Chatbot",
+            "description": "You can create a new chatbot using this window.",
+            "name": "Name",
+            "name_placeholder": "My Chatbot",
+            "description_field": "Description",
+            "description_placeholder": "Description of the chatbot",
+            "provider": "Provider",
+            "model_name": "Model Name",
+            "model_name_placeholder": "gpt-3.5-turbo",
+            "create": "Create"
+        },
+        "edit": {
+            "title": "Edit Chatbot",
+            "description": "You can edit the chatbot's information using this window.",
+            "submit": "Edit"
+        },
+        "delete": {
+            "success": "The chatbot has been deleted successfully.",
+            "error": "An error occurred while deleting the chatbot.",
+            "title": "Are you sure?",
+            "subtext": "The selected chatbot <b>({{name}})</b> will be completely deleted. Do you want to continue?",
+            "no": "Cancel",
+            "yes": "Confirm"
+        }
+    },
+    "messages": {
+        "title": "Messages",
+        "description": "View and manage messages in the system.",
+        "session": "Session",
+        "role": "Role",
+        "content": "Content",
+        "user": "User",
+        "assistant": "Assistant"
+    },
+    "providers": {
+        "title": "Providers",
+        "description": "Manage AI providers in the system.",
+        "name": "Name",
+        "type": "Type",
+        "description_field": "Description",
+        "base_url": "Base URL",
+        "toasts": {
+            "success_msg": "The provider has been created successfully.",
+            "edit_success_msg": "The provider has been edited successfully.",
+            "error_msg": "An error occurred while creating the provider.",
+            "edit_error_msg": "An error occurred while editing the provider."
+        },
+        "validation": {
+            "name_min": "Name must be at least 2 characters.",
+            "name_max": "Name must be at most 255 characters.",
+            "type_min": "Type must be at least 2 characters.",
+            "type_max": "Type must be at most 50 characters.",
+            "base_url": "Please enter a valid URL."
+        },
+        "create": {
+            "button": "Add",
+            "title": "Add Provider",
+            "description": "You can create a new provider using this window.",
+            "name": "Name",
+            "name_placeholder": "OpenAI",
+            "type": "Type",
+            "type_placeholder": "openai",
+            "description": "Description",
+            "description_placeholder": "OpenAI API provider",
+            "base_url": "Base URL",
+            "base_url_placeholder": "https://api.openai.com",
+            "create": "Create"
+        },
+        "edit": {
+            "title": "Edit Provider",
+            "description": "You can edit the provider's information using this window.",
+            "submit": "Edit"
+        },
+        "delete": {
+            "success": "The provider has been deleted successfully.",
+            "error": "An error occurred while deleting the provider.",
+            "title": "Are you sure?",
+            "subtext": "The selected provider <b>({{name}})</b> will be completely deleted. Do you want to continue?",
+            "no": "Cancel",
+            "yes": "Confirm"
+        }
+    },
+    "sessions": {
+        "title": "Sessions",
+        "description": "View and manage chat sessions in the system.",
+        "user": "User",
+        "chatbot": "Chatbot",
+        "messages_count": "Messages Count"
     }
 }

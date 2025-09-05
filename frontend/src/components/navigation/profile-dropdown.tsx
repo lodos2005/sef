@@ -44,17 +44,17 @@ export default function ProfileDropdown() {
           <Avatar className="size-6">
             <AvatarImage
               src={`https://gravatar.com/avatar/${md5(user.username)}?d=404`}
-              alt={user.username}
+              alt={user.name}
             />
             <AvatarFallback className="text-xs">
               {Object.keys(user).length > 0 &&
-                (user.username ?? "")
+                (user.name ?? "")
                   .split(" ")
                   .map((n: string) => n[0])
                   .join("")}
             </AvatarFallback>
           </Avatar>
-          {user.username || ""}
+          {user.name || ""}
           <ChevronDown className="size-3 text-muted-foreground" />
         </div>
       </DropdownMenuTrigger>
@@ -66,13 +66,13 @@ export default function ProfileDropdown() {
                 <Avatar className="size-12">
                   <AvatarImage
                     src={`https://gravatar.com/avatar/${md5(user.username)}?d=404`}
-                    alt={user.username}
+                    alt={user.name}
                   />
-                  <AvatarFallback>{user && user.username[0]}</AvatarFallback>
+                  <AvatarFallback>{user && user.name[0]}</AvatarFallback>
                 </Avatar>
 
                 <div className="flex flex-col">
-                  <span className="font-medium">{user.username}</span>
+                  <span className="font-medium">{user.name}</span>
                   {/* If user is super admin add a badge */}
                   {user.super_admin && (
                     <Badge variant="outline">

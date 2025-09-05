@@ -1,0 +1,169 @@
+import { MessageSquare } from "lucide-react"
+import { useTranslation } from "react-i18next"
+import { useState, useEffect } from "react"
+
+import { Badge } from "@/components/ui/badge"
+import AsyncDataTable from "@/components/ui/data-table/async-data-table"
+import { DataTableColumnHeader } from "@/components/ui/data-table/data-table-column-header"
+import PageHeader from "@/components/ui/page-header"
+import { DivergentColumn } from "@/types/table"
+import { ISession } from "@/types/session"
+import { useEmitter } from "@/hooks/useEmitter"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { cn } from "@/lib/utils"
+
+export default function SessionSettingsPage() {
+  const [refetchTrigger, setRefetchTrigger] = useState<number>(0)
+  const emitter = useEmitter()
+  const { t } = useTranslation("settings")
+
+  const columns: DivergentColumn<ISession, string>[] = [
+    {
+      accessorKey: "user.username",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={t("sessions.user")} />
+      ),
+      title: t("sessions.user"),
+      cell: ({ row }) => (
+        <div className="flex items-center">
+          <span>{row.original.user?.username || "N/A"}</span>
+        </div>
+      ),
+    },
+    {
+      accessorKey: "chatbot.name",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={t("sessions.chatbot")} />
+      ),
+      title: t("sessions.chatbot"),
+      cell: ({ row }) => (
+        <Badge variant="outline">
+          {row.original.chatbot?.name || "N/A"}
+        </Badge>
+      ),
+    },
+    {
+      accessorKey: "messages",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={t("sessions.messages_count")} />
+      ),
+      title: t("sessions.messages_count"),
+      cell: ({ row }) => (
+        <span>{row.original.messages?.length || 0}</span>
+      ),
+    },
+    {
+      accessorKey: "created_at",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Created At" />
+      ),
+      title: "Created At",
+      cell: ({ row }) => (
+        <span>{new Date(row.original.created_at || "").toLocaleString()}</span>
+      ),
+    },
+    {
+      id: "actions",
+      cell: ({ row }) => (
+        <div className="flex justify-center">
+          <ChatHistoryDialog session={row.original} />
+        </div>
+      ),
+    },
+  ]
+
+  useEffect(() => {
+    emitter.on("REFETCH_SESSIONS", () => {
+      setRefetchTrigger((prev) => prev + 1)
+    })
+    return () => emitter.off("REFETCH_SESSIONS")
+  }, [])
+
+  return (
+    <>
+      <PageHeader
+        title={t("sessions.title")}
+        description={t("sessions.description")}
+      />
+
+      <AsyncDataTable<ISession, string>
+        columns={columns}
+        endpoint="/sessions"
+        refetchTrigger={refetchTrigger}
+      />
+    </>
+  )
+}
+
+function ChatHistoryDialog({ session }: { session: ISession }) {
+  const [open, setOpen] = useState(false)
+  const { t } = useTranslation("settings")
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm">
+          <MessageSquare className="mr-2 size-4" />
+          View Chat
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            Chat History - {session.user?.username} & {session.chatbot?.name}
+          </DialogTitle>
+          <DialogDescription>
+            Conversation between {session.user?.username} and {session.chatbot?.name}
+          </DialogDescription>
+        </DialogHeader>
+                <div className="space-y-4 mt-4">
+          {session.messages && session.messages.length > 0 ? (
+            session.messages
+              .sort((a, b) => new Date(a.created_at || "").getTime() - new Date(b.created_at || "").getTime())
+              .map((message) => (
+                <div
+                  key={message.id}
+                  className={cn(
+                    "flex gap-3 rounded-lg p-3",
+                    message.role === "user"
+                      ? "bg-primary/10 ml-12"
+                      : "bg-muted mr-12"
+                  )}
+                >
+                  <Avatar className="size-8">
+                    <AvatarFallback>
+                      {message.role === "user" ? "U" : "A"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">
+                        {message.role === "user" ? "You" : "Assistant"}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(message.created_at || "").toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="text-sm">{message.content}</div>
+                  </div>
+                </div>
+              ))
+          ) : (
+            <div className="text-center text-muted-foreground">
+              No messages in this session
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}

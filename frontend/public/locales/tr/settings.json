@@ -10,7 +10,7 @@
     "system_settings": "Sistem Ayarları",
     "users": {
         "title": "Kullanıcılar",
-        "description": "Bu sayfa aracılığıyla kullanıcılara roller ekleyebilir, kullanıcı profillerini düzenleyebilir ve yenilerini ekleyebilirsiniz.",
+        "description": "Bu sayfa aracılığıyla kullanıcı profillerini düzenleyebilir ve yenilerini ekleyebilirsiniz.",
         "name": "İsim Soyisim",
         "email": "E-Posta Adresi",
         "username": "Kullanıcı Adı",
@@ -75,5 +75,115 @@
         "actions": {
             "edit": "Düzenle"
         }
+    },
+    "chatbots": {
+        "title": "Chatbotlar",
+        "description": "Sistemdeki chatbot türlerini yönetebilir, sistem promptlarını düzenleyebilir ve yenilerini ekleyebilirsiniz.",
+        "name": "İsim",
+        "description_field": "Açıklama",
+        "provider": "Sağlayıcı",
+        "user": "Kullanıcı",
+        "model_name": "Model Adı",
+        "toasts": {
+            "success_msg": "Chatbot başarıyla oluşturuldu.",
+            "edit_success_msg": "Chatbot başarıyla düzenlendi.",
+            "error_msg": "Chatbot oluşturulurken bir hata oluştu.",
+            "edit_error_msg": "Chatbot düzenlenirken bir hata oluştu."
+        },
+        "validation": {
+            "name_min": "İsim en az 2 karakter olmalıdır.",
+            "name_max": "İsim en fazla 255 karakter olmalıdır.",
+            "description_max": "Açıklama en fazla 1000 karakter olmalıdır."
+        },
+        "create": {
+            "button": "Ekle",
+            "title": "Chatbot Ekle",
+            "description": "Bu pencereyi kullanarak yeni bir chatbot oluşturabilirsiniz.",
+            "name": "İsim",
+            "name_placeholder": "Chatbotum",
+            "description_field": "Açıklama",
+            "description_placeholder": "Chatbot açıklaması",
+            "provider": "Sağlayıcı",
+            "model_name": "Model Adı",
+            "model_name_placeholder": "gpt-3.5-turbo",
+            "create": "Oluştur"
+        },
+        "edit": {
+            "title": "Chatbot Düzenle",
+            "description": "Bu pencereyi kullanarak chatbot bilgilerini düzenleyebilirsiniz.",
+            "submit": "Düzenle"
+        },
+        "delete": {
+            "success": "Chatbot başarıyla silindi.",
+            "error": "Chatbot silinirken hata oluştu.",
+            "title": "Emin misiniz?",
+            "subtext": "Seçilen chatbot <b>({{name}})</b> tamamen silinecektir. Devam etmek istiyor musunuz?",
+            "no": "Vazgeç",
+            "yes": "Onayla"
+        }
+    },
+    "messages": {
+        "title": "Mesajlar",
+        "description": "Sistemdeki mesajları görüntüleyin ve yönetin.",
+        "session": "Oturum",
+        "role": "Rol",
+        "content": "İçerik",
+        "user": "Kullanıcı",
+        "assistant": "Asistan"
+    },
+    "providers": {
+        "title": "Sağlayıcılar",
+        "description": "Sistemdeki LLM sağlayıcılarını yönetebilir, düzenleyebilir ve yenilerini ekleyebilirsiniz.",
+        "name": "İsim",
+        "type": "Tür",
+        "description_field": "Açıklama",
+        "base_url": "Temel URL",
+        "toasts": {
+            "success_msg": "Sağlayıcı başarıyla oluşturuldu.",
+            "edit_success_msg": "Sağlayıcı başarıyla düzenlendi.",
+            "error_msg": "Sağlayıcı oluşturulurken bir hata oluştu.",
+            "edit_error_msg": "Sağlayıcı düzenlenirken bir hata oluştu."
+        },
+        "validation": {
+            "name_min": "İsim en az 2 karakter olmalıdır.",
+            "name_max": "İsim en fazla 255 karakter olmalıdır.",
+            "type_min": "Tür en az 2 karakter olmalıdır.",
+            "type_max": "Tür en fazla 50 karakter olmalıdır.",
+            "base_url": "Geçerli bir URL giriniz."
+        },
+        "create": {
+            "button": "Ekle",
+            "title": "Sağlayıcı Ekle",
+            "description": "Bu pencereyi kullanarak yeni bir sağlayıcı oluşturabilirsiniz.",
+            "name": "İsim",
+            "name_placeholder": "OpenAI",
+            "type": "Tür",
+            "type_placeholder": "openai",
+            "description_field": "Açıklama",
+            "description_placeholder": "OpenAI API sağlayıcısı",
+            "base_url": "Temel URL",
+            "base_url_placeholder": "https://api.openai.com",
+            "create": "Oluştur"
+        },
+        "edit": {
+            "title": "Sağlayıcı Düzenle",
+            "description": "Bu pencereyi kullanarak sağlayıcı bilgilerini düzenleyebilirsiniz.",
+            "submit": "Düzenle"
+        },
+        "delete": {
+            "success": "Sağlayıcı başarıyla silindi.",
+            "error": "Sağlayıcı silinirken hata oluştu.",
+            "title": "Emin misiniz?",
+            "subtext": "Seçilen sağlayıcı <b>({{name}})</b> tamamen silinecektir. Devam etmek istiyor musunuz?",
+            "no": "Vazgeç",
+            "yes": "Onayla"
+        }
+    },
+    "sessions": {
+        "title": "Oturumlar",
+        "description": "Sistemdeki sohbet oturumlarını görüntüleyin ve yönetin.",
+        "user": "Kullanıcı",
+        "chatbot": "Chatbot",
+        "messages_count": "Mesaj Sayısı"
     }
 }
