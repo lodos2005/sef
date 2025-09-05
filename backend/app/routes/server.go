@@ -3,7 +3,6 @@ package routes
 import (
 	"sef/app/controllers/auth"
 	"sef/app/controllers/chatbots"
-	"sef/app/controllers/messages"
 	"sef/app/controllers/providers"
 	"sef/app/controllers/sessions"
 	"sef/app/controllers/users"
@@ -30,15 +29,13 @@ func Server(app *fiber.App) {
 		authGroup.Get("/me", auth.CurrentUser)
 	}
 
-	// Admin routes
-	apiV1.Use(middleware.IsSuperAdmin())
-
 	userGroup := apiV1.Group("/users")
 	{
 		controller := &users.Controller{
 			DB: database.Connection(),
 		}
 
+		userGroup.Use(middleware.IsSuperAdmin())
 		userGroup.Get("/", controller.Index)
 		userGroup.Post("/", controller.Create)
 		userGroup.Get("/:id", controller.Show)
@@ -53,23 +50,12 @@ func Server(app *fiber.App) {
 		}
 
 		chatbotsGroup.Get("/", controller.Index)
-		chatbotsGroup.Post("/", controller.Create)
 		chatbotsGroup.Get("/:id", controller.Show)
+
+		chatbotsGroup.Use(middleware.IsSuperAdmin())
+		chatbotsGroup.Post("/", controller.Create)
 		chatbotsGroup.Patch("/:id", controller.Update)
 		chatbotsGroup.Delete("/:id", controller.Delete)
-	}
-
-	messagesGroup := apiV1.Group("/messages")
-	{
-		controller := &messages.Controller{
-			DB: database.Connection(),
-		}
-
-		messagesGroup.Get("/", controller.Index)
-		messagesGroup.Post("/", controller.Create)
-		messagesGroup.Get("/:id", controller.Show)
-		messagesGroup.Patch("/:id", controller.Update)
-		messagesGroup.Delete("/:id", controller.Delete)
 	}
 
 	providersGroup := apiV1.Group("/providers")
@@ -78,9 +64,10 @@ func Server(app *fiber.App) {
 			DB: database.Connection(),
 		}
 
+		providersGroup.Use(middleware.IsSuperAdmin())
 		providersGroup.Get("/", controller.Index)
-		providersGroup.Post("/", controller.Create)
 		providersGroup.Get("/:id", controller.Show)
+		providersGroup.Post("/", controller.Create)
 		providersGroup.Patch("/:id", controller.Update)
 		providersGroup.Delete("/:id", controller.Delete)
 	}
@@ -91,10 +78,24 @@ func Server(app *fiber.App) {
 			DB: database.Connection(),
 		}
 
+		// GetUserSessions
 		sessionsGroup.Get("/", controller.Index)
-		sessionsGroup.Post("/", controller.Create)
+		// GetSession
 		sessionsGroup.Get("/:id", controller.Show)
-		sessionsGroup.Patch("/:id", controller.Update)
+		// CreateSession
+		sessionsGroup.Post("/", controller.Create)
+		// DeleteSession
 		sessionsGroup.Delete("/:id", controller.Delete)
+
+		// GetSessionMessages
+		sessionsGroup.Get("/:id/messages", controller.Messages)
+		// SendMessage
+		sessionsGroup.Post("/:id/messages", controller.SendMessage)
+
+		sessionsGroup.Use(middleware.IsSuperAdmin())
+		sessionsAdminGroup := sessionsGroup.Group("/admin")
+		{
+			sessionsAdminGroup.Get("/", controller.IndexAdmin)
+		}
 	}
 }

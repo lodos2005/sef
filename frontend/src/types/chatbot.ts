@@ -10,6 +10,7 @@ export interface IChatbot {
   user_id: number
   user?: IUser
   model_name: string
+  system_prompt?: string
   created_at?: string
   updated_at?: string
 }

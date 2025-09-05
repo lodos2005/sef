@@ -52,6 +52,7 @@ export default function CreateChatbot() {
         .optional(),
       provider_id: z.number().min(1, "Please select a provider"),
       model_name: z.string().min(1, "Model name is required"),
+      system_prompt: z.string().optional(),
     })
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -61,6 +62,7 @@ export default function CreateChatbot() {
       description: "",
       provider_id: 0,
       model_name: "",
+      system_prompt: "",
     },
   })
 
@@ -187,6 +189,22 @@ export default function CreateChatbot() {
                   <Input
                     id="model_name"
                     placeholder={t("chatbots.create.model_name_placeholder")}
+                    {...field}
+                  />
+                  <FormMessage className="mt-1" />
+                </div>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="system_prompt"
+              render={({ field }) => (
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="system_prompt">{t("chatbots.create.system_prompt")}</Label>
+                  <Textarea
+                    id="system_prompt"
+                    placeholder={t("chatbots.create.system_prompt_placeholder")}
                     {...field}
                   />
                   <FormMessage className="mt-1" />

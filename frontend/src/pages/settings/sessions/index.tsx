@@ -97,7 +97,7 @@ export default function SessionSettingsPage() {
 
       <AsyncDataTable<ISession, string>
         columns={columns}
-        endpoint="/sessions"
+        endpoint="/sessions/admin"
         refetchTrigger={refetchTrigger}
       />
     </>

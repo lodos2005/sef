@@ -63,19 +63,6 @@ export default function ChatbotSettingsPage() {
       ),
     },
     {
-      accessorKey: "user.username",
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t("chatbots.user")} />
-      ),
-      title: t("chatbots.user"),
-      cell: ({ row }) => (
-        <div className="flex items-center">
-          <Bot className="size-4 mr-2" />
-          {row.original.user?.username || "N/A"}
-        </div>
-      ),
-    },
-    {
       id: "actions",
       cell: ({ row }) => (
         <div className="flex justify-center">

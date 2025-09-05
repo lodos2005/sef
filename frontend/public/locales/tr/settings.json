@@ -106,11 +106,15 @@
             "provider": "Sağlayıcı",
             "model_name": "Model Adı",
             "model_name_placeholder": "gpt-3.5-turbo",
+            "system_prompt": "Sistem Promptu",
+            "system_prompt_placeholder": "Chatbot için sistem promptu girin",
             "create": "Oluştur"
         },
         "edit": {
             "title": "Chatbot Düzenle",
             "description": "Bu pencereyi kullanarak chatbot bilgilerini düzenleyebilirsiniz.",
+            "system_prompt": "Sistem Promptu",
+            "system_prompt_placeholder": "Chatbot için sistem promptu girin",
             "submit": "Düzenle"
         },
         "delete": {

@@ -16,7 +16,7 @@ type Controller struct {
 
 func (h *Controller) Index(c fiber.Ctx) error {
 	var items []*entities.Chatbot
-	db := h.DB.Model(&entities.Chatbot{})
+	db := h.DB.Model(&entities.Chatbot{}).Preload(clause.Associations)
 
 	if c.Query("search") != "" {
 		search.Search(c.Query("search"), db)
@@ -32,7 +32,7 @@ func (h *Controller) Index(c fiber.Ctx) error {
 
 func (h *Controller) Show(c fiber.Ctx) error {
 	var item *entities.Chatbot
-	if err := h.DB.First(&item, c.Params("id")).Error; err != nil {
+	if err := h.DB.Preload(clause.Associations).First(&item, c.Params("id")).Error; err != nil {
 		return err
 	}
 
