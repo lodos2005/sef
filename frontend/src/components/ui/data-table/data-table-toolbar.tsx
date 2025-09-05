@@ -1,4 +1,4 @@
-import { Row, Table } from "@tanstack/react-table"
+import { Row, Table, ColumnFiltersState } from "@tanstack/react-table"
 import { download, generateCsv, mkConfig } from "export-to-csv"
 import { DownloadCloud, Search, X } from "lucide-react"
 import { useRouter } from "next/router"
@@ -22,6 +22,10 @@ interface DataTableToolbarProps<TData, TValue> {
   columns: DivergentColumn<TData, TValue>[]
   globalFilter: string
   setGlobalFilter: (value: string) => void
+  isServerSide?: boolean
+  serverGlobalFilter?: string
+  serverColumnFilters?: ColumnFiltersState
+  onClearServerFilters?: () => void
 }
 
 export function DataTableToolbar<TData, TValue>({
@@ -29,6 +33,10 @@ export function DataTableToolbar<TData, TValue>({
   columns,
   globalFilter,
   setGlobalFilter,
+  isServerSide = false,
+  serverGlobalFilter,
+  serverColumnFilters,
+  onClearServerFilters,
 }: DataTableToolbarProps<TData, TValue>) {
   const { t } = useTranslation("components")
 
@@ -49,11 +57,22 @@ export function DataTableToolbar<TData, TValue>({
 
   const [isFiltered, setIsFiltered] = useState<boolean>(false)
   useEffect(() => {
-    setIsFiltered(
-      table.getPreFilteredRowModel().rows.length >
-      table.getFilteredRowModel().rows.length
-    )
+    if (isServerSide) {
+      // For server-side filtering, check if there are active filters
+      const hasGlobalFilter = serverGlobalFilter && serverGlobalFilter.trim() !== ""
+      const hasColumnFilters = serverColumnFilters && serverColumnFilters.length > 0 && serverColumnFilters.some(filter => filter.value)
+      setIsFiltered(!!(hasGlobalFilter || hasColumnFilters))
+    } else {
+      // Original client-side logic
+      setIsFiltered(
+        table.getPreFilteredRowModel().rows.length >
+        table.getFilteredRowModel().rows.length
+      )
+    }
   }, [
+    isServerSide,
+    serverGlobalFilter,
+    serverColumnFilters,
     table.getPreFilteredRowModel().rows.length,
     table.getFilteredRowModel().rows.length,
   ])
@@ -85,8 +104,12 @@ export function DataTableToolbar<TData, TValue>({
             <Button
               variant="outline"
               onClick={() => {
-                table.resetColumnFilters()
-                table.resetGlobalFilter()
+                if (isServerSide && onClearServerFilters) {
+                  onClearServerFilters()
+                } else {
+                  table.resetColumnFilters()
+                  table.resetGlobalFilter()
+                }
               }}
               className="h-8 px-2 lg:px-3"
             >

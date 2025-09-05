@@ -25,16 +25,6 @@
       "search_placeholder": "Kullanıcı ara...",
       "not_found": "Kullanıcı bulunamadı",
       "select_placeholder": "Kullanıcı seçiniz"
-    },
-    "server": {
-      "search_placeholder": "Sunucu ara...",
-      "not_found": "Sunucu bulunamadı",
-      "select_placeholder": "Sunucu seçiniz"
-    },
-    "role": {
-      "select_placeholder": "Rol seçimi yapınız...",
-      "search_placeholder": "Rol arayın...",
-      "not_found": "Rol bulunamadı."
     }
   },
   "transfer": {

@@ -33,7 +33,6 @@ export function Sidebar({ className }: { className?: string }) {
           <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background z-0 w-full"></div>
         </div>
       </ScrollArea>
-
     </div>
   )
 }

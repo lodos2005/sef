@@ -59,7 +59,7 @@ const Layout = ({ Component, pageProps }: any) => {
         <ResizablePanelGroup
           className="min-h-[var(--container-height)]"
           direction="horizontal"
-          autoSaveId="limanLayout"
+          autoSaveId="sefLayout"
         >
           <ResizablePanel
             defaultSize={18}

@@ -1,13 +1,11 @@
-import { Menu, Settings } from "lucide-react"
-import dynamic from "next/dynamic"
+import { Settings } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/router"
 
-import { Button, buttonVariants } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/button"
 
 import { cn } from "@/lib/utils"
 import { Icons } from "../ui/icons"
-import CommandMenu from "./command-menu"
 import ProfileDropdown from "./profile-dropdown"
 
 export function SiteHeader() {
@@ -21,7 +19,8 @@ export function SiteHeader() {
             href="/"
             className="flex items-center space-x-2"
           >
-            <Icons.dugumluLogo className="w-22 h-9 dark:fill-white" />
+            <Icons.logo className="w-18 h-9 dark:fill-white -ml-2" />
+            <span className="text-lg font-semibold">Şef</span>
           </Link>
         </div>
 

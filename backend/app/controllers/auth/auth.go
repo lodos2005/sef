@@ -52,3 +52,15 @@ func Login(c fiber.Ctx) error {
 func CurrentUser(c fiber.Ctx) error {
 	return c.JSON(c.Locals("user").(*entities.User))
 }
+
+func Logout(c fiber.Ctx) error {
+	// Invalidate the token cookie by setting its expiration time to the past
+	c.Cookie(&fiber.Cookie{
+		Name:     "token",
+		Value:    "",
+		HTTPOnly: true,
+		Expires:  time.Now().Add(-100 * time.Hour), // Set to past time
+	})
+
+	return c.JSON(fiber.Map{"message": "Logged out successfully"})
+}

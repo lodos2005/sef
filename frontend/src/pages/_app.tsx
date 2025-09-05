@@ -33,7 +33,7 @@ const RootLayout: AppType = ({ Component, pageProps }: AppPropsWithLayout) => {
   return (
     <>
       <Head>
-        <title>{t("page_title", "Liman Merkezi Yönetim Sistemi")}</title>
+        <title>{t("page_title", "Şef")}</title>
         <link rel="icon" type="image/png" href="/favicon.png"></link>
       </Head>
 

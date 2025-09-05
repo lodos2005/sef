@@ -6,26 +6,28 @@ import type { Ni18nOptions } from "ni18n"
 const isBrowser = typeof window !== "undefined"
 
 export const ni18nConfig: Ni18nOptions = {
-  supportedLngs: ["tr", "en", "de"],
+  supportedLngs: ["tr", "en"],
   fallbackLng: {
     dev: ["tr", "en"],
   },
   react: {
     useSuspense: false,
   },
-  ns: ["common", "zod", "components", "dashboard", "settings", "notifications"],
+  ns: ["common", "zod", "components", "dashboard", "settings"],
   use: isBrowser ? [ChainedBackend] : undefined,
   backend: isBrowser
     ? {
-      backends: [LocalStorageBackend, HttpBackend],
+      backends: [
+        // LocalStorageBackend, 
+        HttpBackend
+      ],
       backendOptions: [
         {
           expirationTime: 24 * 60 * 60 * 1000,
           defaultVersion: "v1",
           versions: {
-            en: "v5",
-            tr: "v5",
-            de: "v5",
+            en: "v1",
+            tr: "v1",
           },
         },
         {

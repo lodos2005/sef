@@ -49,16 +49,10 @@ export function UserRowActions({ row }: { row: Row<IUser> }) {
         <DropdownMenuContent align="end" className="w-[160px]">
           <DropdownMenuItem onClick={() => emitter.emit("EDIT_USER", user)}>
             <Edit2 className="mr-2 size-3.5" />
-            {t("roles.actions.edit")}
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => emitter.emit("AUTH_LOG_DIALOG", user.id)}
-          >
-            <Footprints className="mr-2 size-3.5" />
-            {t("users.auth_log.title")}
+            {t("users.actions.edit")}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => setDeleteDialog(true)} disabled={user.auth_type != 'local'}>
+          <DropdownMenuItem onClick={() => setDeleteDialog(true)}>
             <Trash className="mr-2 size-3.5" />
             {t("delete")}
           </DropdownMenuItem>
@@ -120,7 +114,7 @@ function DeleteDialog({
                 // Couldn't find a better way to use tags with localized strings
                 // If i find any i'll change it.
                 __html: t("users.delete.subtext", {
-                  username: user.name,
+                  username: user.username,
                 }),
               }}
             />

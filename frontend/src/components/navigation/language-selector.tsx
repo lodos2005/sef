@@ -27,7 +27,6 @@ const changeLanguage = (i18n: any, language: any) => {
 const languages = [
   { code: "tr", name: "Türkçe" },
   { code: "en", name: "English" },
-  { code: "de", name: "Deutsch" },
 ]
 
 export default function LanguageSelector() {

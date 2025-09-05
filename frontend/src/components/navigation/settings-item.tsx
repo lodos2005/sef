@@ -5,7 +5,6 @@ import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { cn } from "@/lib/utils"
-import { http } from "@/services"
 
 import { Button } from "../ui/button"
 import {
@@ -19,7 +18,6 @@ interface ISettingsItemChild {
   title: string
   href: string
   icon: LucideIcon
-  requiresLdap?: boolean
 }
 
 interface ISettingsItemProps {
@@ -36,7 +34,6 @@ export default function SettingsItem(props: ISettingsItemProps) {
   const router = useRouter()
   const { t } = useTranslation("common")
   const [isCollapsed, setIsCollapsed] = useState(true)
-  const [ldapEnabled, setLdapEnabled] = useState(false)
 
   // Check if this item or any of its children is active
   const isActive = () => {
@@ -49,22 +46,6 @@ export default function SettingsItem(props: ISettingsItemProps) {
       ? router.asPath === props.href
       : router.asPath.includes(props.href)
   }
-
-  // Load LDAP configuration if needed
-  useEffect(() => {
-    if (props.children?.some(child => child.requiresLdap)) {
-      http
-        .get("/settings/access/ldap/configuration")
-        .then((res) => {
-          if (res.data.active) {
-            setLdapEnabled(true)
-          }
-        })
-        .catch(() => {
-          // Silently handle error
-        })
-    }
-  }, [props.children])
 
   // Auto-expand if any child is active
   useEffect(() => {
@@ -80,11 +61,6 @@ export default function SettingsItem(props: ISettingsItemProps) {
   const toggleCollapsed = () => {
     setIsCollapsed(!isCollapsed)
   }
-
-  // Filter enabled children
-  const enabledChildren = props.children?.filter(child => 
-    child.requiresLdap ? ldapEnabled : true
-  ) || []
 
   // If no children, render as regular link
   if (!props.children || props.children.length === 0) {
@@ -130,7 +106,7 @@ export default function SettingsItem(props: ISettingsItemProps) {
         </CollapsibleTrigger>
         <CollapsibleContent className="animated-collapsible">
           <div className="my-1 flex flex-col gap-y-[3px] rounded-md border p-1">
-            {enabledChildren.map((child) => (
+            {props.children.map((child) => (
               <Link href={child.href} key={child.href}>
                 <Button
                   variant={router.asPath === child.href ? "secondary" : "ghost"}

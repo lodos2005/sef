@@ -19,10 +19,11 @@ import {
 } from "../ui/dropdown-menu"
 import FullScreenToggle from "./full-screen-toggle"
 import LanguageSelector from "./language-selector"
+import { Badge } from "../ui/badge"
 
 export default function ProfileDropdown() {
   const router = useRouter()
-  const { t, i18n } = useTranslation("common")
+  const { t } = useTranslation("common")
 
   const user = useCurrentUser()
 
@@ -60,14 +61,8 @@ export default function ProfileDropdown() {
       <DropdownMenuContent className="mr-5 w-[420px]">
         {Object.keys(user).length > 0 && (
           <>
-            <DropdownMenuLabel>
-              {user.username}
-              <br />
-              <span className="text-xs text-slate-400">{user.username}</span>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
             <div className="flex">
-              <div className="avatar mr-2 p-2">
+              <div className="avatar mr-2 p-2 flex items-center gap-4">
                 <Avatar className="size-12">
                   <AvatarImage
                     src={`https://gravatar.com/avatar/${md5(user.username)}?d=404`}
@@ -75,6 +70,16 @@ export default function ProfileDropdown() {
                   />
                   <AvatarFallback>{user && user.username[0]}</AvatarFallback>
                 </Avatar>
+
+                <div className="flex flex-col">
+                  <span className="font-medium">{user.username}</span>
+                  {/* If user is super admin add a badge */}
+                  {user.super_admin && (
+                    <Badge variant="outline">
+                      Super Admin
+                    </Badge>
+                  )}
+                </div>
               </div>
             </div>
           </>
@@ -84,14 +89,6 @@ export default function ProfileDropdown() {
 
         <div className="flex gap-1">
           <div className="flex items-center">
-            <Button
-              className="w-full"
-              variant="ghost"
-              onClick={() => router.push("/settings/profile")}
-            >
-              <User className="mr-2 size-4" /> {t("profile_dropdown.profile")}
-            </Button>
-
             <ThemeToggle />
 
             <LanguageSelector />

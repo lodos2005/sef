@@ -144,15 +144,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
               name="password"
               render={({ field }) => (
                 <div className="flex flex-col gap-3">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="password">Parola</Label>
-
-                    <small className="italic text-muted-foreground">
-                      <Link href="/auth/forgot_password" tabIndex={-1}>
-                        Şifrenizi mi unuttunuz?
-                      </Link>
-                    </small>
-                  </div>
+                  <Label htmlFor="password">Parola</Label>
                   <Input
                     id="password"
                     type="password"

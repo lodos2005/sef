@@ -10,10 +10,19 @@ const defaultUserObject: IUser = {
   super_admin: false,
 } as IUser
 
+let user = {
+  id: -1,
+} as IUser
+
 export async function getCurrentUser(): Promise<IUser> {
+  if (user.id !== -1) {
+    return user
+  }
+
   try {
     const response = await authService.me()
-    return response.data
+    user = response.data
+    return user
   } catch (error) {
     return defaultUserObject
   }

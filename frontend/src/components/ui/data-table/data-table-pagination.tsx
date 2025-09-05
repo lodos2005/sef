@@ -19,11 +19,13 @@ import {
 interface DataTablePaginationProps<TData> {
   table: Table<TData>
   selectable?: boolean
+  totalRecords?: number
 }
 
 export function DataTablePagination<TData>({
   table,
   selectable,
+  totalRecords,
 }: DataTablePaginationProps<TData>) {
   const { t } = useTranslation("components")
 
@@ -39,7 +41,7 @@ export function DataTablePagination<TData>({
         ) : (
           <>
             {t("table.pagination.total")}{" "}
-            {table.getFilteredRowModel().rows.length}{" "}
+            {totalRecords ?? table.getFilteredRowModel().rows.length}{" "}
             {t("table.pagination.records")}
           </>
         )}

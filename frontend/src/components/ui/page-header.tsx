@@ -12,7 +12,7 @@ export default function PageHeader({
   return (
     <div className="flex-1 flex-col p-8 md:flex">
       <Head>
-        <title>{`${title} | Liman`}</title>
+        <title>{`${title} | Şef`}</title>
       </Head>
 
       <div className="flex items-center justify-between space-y-2">

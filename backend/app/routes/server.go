@@ -19,6 +19,7 @@ func Server(app *fiber.App) {
 	authGroup := apiV1.Group("/auth")
 	{
 		authGroup.Post("/login", auth.Login)
+		authGroup.Post("/logout", auth.Logout)
 	}
 
 	apiV1.Use(middleware.TokenLookup)

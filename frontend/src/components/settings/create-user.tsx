@@ -20,15 +20,9 @@ import {
 import { Form, FormField, FormMessage } from "@/components/form/form"
 
 import { Button } from "../ui/button"
+import { Checkbox } from "../ui/checkbox"
 import { Input } from "../ui/input"
 import { Label } from "../ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select"
 import { useToast } from "../ui/use-toast"
 
 export default function CreateUser() {
@@ -38,14 +32,7 @@ export default function CreateUser() {
 
   const formSchema = z
     .object({
-      name: z
-        .string()
-        .min(2, {
-          message: t("users.validation.n_min"),
-        })
-        .max(50, {
-          message: t("users.validation.n_max"),
-        }),
+      name: z.string().optional(),
       username: z
         .string()
         .min(2, {
@@ -54,10 +41,6 @@ export default function CreateUser() {
         .max(50, {
           message: t("users.validation.name_max"),
         }),
-      email: z.string().email({
-        message: t("users.validation.email"),
-      }),
-      status: z.string(),
       password: z
         .string()
         .min(8, {
@@ -66,11 +49,7 @@ export default function CreateUser() {
         .max(50, {
           message: t("users.validation.password_max"),
         }),
-      password_confirmation: z.string(),
-    })
-    .refine((data) => data.password === data.password_confirmation, {
-      message: t("users.validation.password_confirmation"),
-      path: ["password_confirmation"],
+      super_admin: z.boolean().optional().default(false),
     })
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -78,17 +57,15 @@ export default function CreateUser() {
     defaultValues: {
       name: "",
       username: "",
-      email: "",
-      status: "0",
       password: "",
-      password_confirmation: "",
+      super_admin: false,
     },
   })
 
   const [open, setOpen] = useState<boolean>(false)
   const handleCreate = (values: z.infer<typeof formSchema>) => {
     http
-      .post(`/settings/users`, values)
+      .post(`/users`, values)
       .then((res) => {
         if (res.status === 200) {
           toast({
@@ -138,73 +115,27 @@ export default function CreateUser() {
           >
             <FormField
               control={form.control}
-              name="status"
-              render={({ field }) => (
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="status">{t("users.create.user_type")}</Label>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="0">
-                        {t("users.create.user")}
-                      </SelectItem>
-                      <SelectItem value="1">
-                        {t("users.create.admin")}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage className="mt-1" />
-                </div>
-              )}
-            />
-            <FormField
-              control={form.control}
               name="name"
               render={({ field }) => (
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="name">{t("users.create.name_surname")}</Label>
-                  <Input
-                    id="name"
-                    placeholder={t("users.create.name_surname_placeholder")}
-                    {...field}
-                  />
+                  <Label htmlFor="name">{t("users.create.name")}</Label>
+                  <Input id="name" placeholder="Sef User" {...field} />
                   <FormMessage className="mt-1" />
                 </div>
               )}
             />
+
             <FormField
               control={form.control}
               name="username"
               render={({ field }) => (
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="username">{t("users.create.username")}</Label>
-                  <Input id="username" placeholder="limanuser" {...field} />
+                  <Input id="username" placeholder="sefuser" {...field} />
                   <FormMessage className="mt-1" />
                 </div>
               )}
             />
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="email">{t("users.create.email")}</Label>
-                  <Input
-                    id="email"
-                    placeholder="user@liman.dev"
-                    {...field}
-                    type="email"
-                  />
-                  <FormMessage className="mt-1" />
-                </div>
-              )}
-            />
-
             <FormField
               control={form.control}
               name="password"
@@ -224,18 +155,19 @@ export default function CreateUser() {
 
             <FormField
               control={form.control}
-              name="password_confirmation"
+              name="super_admin"
               render={({ field }) => (
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="password_confirmation">
-                    {t("users.create.password_confirmation")}
-                  </Label>
-                  <Input
-                    id="password_confirmation"
-                    {...field}
-                    className="col-span-3"
-                    type="password"
+                <div className="flex gap-2">
+                  <Checkbox
+                    id="super_admin"
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
                   />
+
+                  <Label htmlFor="super_admin">
+                    {t("users.create.super_admin")}
+                  </Label>
+
                   <FormMessage className="mt-1" />
                 </div>
               )}

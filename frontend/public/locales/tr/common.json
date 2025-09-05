@@ -1,83 +1,14 @@
 {
-    "page_title": "Liman Merkezi Yönetim Sistemi",
+    "page_title": "Şef",
     "information": "Bilgilendirme",
     "success": "Başarılı",
     "error": "Hata",
     "warning": "Uyarı",
     "upload": "Yükle",
-    "logout_title": "Bilgilendirme",
-    "logout_description": "Oturum süreniz dolduğu için sistemden çıkış yapıyorsunuz. Lütfen tekrar giriş yapınız.",
-    "logout": "Giriş Yap",
-    "command_menu": {
-        "search": "Arama...",
-        "search_placeholder": "Arama yapın...",
-        "no_results": "Sonuç bulunamadı."
-    },
     "language_selector": {
         "title": "Dil Seçimi"
     },
-    "notifications": {
-        "title": "Bildirimleriniz",
-        "description": "Geçmişe dönük okuduğunuz tüm bildirimleri bu sayfa aracılığı ile görüntüleyebilirsiniz.",
-        "mark_all_as_read": "Tümünü Okundu Olarak İşaretle",
-        "empty": "Bildirim Yok",
-        "empty_message": "Bildirimleriniz burada görünecektir.",
-        "manage": "Bildirimleri Yönet",
-        "show_all": "Tüm Bildirimleri Görüntüle"
-    },
     "profile_dropdown": {
-        "last_login_at": "Son Giriş Tarihi",
-        "last_login_ip": "Giriş Yapılan Son IP",
-        "profile": "Profil",
         "logout": "Çıkış Yap"
-    },
-    "sidebar": {
-        "servers": "Sunucular",
-        "management": "Sunucu Yönetimi",
-        "favorite": "Favorilere ekle/çıkar",
-        "all_servers": "Tüm sunucuları gör",
-        "add_server": "Yeni sunucu ekle",
-        "admin_message": "Liman'ı aktif şekilde kullanmaya başlamak için yukarıdan sunucu ekleyin.",
-        "user_message": "Liman'ı aktif şekilde kullanmaya başlamak için sistem yöneticinizden size rol tanımlamasını talep ediniz.",
-        "extensions": "Eklentiler",
-        "system_status": "Sistem Durumu",
-        "container_status": "Konteyner Durumu",
-        "services": "Servisler",
-        "packages": "Paketler",
-        "updates": "Güncellemeler",
-        "user_management": {
-            "title": "Kullanıcı İşlemleri",
-            "local_users": "Yerel Kullanıcılar",
-            "local_groups": "Yerel Gruplar",
-            "sudoers": "Yetkili Kullanıcılar"
-        },
-        "open_ports": "Açık Portlar",
-        "access_logs": "Erişim Kayıtları",
-        "settings": {
-            "title": "Ayarlar",
-            "user": "Kullanıcı Ayarları",
-            "system": "Sistem Ayarları",
-            "profile": "Profil",
-            "vault": "Kasa",
-            "tokens": "Kişisel Erişim Anahtarları",
-            "extensions": "Eklentiler",
-            "users": "Kullanıcılar",
-            "roles": "Roller",
-            "email": "E-Posta",
-            "external_notifications": "Dış Bildirimler",
-            "subscriptions": "Abonelikler",
-            "access": "Erişim",
-            "audit": "Erişim Kayıtları",
-            "ldap": "LDAP Bağlantısı",
-            "permissions_ldap": "LDAP Erişim İzinleri",
-            "keycloak": "Keycloak",
-            "oidc": "OpenID Connect",
-            "health": "Sağlık Durumu",
-            "advanced": "Gelişmiş Ayarlar",
-            "certificates": "Sertifikalar",
-            "dns": "DNS Ayarları",
-            "log_rotation": "Log Yönlendirme",
-            "tweaks": "İnce Ayarlar"
-        }
     }
 }
