@@ -3,6 +3,7 @@ const nextConfig = {
   reactStrictMode: true,
   output: "standalone",
   allowedDevOrigins: ["*", "liman.io", "*.liman.io"],
+  devIndicators: false,
   rewrites: async () => {
     return [
       {

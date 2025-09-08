@@ -6,7 +6,7 @@ import { Chat } from "@/components/ui/chat"
 import { useChatSession } from "@/hooks/useChatSession"
 import { useMessages } from "@/hooks/useMessages"
 import { useSendMessage } from "@/hooks/useSendMessage"
-import { ChatHeader, ErrorBanner, LoadingSpinner, ErrorPage } from "@/components/ChatComponents"
+import { ChatHeader, ErrorBanner, LoadingSpinner, ErrorPage } from "@/components/chat"
 
 export default function ChatPage() {
   const router = useRouter()
@@ -49,12 +49,12 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex flex-col h-[93vh] bg-background">
+    <div className="flex flex-col h-[calc(100vh-3.8rem)] bg-background p-0">
       <ChatHeader chatbotName={session?.chatbot?.name} />
 
       <ErrorBanner error={error} />
 
-      <div className="flex-1 flex flex-col min-h-0 p-4">
+      <div className="flex-1 flex flex-col min-h-0">
         <div className="flex-1 overflow-hidden max-w-4xl mx-auto w-full">
           <Chat
             messages={messages}
@@ -63,7 +63,7 @@ export default function ChatPage() {
             handleInputChange={handleInputChange}
             isGenerating={isGenerating}
             setMessages={setMessages}
-            className="h-full"
+            className="h-screen"
           />
         </div>
       </div>

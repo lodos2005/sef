@@ -17,10 +17,9 @@ export function SiteHeader() {
         <div className="flex">
           <Link
             href="/"
-            className="flex items-center space-x-2"
+            className="flex items-center space-x-2 -ml-2"
           >
-            <Icons.logo className="w-18 h-9 dark:fill-white -ml-2" />
-            <span className="text-lg font-semibold">Şef</span>
+            <Icons.logo className="w-18 h-9 dark:fill-white" />
           </Link>
         </div>
 

@@ -78,6 +78,12 @@ func Server(app *fiber.App) {
 			DB: database.Connection(),
 		}
 
+		sessionsAdminGroup := sessionsGroup.Group("/admin")
+		{
+			sessionsAdminGroup.Use(middleware.IsSuperAdmin())
+			sessionsAdminGroup.Get("/", controller.IndexAdmin)
+		}
+
 		// GetUserSessions
 		sessionsGroup.Get("/", controller.Index)
 		// GetSession
@@ -92,10 +98,5 @@ func Server(app *fiber.App) {
 		// SendMessage
 		sessionsGroup.Post("/:id/messages", controller.SendMessage)
 
-		sessionsGroup.Use(middleware.IsSuperAdmin())
-		sessionsAdminGroup := sessionsGroup.Group("/admin")
-		{
-			sessionsAdminGroup.Get("/", controller.IndexAdmin)
-		}
 	}
 }

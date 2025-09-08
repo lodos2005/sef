@@ -54,7 +54,7 @@ export default function IndexPage() {
 
   return (
     <div
-      className="flex flex-col gap-6 p-8"
+      className="flex flex-col gap-6 p-8 overflow-x-hidden"
       style={{ height: "var(--container-height)" }}
     >
       {/* Header */}
@@ -70,58 +70,15 @@ export default function IndexPage() {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Toplam Chatbot</CardTitle>
-            <Bot className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {chatbotsLoading ? <Skeleton className="h-8 w-16" /> : chatbots.length}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Aktif Oturum</CardTitle>
-            <MessageSquare className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {sessionsLoading ? <Skeleton className="h-8 w-16" /> : sessions.length}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Son Aktivite</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {sessions.length > 0 ? (
-                new Date(sessions[0].updated_at || sessions[0].created_at || '').toLocaleDateString('tr-TR')
-              ) : (
-                "Yok"
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Chatbots Section */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Bot className="h-5 w-5" />
-            Kullanılabilir Chatbot'lar
+            Kullanılabilir Asistanlar
           </CardTitle>
           <CardDescription>
-            Yeni bir sohbet başlatmak için bir chatbot seçin
+            Yeni bir sohbet başlatmak için bir asistan seçin
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -179,7 +136,7 @@ export default function IndexPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5" />
+            <Clock className="h-5 w-5" />
             Son Oturumlar
           </CardTitle>
           <CardDescription>
@@ -188,50 +145,72 @@ export default function IndexPage() {
         </CardHeader>
         <CardContent>
           {sessionsLoading ? (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {[...Array(3)].map((_, i) => (
-                <Card key={i}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <Skeleton className="h-4 w-48" />
-                        <Skeleton className="h-3 w-32" />
-                      </div>
-                      <Skeleton className="h-9 w-24" />
-                    </div>
-                  </CardContent>
-                </Card>
+                <div key={i} className="flex items-center gap-4 p-4 border rounded-lg">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-3 w-1/2" />
+                  </div>
+                  <Skeleton className="h-9 w-24" />
+                </div>
               ))}
             </div>
           ) : sessions.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {sessions.slice(0, 5).map((session) => (
-                <Card key={session.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <div className="font-medium">
-                          {session.chatbot?.name || "Chatbot"}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {new Date(session.created_at || '').toLocaleDateString('tr-TR')} • 
-                          {session.messages?.length || 0} mesaj
-                        </div>
-                      </div>
-                      <Button
-                        variant="outline"
-                        onClick={() => handleContinueSession(session.id)}
-                      >
-                        Devam Et
-                      </Button>
+                <div
+                  key={session.id}
+                  className="flex items-center gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                  onClick={() => handleContinueSession(session.id)}
+                >
+                  <div className="flex-shrink-0">
+                    <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center">
+                      <MessageSquare className="h-5 w-5 text-primary" />
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm truncate">
+                      {session.chatbot?.name || "Chatbot"}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(session.created_at || '').toLocaleDateString('tr-TR', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })} • {session.messages?.length || 0} mesaj
+                    </div>
+                    {session.messages && session.messages.length > 0 && (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {session.messages[session.messages.length - 1].content.substring(0, 120)}...
+                      </div>
+                    )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleContinueSession(session.id)
+                    }}
+                  >
+                    Devam Et
+                  </Button>
+                </div>
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              Henüz hiç oturum başlatmadınız.
+            <div className="text-center py-12">
+              <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">
+                Henüz hiç oturum başlatmadınız.
+              </p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Yukarıdaki asistanlardan birini seçerek sohbetinizi başlatın.
+              </p>
             </div>
           )}
         </CardContent>

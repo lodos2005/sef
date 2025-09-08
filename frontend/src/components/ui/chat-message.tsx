@@ -159,7 +159,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
 
   const isUser = role === "user"
 
-  const formattedTime = createdAt?.toLocaleTimeString("en-US", {
+  const formattedTime = createdAt?.toLocaleTimeString("tr-TR", {
     hour: "2-digit",
     minute: "2-digit",
   })

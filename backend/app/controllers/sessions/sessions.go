@@ -33,7 +33,8 @@ func (h *Controller) Index(c fiber.Ctx) error {
 	currentUser := c.Locals("user").(*entities.User)
 
 	db := h.DB.Model(&entities.Session{}).
-		Where("user_id = ?", currentUser.ID)
+		Where("user_id = ?", currentUser.ID).
+		Preload(clause.Associations)
 
 	if c.Query("search") != "" {
 		search.Search(c.Query("search"), db)

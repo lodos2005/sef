@@ -64,11 +64,11 @@ export default function SessionSettingsPage() {
     {
       accessorKey: "created_at",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Created At" />
+        <DataTableColumnHeader column={column} title="Oluşturulma Tarihi" />
       ),
-      title: "Created At",
+      title: "Oluşturulma Tarihi",
       cell: ({ row }) => (
-        <span>{new Date(row.original.created_at || "").toLocaleString()}</span>
+        <span>{new Date(row.original.created_at || "").toLocaleString("tr-TR")}</span>
       ),
     },
     {
@@ -113,16 +113,16 @@ function ChatHistoryDialog({ session }: { session: ISession }) {
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
           <MessageSquare className="mr-2 size-4" />
-          View Chat
+          Görüşmeyi İncele
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            Chat History - {session.user?.username} & {session.chatbot?.name}
+            Görüşme Geçmişi - {session.user?.username} & {session.chatbot?.name}
           </DialogTitle>
           <DialogDescription>
-            Conversation between {session.user?.username} and {session.chatbot?.name}
+            {session.user?.username} ile {session.chatbot?.name} arasındaki görüşme
           </DialogDescription>
         </DialogHeader>
                 <div className="space-y-4 mt-4">
@@ -150,7 +150,7 @@ function ChatHistoryDialog({ session }: { session: ISession }) {
                         {message.role === "user" ? "You" : "Assistant"}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        {new Date(message.created_at || "").toLocaleString()}
+                        {new Date(message.created_at || "").toLocaleString("tr-TR")}
                       </span>
                     </div>
                     <div className="text-sm">{message.content}</div>

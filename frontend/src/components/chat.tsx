@@ -9,15 +9,10 @@ interface ChatHeaderProps {
 
 export function ChatHeader({ chatbotName }: ChatHeaderProps) {
   return (
-    <div className="flex-shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
-      <div className="container mx-auto px-4 py-3">
+    <div className="flex-shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10 h-18 flex items-center">
+      <div className="container mx-auto px-8 py-3">
         <div className="flex items-center gap-2">
           <h1 className="font-semibold text-lg">{chatbotName || "Chat"}</h1>
-          {chatbotName && (
-            <span className="text-sm text-muted-foreground">
-              with {chatbotName}
-            </span>
-          )}
         </div>
       </div>
     </div>
