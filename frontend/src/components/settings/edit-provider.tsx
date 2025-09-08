@@ -17,6 +17,13 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet"
 import { Form, FormField, FormMessage } from "@/components/form/form"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 import { Button } from "../ui/button"
 import { Input } from "../ui/input"
@@ -74,6 +81,16 @@ export default function EditProvider() {
   })
 
   const [open, setOpen] = useState<boolean>(false)
+  const [providerTypes, setProviderTypes] = useState<string[]>([])
+
+  useEffect(() => {
+    http.get("/providers/types").then((res) => {
+      if (res.status === 200) {
+        setProviderTypes(res.data.types)
+      }
+    })
+  }, [])
+
   const handleEdit = (values: z.infer<typeof formSchema>) => {
     http
       .patch(`/providers/${values.id}`, values)
@@ -152,7 +169,18 @@ export default function EditProvider() {
               render={({ field }) => (
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="type">{t("providers.create.type")}</Label>
-                  <Input id="type" placeholder={t("providers.create.type_placeholder")} {...field} />
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={t("providers.create.type_placeholder")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {providerTypes.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage className="mt-1" />
                 </div>
               )}

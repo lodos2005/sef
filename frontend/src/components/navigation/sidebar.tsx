@@ -16,12 +16,24 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 import { Icons } from "../ui/icons"
 
 export function Sidebar({ className }: { className?: string }) {
   const { sessions, isLoading, error, deleteSession } = useUserSessions()
   const [hoveredSession, setHoveredSession] = useState<number | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [sessionToDelete, setSessionToDelete] = useState<number | null>(null)
   const router = useRouter()
 
   const getSessionTitle = (session: any) => {
@@ -43,17 +55,6 @@ export function Sidebar({ className }: { className?: string }) {
     router.push("/")
   }
 
-  const handleDeleteSession = async (
-    e: React.MouseEvent,
-    sessionId: number
-  ) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (confirm("Bu sohbeti silmek istediğinize emin misiniz?")) {
-      await deleteSession(sessionId)
-    }
-  }
-
   return (
     <div
       className={cn(
@@ -71,7 +72,7 @@ export function Sidebar({ className }: { className?: string }) {
         <div className="p-4 border-b h-18">
           <Button
             onClick={handleNewChat}
-            className="w-full justify-start gap-2"
+            className="w-full gap-2"
             variant="default"
           >
             <MessageCirclePlusIcon className="h-4 w-4" />
@@ -122,14 +123,19 @@ export function Sidebar({ className }: { className?: string }) {
                       <p className="text-xs text-muted-foreground">
                         {new Date(
                           session.created_at || ""
-                        ).toLocaleDateString()}
+                        ).toLocaleString("tr-TR")}
                       </p>
                     </div>
                   </div>
                 </Link>
                 {hoveredSession === session.id && (
                   <button
-                    onClick={(e) => handleDeleteSession(e, session.id)}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setSessionToDelete(session.id)
+                      setDeleteDialogOpen(true)
+                    }}
                     className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-muted opacity-0 group-hover:opacity-100 transition-opacity"
                     title="Delete conversation"
                   >
@@ -144,6 +150,30 @@ export function Sidebar({ className }: { className?: string }) {
           <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background z-0 w-full"></div>
         </div>
       </ScrollArea>
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sohbeti Sil</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bu sohbeti silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>İptal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (sessionToDelete) {
+                  await deleteSession(sessionToDelete)
+                  setDeleteDialogOpen(false)
+                  setSessionToDelete(null)
+                }
+              }}
+            >
+              Sil
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

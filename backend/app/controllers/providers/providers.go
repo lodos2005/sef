@@ -4,6 +4,7 @@ import (
 	"sef/app/entities"
 	"sef/internal/paginator"
 	"sef/internal/search"
+	"sef/pkg/providers"
 
 	"github.com/gofiber/fiber/v3"
 	"gorm.io/gorm"
@@ -82,4 +83,35 @@ func (h *Controller) Delete(c fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{"message": "Provider deleted successfully"})
+}
+
+func (h *Controller) Types(c fiber.Ctx) error {
+	// For now, hardcoded list of supported provider types
+	// In the future, this could be dynamic based on available providers
+	types := []string{"ollama"}
+	return c.JSON(fiber.Map{"types": types})
+}
+
+func (h *Controller) Models(c fiber.Ctx) error {
+	var provider *entities.Provider
+	if err := h.DB.First(&provider, c.Params("id")).Error; err != nil {
+		return err
+	}
+
+	factory := &providers.ProviderFactory{}
+	config := map[string]interface{}{
+		"base_url": provider.BaseURL,
+	}
+
+	llmProvider, err := factory.NewProvider(provider.Type, config)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	models, err := llmProvider.ListModels()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to list models"})
+	}
+
+	return c.JSON(fiber.Map{"models": models})
 }

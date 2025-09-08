@@ -7,7 +7,7 @@ export default function AuthenticationPage() {
   return (
     <>
       <div className="container relative h-screen flex-col items-center justify-center md:grid lg:max-w-none lg:grid-cols-2 lg:px-0">
-        <div className="relative lg:h-full flex-col lg:p-10 text-white lg:dark:border-r lg:flex">
+        <div className="relative lg:h-full flex-col lg:p-10 text-white lg:flex">
           <div
             className="absolute inset-0 bg-cover bg-center hidden lg:block m-2 rounded-lg"
             style={{

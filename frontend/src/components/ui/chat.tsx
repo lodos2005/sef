@@ -161,7 +161,7 @@ export function Chat({
           <div className="border-r pr-1">
             <CopyButton
               content={message.content}
-              copyMessage="Copied response to clipboard!"
+              copyMessage="Yanıt panoya kopyalandı."
             />
           </div>
           <Button
@@ -184,7 +184,7 @@ export function Chat({
       ) : (
         <CopyButton
           content={message.content}
-          copyMessage="Copied response to clipboard!"
+          copyMessage="Yanıt panoya kopyalandı."
         />
       ),
     }),

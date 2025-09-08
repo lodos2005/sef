@@ -66,7 +66,9 @@ func Server(app *fiber.App) {
 
 		providersGroup.Use(middleware.IsSuperAdmin())
 		providersGroup.Get("/", controller.Index)
+		providersGroup.Get("/types", controller.Types)
 		providersGroup.Get("/:id", controller.Show)
+		providersGroup.Get("/:id/models", controller.Models)
 		providersGroup.Post("/", controller.Create)
 		providersGroup.Patch("/:id", controller.Update)
 		providersGroup.Delete("/:id", controller.Delete)

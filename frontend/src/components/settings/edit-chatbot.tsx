@@ -33,6 +33,8 @@ export default function EditChatbot() {
   const { t } = useTranslation("settings")
 
   const [providers, setProviders] = useState<IProvider[]>([])
+  const [models, setModels] = useState<string[]>([])
+  const [selectedProviderId, setSelectedProviderId] = useState<number | null>(null)
 
   const formSchema = z
     .object({
@@ -77,6 +79,19 @@ export default function EditChatbot() {
     })
   }, [])
 
+  const fetchModels = (providerId: number) => {
+    if (providerId) {
+      http.get(`/providers/${providerId}/models`).then((res) => {
+        setModels(res.data.models || [])
+      }).catch((e) => {
+        console.error('Error fetching models:', e)
+        setModels([])
+      })
+    } else {
+      setModels([])
+    }
+  }
+
   const [open, setOpen] = useState<boolean>(false)
   const handleEdit = (values: z.infer<typeof formSchema>) => {
     http
@@ -116,6 +131,8 @@ export default function EditChatbot() {
       const d = data as IChatbot
       setChatbot(d)
       setOpen(true)
+      setSelectedProviderId(d.provider_id)
+      fetchModels(d.provider_id)
       form.reset({
         id: d.id,
         name: d.name,
@@ -174,7 +191,12 @@ export default function EditChatbot() {
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="provider_id">{t("chatbots.create.provider")}</Label>
                   <Select
-                    onValueChange={(value) => field.onChange(parseInt(value))}
+                    onValueChange={(value) => {
+                      const providerId = parseInt(value)
+                      field.onChange(providerId)
+                      setSelectedProviderId(providerId)
+                      fetchModels(providerId)
+                    }}
                     value={field.value?.toString()}
                   >
                     <SelectTrigger>
@@ -199,11 +221,22 @@ export default function EditChatbot() {
               render={({ field }) => (
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="model_name">{t("chatbots.create.model_name")}</Label>
-                  <Input
-                    id="model_name"
-                    placeholder={t("chatbots.create.model_name_placeholder")}
-                    {...field}
-                  />
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    disabled={!selectedProviderId || models.length === 0}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={selectedProviderId ? "Select a model" : "Select a provider first"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {models.map((model) => (
+                        <SelectItem key={model} value={model}>
+                          {model}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage className="mt-1" />
                 </div>
               )}
