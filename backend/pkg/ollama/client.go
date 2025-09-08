@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"strings"
 )
@@ -178,8 +177,6 @@ func (oc *OllamaClient) GenerateChatStream(ctx context.Context, model string, me
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
-
-	log.Println(string(reqBody))
 
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", oc.baseURL+"/api/chat", bytes.NewBuffer(reqBody))
 	if err != nil {
