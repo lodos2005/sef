@@ -160,13 +160,13 @@
             "title": "Sağlayıcı Ekle",
             "description": "Bu pencereyi kullanarak yeni bir sağlayıcı oluşturabilirsiniz.",
             "name": "İsim",
-            "name_placeholder": "OpenAI",
+            "name_placeholder": "",
             "type": "Tür",
-            "type_placeholder": "openai",
+            "type_placeholder": "",
             "description_field": "Açıklama",
-            "description_placeholder": "OpenAI API sağlayıcısı",
+            "description_placeholder": "",
             "base_url": "Temel URL",
-            "base_url_placeholder": "https://api.openai.com",
+            "base_url_placeholder": "http://api.fabrika.com:11434",
             "create": "Oluştur"
         },
         "edit": {

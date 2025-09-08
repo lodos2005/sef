@@ -19,6 +19,7 @@ require (
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/gabriel-vasile/mimetype v1.4.10 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
+	github.com/sashabaranov/go-openai v1.41.1 // indirect
 )
 
 require (

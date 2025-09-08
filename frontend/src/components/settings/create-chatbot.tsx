@@ -52,8 +52,8 @@ export default function CreateChatbot() {
           message: t("chatbots.validation.description_max"),
         })
         .optional(),
-      provider_id: z.number().min(1, "Please select a provider"),
-      model_name: z.string().min(1, "Model name is required"),
+      provider_id: z.number().min(1, "Lütfen bir sağlayıcı seçin"),
+      model_name: z.string().min(1, "Model adı gereklidir"),
       system_prompt: z.string().optional(),
     })
 
@@ -185,7 +185,7 @@ export default function CreateChatbot() {
                     value={field.value?.toString()}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select a provider" />
+                      <SelectValue placeholder="Bir sağlayıcı seçin" />
                     </SelectTrigger>
                     <SelectContent>
                       {providers.map((provider) => (
@@ -212,7 +212,7 @@ export default function CreateChatbot() {
                     disabled={!selectedProviderId || models.length === 0}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder={selectedProviderId ? "Select a model" : "Select a provider first"} />
+                      <SelectValue placeholder={selectedProviderId ? "Bir model seçin" : "Önce bir sağlayıcı seçin"} />
                     </SelectTrigger>
                     <SelectContent>
                       {models.map((model) => (
