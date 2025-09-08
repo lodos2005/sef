@@ -32,7 +32,7 @@ export function MessageList({
 
         return (
           <ChatMessage
-            key={message.id}
+            key={index}
             showTimeStamp={showTimeStamps}
             {...message}
             {...additionalOptions}
