@@ -7,6 +7,7 @@ import {
   AlertCircle,
   MessageCirclePlusIcon,
   MessageSquare,
+  MoreHorizontal,
   Trash2,
 } from "lucide-react"
 
@@ -26,14 +27,20 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 import { Icons } from "../ui/icons"
 
 export function Sidebar({ className }: { className?: string }) {
   const { sessions, isLoading, error, deleteSession } = useUserSessions()
-  const [hoveredSession, setHoveredSession] = useState<number | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [sessionToDelete, setSessionToDelete] = useState<number | null>(null)
+  const [dropdownOpen, setDropdownOpen] = useState<Record<number, boolean>>({})
   const router = useRouter()
 
   const getSessionTitle = (session: any) => {
@@ -47,7 +54,7 @@ export function Sidebar({ className }: { className?: string }) {
           : firstUserMessage.content
       }
     }
-    return `Chat with ${session.chatbot?.name || "Assistant"}`
+    return `${session.chatbot?.name || "Assistant"} ile Sohbet`
   }
 
   const handleNewChat = () => {
@@ -58,7 +65,7 @@ export function Sidebar({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "fixed z-30 w-full shrink-0 overflow-y-auto bg-background md:sticky md:block print:hidden",
+        "fixed z-30 w-full shrink-0 overflow-y-auto md:sticky md:block print:hidden",
         className
       )}
     >
@@ -69,7 +76,7 @@ export function Sidebar({ className }: { className?: string }) {
         }}
       >
         {/* New Chat Button */}
-        <div className="p-4 border-b h-18">
+        <div className="p-4 h-18">
           <Button
             onClick={handleNewChat}
             className="w-full gap-2"
@@ -110,12 +117,16 @@ export function Sidebar({ className }: { className?: string }) {
               <div
                 key={session.id}
                 className="relative group"
-                onMouseEnter={() => setHoveredSession(session.id)}
-                onMouseLeave={() => setHoveredSession(null)}
               >
                 <Link href={`/chat/${session.id}`}>
-                  <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted cursor-pointer transition-colors">
-                    <MessageSquare className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <div className={cn(
+                    "flex items-center gap-3 p-3 rounded-lg hover:bg-muted cursor-pointer transition-colors",
+                    router.asPath === `/chat/${session.id}` && "bg-primary/10 text-primary hover:bg-primary/10"
+                  )}>
+                    <MessageSquare className={cn(
+                      "h-4 w-4 flex-shrink-0",
+                      router.asPath === `/chat/${session.id}` ? "text-primary" : "text-muted-foreground"
+                    )} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-foreground truncate">
                         {getSessionTitle(session)}
@@ -128,20 +139,31 @@ export function Sidebar({ className }: { className?: string }) {
                     </div>
                   </div>
                 </Link>
-                {hoveredSession === session.id && (
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      setSessionToDelete(session.id)
-                      setDeleteDialogOpen(true)
-                    }}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-muted opacity-0 group-hover:opacity-100 transition-opacity"
-                    title="Delete conversation"
-                  >
-                    <Trash2 className="h-4 w-4 text-muted-foreground" />
-                  </button>
-                )}
+                <DropdownMenu open={dropdownOpen[session.id] || false} onOpenChange={(open) => setDropdownOpen(prev => ({ ...prev, [session.id]: open }))}>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={cn(
+                        "absolute right-2 top-1/2 -translate-y-1/2 transition-opacity h-8 w-8 p-0",
+                        (dropdownOpen[session.id] || false) ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                      )}
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setSessionToDelete(session.id)
+                        setDeleteDialogOpen(true)
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Sil
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             ))}
         </div>

@@ -43,6 +43,8 @@ export default function IndexPage() {
     try {
       const response = await sessionsService.createSession({ chatbot_id: chatbotId })
       router.push(`/chat/${response.data.id}`)
+      // Trigger sidebar refresh
+      window.dispatchEvent(new Event('refreshSessions'))
     } catch (error) {
       console.error("Failed to create session:", error)
     }

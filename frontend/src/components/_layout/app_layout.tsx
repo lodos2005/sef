@@ -62,8 +62,8 @@ const Layout = ({ Component, pageProps }: any) => {
           autoSaveId="sefLayout"
         >
           <ResizablePanel
-            defaultSize={18}
-            minSize={15}
+            defaultSize={20}
+            minSize={20}
             collapsible={true}
             className={cn("md:block")}
             ref={panel}

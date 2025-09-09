@@ -49,9 +49,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-3.8rem)] bg-background p-0">
-      <ChatHeader chatbotName={session?.chatbot?.name} />
-
+    <div className="flex flex-col h-[calc(100vh-4.03rem)] p-0">
       <ErrorBanner error={error} />
 
       <div className="flex-1 flex flex-col min-h-0">

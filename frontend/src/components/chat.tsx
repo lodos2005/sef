@@ -27,12 +27,10 @@ export function ErrorBanner({ error }: ErrorBannerProps) {
   if (!error) return null
 
   return (
-    <div className="flex-shrink-0 px-4 py-2">
-      <Alert className="mx-4">
+      <Alert className="max-w-4xl mx-auto mt-3">
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>{error}</AlertDescription>
       </Alert>
-    </div>
   )
 }
 

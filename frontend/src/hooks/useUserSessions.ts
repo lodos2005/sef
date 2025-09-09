@@ -7,19 +7,29 @@ export function useUserSessions() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const loadSessions = async () => {
+    try {
+      const response = await sessionsService.getUserSessions()
+      setSessions(response.data.records)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load sessions")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   useEffect(() => {
-    const loadSessions = async () => {
-      try {
-        const response = await sessionsService.getUserSessions()
-        setSessions(response.data.records)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load sessions")
-      } finally {
-        setIsLoading(false)
-      }
+    loadSessions()
+
+    const handleRefresh = () => {
+      loadSessions()
     }
 
-    loadSessions()
+    window.addEventListener('refreshSessions', handleRefresh)
+
+    return () => {
+      window.removeEventListener('refreshSessions', handleRefresh)
+    }
   }, [])
 
   const deleteSession = async (id: number) => {

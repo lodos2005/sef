@@ -3,6 +3,7 @@
 import {
   forwardRef,
   useCallback,
+  useEffect,
   useRef,
   useState,
   type ReactElement,
@@ -247,9 +248,20 @@ export function ChatMessages({
     handleTouchStart,
   } = useAutoScroll([messages])
 
+  // Scroll to bottom when messages are first loaded
+  useEffect(() => {
+    if (messages.length > 0 && containerRef.current) {
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(() => {
+        scrollToBottom()
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [messages.length, scrollToBottom])
+
   return (
     <div
-      className="grid grid-cols-1 overflow-y-auto pb-4"
+      className="grid grid-cols-1 overflow-y-auto pb-4 pt-4"
       ref={containerRef}
       onScroll={handleScroll}
       onTouchStart={handleTouchStart}

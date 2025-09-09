@@ -32,7 +32,7 @@ export function useSendMessage(sessionId: string | string[] | undefined, setMess
       })
 
       if (!response.ok) {
-        throw new Error("Failed to send message")
+        throw new Error("Mesaj gönderilirken hata oluştu")
       }
 
       // Handle JSON streaming response
@@ -83,7 +83,7 @@ export function useSendMessage(sessionId: string | string[] | undefined, setMess
       }
 
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to send message")
+      setError(err instanceof Error ? err.message : "Mesaj gönderilirken hata oluştu")
       // Remove the failed assistant message
       setMessages(prev => prev.filter(msg => msg.id !== (Date.now() + 1).toString()))
     } finally {
