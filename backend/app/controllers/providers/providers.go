@@ -7,6 +7,7 @@ import (
 	"sef/pkg/providers"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/log"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -110,6 +111,7 @@ func (h *Controller) Models(c fiber.Ctx) error {
 
 	models, err := llmProvider.ListModels()
 	if err != nil {
+		log.Error("Failed to list models: ", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to list models"})
 	}
 
