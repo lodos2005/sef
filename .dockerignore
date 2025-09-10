@@ -1,0 +1,25 @@
+# Docker ignore file for the root directory
+**/.git
+**/.gitignore
+**/README.md
+**/.env
+**/.env.local
+**/.env.development
+**/.env.production
+**/node_modules
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+**/.next
+**/out
+**/dist
+**/build
+**/.DS_Store
+**/*.pem
+**/coverage
+**/.nyc_output
+**/.cache
+**/tmp
+**/.tmp
+**/logs
+**/*.log

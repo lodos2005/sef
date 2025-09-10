@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  postgresql:
+    image: postgres:16-alpine
+    container_name: sef_postgresql
+    environment:
+      POSTGRES_DB: sef
+      POSTGRES_USER: sef_user
+      POSTGRES_PASSWORD: sef_password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgresql_data:/var/lib/postgresql/data
+    networks:
+      - sef_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sef_user -d sef"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: sef_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - sef_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sef_backend
+    environment:
+      - DATABASE_HOST=postgresql
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=sef
+      - DATABASE_USER=sef_user
+      - DATABASE_PASSWORD=sef_password
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - APP_ENV=production
+      - APP_KEY=your-secret-key-here-change-this-in-production
+      - JWT_SECRET=your-jwt-secret-here-change-this-in-production
+    ports:
+      - "8110:8110"
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - sef_network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: sef_frontend
+    environment:
+      - NODE_ENV=production
+      - API_URL=backend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - sef_network
+    restart: unless-stopped
+
+volumes:
+  postgresql_data:
+  redis_data:
+
+networks:
+  sef_network:
+    driver: bridge

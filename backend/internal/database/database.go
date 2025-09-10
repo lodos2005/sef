@@ -30,7 +30,7 @@ func initialize() *gorm.DB {
 	}
 
 	dsn := fmt.Sprintf(
-		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable timezone=Europe/Istanbul",
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		conf.MustString("database.host"),
 		conf.MustString("database.port"),
 		conf.MustString("database.user"),

@@ -1,0 +1,14 @@
+# Backend Docker ignore
+.env
+.env.local
+.env.development
+.env.production
+.git
+.gitignore
+README.md
+*.log
+tmp/
+.tmp/
+coverage/
+.nyc_output/
+.cache/
