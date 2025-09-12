@@ -5,6 +5,7 @@ import (
 	"sef/app/controllers/chatbots"
 	"sef/app/controllers/providers"
 	"sef/app/controllers/sessions"
+	"sef/app/controllers/tools"
 	"sef/app/controllers/users"
 	"sef/app/middleware"
 	"sef/internal/database"
@@ -72,6 +73,22 @@ func Server(app *fiber.App) {
 		providersGroup.Post("/", controller.Create)
 		providersGroup.Patch("/:id", controller.Update)
 		providersGroup.Delete("/:id", controller.Delete)
+	}
+
+	toolsGroup := apiV1.Group("/tools")
+	{
+		controller := &tools.Controller{
+			DB: database.Connection(),
+		}
+
+		toolsGroup.Use(middleware.IsSuperAdmin())
+		toolsGroup.Get("/", controller.Index)
+		toolsGroup.Get("/types", controller.Types)
+		toolsGroup.Get("/schema", controller.Schema)
+		toolsGroup.Get("/:id", controller.Show)
+		toolsGroup.Post("/", controller.Create)
+		toolsGroup.Patch("/:id", controller.Update)
+		toolsGroup.Delete("/:id", controller.Delete)
 	}
 
 	sessionsGroup := apiV1.Group("/sessions")

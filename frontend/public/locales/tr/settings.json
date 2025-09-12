@@ -189,5 +189,72 @@
         "user": "Kullanıcı",
         "chatbot": "Chatbot",
         "messages_count": "Mesaj Sayısı"
+    },
+    "tools": {
+        "title": "Araçlar",
+        "description": "AI araçlarınızı ve yapılandırmalarınızı yönetin",
+        "name": "İsim",
+        "display_name": "Görünen İsim",
+        "description_field": "Açıklama",
+        "type": "Tür",
+        "config": "Yapılandırma (JSON)",
+        "actions": "İşlemler",
+        "create": "Araç Oluştur",
+        "edit": "Düzenle",
+        "delete": "Sil",
+        "cancel": "İptal",
+        "update": "Güncelle",
+        "save": "Kaydet",
+        "back_to_tools": "Araçlara Dön",
+        "loading": "Yükleniyor...",
+        "not_found": "Araç bulunamadı",
+        "creating": "Oluşturuluyor...",
+        "updating": "Güncelleniyor...",
+        "deleting": "Siliniyor...",
+        "basic_info": "Temel Bilgiler",
+        "basic_info_description": "Aracınız hakkında temel bilgileri sağlayın.",
+        "configuration": "Yapılandırma",
+        "configuration_description": "Aracınız için parametreleri yapılandırın.",
+        "name_placeholder": "api_aracim",
+        "display_name_placeholder": "API Aracım",
+        "name_help": "Sadece küçük harfler ve alt çizgi kullanılabilir",
+        "description_placeholder": "Bu aracın ne yaptığını açıklayın...",
+        "config_placeholder": "{\"url\": \"https://api.example.com\", \"method\": \"GET\"}",
+        "json_placeholder": "{\"anahtar\": \"değer\"}",
+        "select_type": "Araç türünü seçin",
+        "select_placeholder": "{{field}} seçin",
+        "enter_placeholder": "{{field}} girin",
+        "body_placeholder": "JSON olarak Body alanını girebilirsiniz.",
+        "header_name": "Başlık Adı",
+        "header_value": "Başlık Değeri",
+        "create_title": "Yeni Araç Oluştur",
+        "create_description": "AI asistanlarınız için yeni bir araç oluşturun.",
+        "edit_title": "Aracı Düzenle",
+        "edit_description": "Araç yapılandırmasını güncelleyin.",
+        "delete_confirm_title": "Aracı Sil",
+        "delete_confirm_description": "Bu aracı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+        "types": {
+            "api": "API"
+        },
+        "options": {
+            "GET": "GET",
+            "POST": "POST",
+            "PUT": "PUT",
+            "PATCH": "PATCH",
+            "DELETE": "DELETE"
+        },
+        "fields": {
+            "url": "URL",
+            "method": "Yöntem",
+            "headers": "Başlıklar",
+            "body": "Gövde",
+            "timeout": "Zaman Aşımı"
+        },
+        "toasts": {
+            "create_success_msg": "Araç başarıyla oluşturuldu",
+            "create_error_msg": "Araç oluşturulamadı",
+            "edit_success_msg": "Araç başarıyla güncellendi",
+            "edit_error_msg": "Araç güncellenemedi"
+        }
     }
 }

@@ -2,7 +2,8 @@ import {
   CloudCog,
   MessageCircleMoreIcon,
   ScrollText,
-  Users2
+  Users2,
+  Wrench
 } from "lucide-react"
 
 export const Settings = {
@@ -28,6 +29,13 @@ export const Settings = {
       description: "Sistemdeki AI sağlayıcılarını yönetin.",
       icon: CloudCog,
       href: "/settings/providers",
+    },
+    {
+      id: "tools",
+      title: "Araçlar",
+      description: "AI araçlarınızı ve yapılandırmalarınızı yönetin.",
+      icon: Wrench,
+      href: "/settings/tools",
     },
     {
       id: "sessions",

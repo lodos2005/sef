@@ -68,6 +68,7 @@
     "react-hook-form": "^7.62.0",
     "react-i18next": "^15.7.3",
     "react-markdown": "^10.1.0",
+    "react-number-format": "^5.4.4",
     "react-resizable-panels": "^2.1.9",
     "remark-gfm": "^4.0.1",
     "remeda": "^2.30.0",

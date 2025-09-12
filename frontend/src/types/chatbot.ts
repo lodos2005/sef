@@ -1,4 +1,5 @@
 import { IProvider } from './provider'
+import { ITool } from './tool'
 import { IUser } from './user'
 
 export interface IChatbot {
@@ -11,6 +12,7 @@ export interface IChatbot {
   user?: IUser
   model_name: string
   system_prompt?: string
+  tools?: ITool[]
   created_at?: string
   updated_at?: string
 }
