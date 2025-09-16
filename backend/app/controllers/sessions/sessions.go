@@ -2,15 +2,13 @@ package sessions
 
 import (
 	"bufio"
-	"context"
 	"encoding/json"
 	"fmt"
 	"sef/app/entities"
 	"sef/internal/paginator"
 	"sef/internal/search"
-	"sef/internal/validation"
+	"sef/pkg/messaging"
 	"sef/pkg/providers"
-	"strconv"
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
@@ -20,12 +18,9 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-type SendMessageRequest struct {
-	Content string `json:"content" validate:"required,min=1"`
-}
-
 type Controller struct {
-	DB *gorm.DB
+	DB               *gorm.DB
+	MessagingService messaging.MessagingServiceInterface
 }
 
 func (h *Controller) Index(c fiber.Ctx) error {
@@ -134,190 +129,77 @@ func (h *Controller) Messages(c fiber.Ctx) error {
 }
 
 func (h *Controller) SendMessage(c fiber.Ctx) error {
-	sessionID, err := h.validateAndParseSessionID(c)
+	sessionID, err := h.MessagingService.ValidateAndParseSessionID(c.Params("id"))
 	if err != nil {
-		return err
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": err.Error(),
+		})
 	}
 
 	user := c.Locals("user").(*entities.User)
-	session, err := h.getSessionByIDAndUser(sessionID, user.ID)
+	session, err := h.MessagingService.GetSessionByIDAndUser(sessionID, user.ID)
 	if err != nil {
-		return err
+		if strings.Contains(err.Error(), "not found") {
+			return fiber.NewError(fiber.StatusNotFound, err.Error())
+		}
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
 	// Parse and validate request
-	req, err := h.parseSendMessageRequest(c)
+	req, err := h.MessagingService.ParseSendMessageRequest(c.Body())
 	if err != nil {
-		return err
+		if strings.Contains(err.Error(), "validation failed") {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"errors": strings.TrimPrefix(err.Error(), "validation failed: "),
+			})
+		}
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": err.Error(),
+		})
 	}
 
 	// Load session with full data
-	if err := h.loadSessionWithChatbotAndMessages(session, sessionID, user.ID); err != nil {
-		return err
+	session, err = h.MessagingService.LoadSessionWithChatbotAndMessages(sessionID, user.ID)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			return fiber.NewError(fiber.StatusNotFound, err.Error())
+		}
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
 	// Save user message
-	if err := h.saveUserMessage(sessionID, req.Content); err != nil {
-		return err
+	if err := h.MessagingService.SaveUserMessage(sessionID, req.Content); err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
 	// Prepare chat messages
-	messages := h.prepareChatMessages(session, req.Content)
+	messages := h.MessagingService.PrepareChatMessages(session, req.Content)
 
-	// Create provider and generate response
-	return h.streamChatResponse(c, session, messages)
-}
-
-// Helper functions
-
-// validateAndParseSessionID validates and parses session ID from URL params
-func (h *Controller) validateAndParseSessionID(c fiber.Ctx) (uint, error) {
-	sessionID, err := strconv.ParseUint(c.Params("id"), 10, 32)
+	// Create assistant message record
+	assistantMessage, err := h.MessagingService.CreateAssistantMessage(session.ID)
 	if err != nil {
-		return 0, c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid session ID",
-		})
-	}
-	return uint(sessionID), nil
-}
-
-// getSessionByIDAndUser retrieves a session by ID and user ID
-func (h *Controller) getSessionByIDAndUser(sessionID, userID uint) (*entities.Session, error) {
-	var session entities.Session
-	if err := h.DB.
-		Where("id = ? AND user_id = ?", sessionID, userID).
-		First(&session).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, fiber.NewError(fiber.StatusNotFound, "Chat session not found")
-		}
-		log.Error("Failed to fetch chat session:", err)
-		return nil, fiber.NewError(fiber.StatusInternalServerError, "Failed to fetch chat session")
-	}
-	return &session, nil
-}
-
-// parseSendMessageRequest parses and validates the send message request
-func (h *Controller) parseSendMessageRequest(c fiber.Ctx) (*SendMessageRequest, error) {
-	var req SendMessageRequest
-	if err := c.Bind().Body(&req); err != nil {
-		return nil, c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid request body",
-		})
+		return err
 	}
 
-	if err := validation.Validate(req); err != nil {
-		return nil, c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"errors": err,
-		})
-	}
-
-	return &req, nil
-}
-
-// loadSessionWithChatbotAndMessages loads session with chatbot and messages
-func (h *Controller) loadSessionWithChatbotAndMessages(session *entities.Session, sessionID, userID uint) error {
-	if err := h.DB.
-		Where("id = ? AND user_id = ?", sessionID, userID).
-		Preload("Chatbot").
-		Preload("Chatbot.Provider").
-		Preload("Messages").
-		First(&session).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return fiber.NewError(fiber.StatusNotFound, "Chat session not found")
-		}
-		log.Error("Failed to fetch chat session:", err)
-		return fiber.NewError(fiber.StatusInternalServerError, "Failed to fetch chat session")
-	}
-	return nil
-}
-
-// saveUserMessage saves the user message to database
-func (h *Controller) saveUserMessage(sessionID uint, content string) error {
-	userMessage := entities.Message{
-		SessionID: sessionID,
-		Role:      "user",
-		Content:   content,
-	}
-
-	if err := h.DB.Create(&userMessage).Error; err != nil {
-		log.Error("Failed to save user message:", err)
-		return fiber.NewError(fiber.StatusInternalServerError, "Failed to save message")
-	}
-
-	return nil
-}
-
-// prepareChatMessages prepares the messages array for the chat API
-func (h *Controller) prepareChatMessages(session *entities.Session, userContent string) []providers.ChatMessage {
-	var messages []providers.ChatMessage
-
-	// Add system message if system prompt exists
-	if session.Chatbot.SystemPrompt != "" {
-		messages = append(messages, providers.ChatMessage{
-			Role:    "system",
-			Content: session.Chatbot.SystemPrompt,
-		})
-	}
-
-	// Add current chat session messages
-	for _, msg := range session.Messages {
-		messages = append(messages, providers.ChatMessage{
-			Role:    msg.Role,
-			Content: msg.Content,
-		})
-	}
-
-	// Add current user message
-	messages = append(messages, providers.ChatMessage{
-		Role:    "user",
-		Content: userContent,
-	})
-
-	return messages
+	// Generate and stream response
+	return h.streamChatResponse(c, session, messages, assistantMessage)
 }
 
 // streamChatResponse handles the streaming chat response
-func (h *Controller) streamChatResponse(c fiber.Ctx, session *entities.Session, messages []providers.ChatMessage) error {
-	// Create provider instance
-	factory := &providers.ProviderFactory{}
-	providerConfig := map[string]interface{}{
-		"base_url": session.Chatbot.Provider.BaseURL,
-	}
-	provider, err := factory.NewProvider(session.Chatbot.Provider.Type, providerConfig)
+func (h *Controller) streamChatResponse(c fiber.Ctx, session *entities.Session, messages []providers.ChatMessage, assistantMessage *entities.Message) error {
+	// Generate response stream
+	stream, err := h.MessagingService.GenerateChatResponse(session, messages)
 	if err != nil {
-		log.Error("Failed to create provider:", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to initialize provider",
+			"error": err.Error(),
 		})
-	}
-
-	// Create assistant message record
-	assistantMessage, err := h.createAssistantMessage(session.ID)
-	if err != nil {
-		return err
 	}
 
 	// Set streaming headers
 	h.setStreamingHeaders(c)
 
-	// Generate and stream response
-	return h.generateAndStreamResponse(c, provider, messages, session.Chatbot.ModelName, assistantMessage)
-}
-
-// createAssistantMessage creates an empty assistant message record
-func (h *Controller) createAssistantMessage(sessionID uint) (*entities.Message, error) {
-	assistantMessage := entities.Message{
-		SessionID: sessionID,
-		Role:      "assistant",
-		Content:   "",
-	}
-
-	if err := h.DB.Create(&assistantMessage).Error; err != nil {
-		log.Error("Failed to create assistant message:", err)
-		return nil, fiber.NewError(fiber.StatusInternalServerError, "Failed to create message record")
-	}
-
-	return &assistantMessage, nil
+	// Stream the response
+	return h.streamResponse(c, stream, assistantMessage)
 }
 
 // setStreamingHeaders sets the necessary headers for SSE streaming
@@ -328,30 +210,6 @@ func (h *Controller) setStreamingHeaders(c fiber.Ctx) {
 	c.Set("Transfer-Encoding", "chunked")
 }
 
-// generateAndStreamResponse generates the chat response and streams it
-func (h *Controller) generateAndStreamResponse(c fiber.Ctx, provider providers.LLMProvider, messages []providers.ChatMessage, modelName string, assistantMessage *entities.Message) error {
-	// Prepare options
-	options := make(map[string]interface{})
-	if modelName != "" {
-		options["model"] = modelName
-		log.Info("Using model from chatbot:", modelName)
-	} else {
-		log.Info("Using default model")
-	}
-
-	// Generate streaming response
-	stream, err := provider.GenerateChat(context.Background(), messages, options)
-	if err != nil {
-		log.Error("Failed to generate response:", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to generate response",
-		})
-	}
-
-	// Stream the response
-	return h.streamResponse(c, stream, assistantMessage)
-}
-
 // streamResponse handles the actual streaming of the response
 func (h *Controller) streamResponse(c fiber.Ctx, stream <-chan string, assistantMessage *entities.Message) error {
 	var fullResponse strings.Builder
@@ -359,7 +217,7 @@ func (h *Controller) streamResponse(c fiber.Ctx, stream <-chan string, assistant
 	c.Response().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
 		defer func() {
 			// Update the assistant message with full content (async)
-			go h.updateAssistantMessage(assistantMessage, fullResponse.String())
+			go h.MessagingService.UpdateAssistantMessage(assistantMessage, fullResponse.String())
 		}()
 
 		for chunk := range stream {
@@ -416,12 +274,4 @@ func (h *Controller) sendEndEvent(w *bufio.Writer) {
 	log.Info("Sending end event:", endJson)
 	fmt.Fprint(w, endJson)
 	w.Flush()
-}
-
-// updateAssistantMessage updates the assistant message with the full response
-func (h *Controller) updateAssistantMessage(assistantMessage *entities.Message, content string) {
-	assistantMessage.Content = content
-	if err := h.DB.Save(&assistantMessage).Error; err != nil {
-		log.Error("Failed to update assistant message:", err)
-	}
 }
