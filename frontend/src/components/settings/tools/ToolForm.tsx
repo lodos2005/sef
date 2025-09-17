@@ -1,10 +1,11 @@
-import { Save } from "lucide-react"
+import { Plus, Save, Trash2 } from "lucide-react"
 import { useRouter } from "next/router"
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { KeyValueInput } from "@/components/ui/key-value-input"
 import { Label } from "@/components/ui/label"
@@ -13,6 +14,13 @@ import { Textarea } from "@/components/ui/textarea"
 import { useEmitter } from "@/hooks/useEmitter"
 import { http } from "@/services"
 import { ITool } from "@/types/tool"
+
+interface ToolParameter {
+    name: string
+    type: string
+    description: string
+    required: boolean
+}
 
 interface ToolFormProps {
     mode: 'create' | 'edit'
@@ -28,12 +36,20 @@ export default function ToolForm({ mode, tool, onSuccess }: ToolFormProps) {
     const [isLoading, setIsLoading] = useState(false)
     const [isLoadingData, setIsLoadingData] = useState(mode === 'edit')
     const [schema, setSchema] = useState<Record<string, any> | null>(null)
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<{
+        name: string
+        display_name: string
+        description: string
+        type: string
+        config: Record<string, any>
+        parameters: ToolParameter[]
+    }>({
         name: tool?.name || "",
         display_name: tool?.display_name || "",
         description: tool?.description || "",
         type: tool?.type || "api",
         config: tool?.config || {} as Record<string, any>,
+        parameters: (tool?.parameters as ToolParameter[]) || [] as ToolParameter[],
     })
 
     // Load tool data for edit mode
@@ -52,6 +68,7 @@ export default function ToolForm({ mode, tool, onSuccess }: ToolFormProps) {
                         description: toolData.description,
                         type: toolData.type,
                         config: toolData.config || {},
+                        parameters: toolData.parameters || [],
                     })
                 } catch (error) {
                     console.error("Failed to load tool:", error)
@@ -95,6 +112,29 @@ export default function ToolForm({ mode, tool, onSuccess }: ToolFormProps) {
         setFormData(prev => ({
             ...prev,
             [field]: value
+        }))
+    }
+
+    const handleParameterChange = (index: number, field: string, value: any) => {
+        setFormData(prev => ({
+            ...prev,
+            parameters: prev.parameters.map((param, i) =>
+                i === index ? { ...param, [field]: value } : param
+            )
+        }))
+    }
+
+    const addParameter = () => {
+        setFormData(prev => ({
+            ...prev,
+            parameters: [...prev.parameters, { name: '', type: 'string', description: '', required: false }]
+        }))
+    }
+
+    const removeParameter = (index: number) => {
+        setFormData(prev => ({
+            ...prev,
+            parameters: prev.parameters.filter((_, i) => i !== index)
         }))
     }
 
@@ -236,7 +276,6 @@ export default function ToolForm({ mode, tool, onSuccess }: ToolFormProps) {
                                 {t("tools.fields.headers", "Headers")} {required && <span className="text-red-500">*</span>}
                             </Label>
                             {description && <p className="text-xs text-muted-foreground">{description}</p>}
-                            <div className="border rounded-lg p-4 bg-slate-50/50 dark:bg-slate-800/50">
                                 <KeyValueInput
                                     value={value || {}}
                                     onChange={(newValue) => handleConfigChange(key, newValue)}
@@ -245,7 +284,6 @@ export default function ToolForm({ mode, tool, onSuccess }: ToolFormProps) {
                                         value: t("tools.header_value", "Header Value")
                                     }}
                                 />
-                            </div>
                         </div>
                     )
                 }
@@ -437,38 +475,136 @@ export default function ToolForm({ mode, tool, onSuccess }: ToolFormProps) {
                                     />
                                 </div>
 
-                                {/* Configuration Section */}
-                                {schema?.properties && (
-                                    <div className="pt-8">
+                                {/* Configuration and Parameters Grid */}
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-8">
+                                    {/* Configuration Section */}
+                                    {schema?.properties && (
+                                        <div>
+                                            <div className="mb-6">
+                                                <h3 className="text-xl font-semibold">
+                                                    {t("tools.configuration", "Configuration")}
+                                                </h3>
+                                                <p className="text-muted-foreground">
+                                                    {t("tools.configuration_description", "Configure the parameters for your tool.")}
+                                                </p>
+                                            </div>
+
+                                            <div className="space-y-6">
+                                                {/* Define the correct order based on the Go schema */}
+                                                {[
+                                                    ['url', schema.properties.url],
+                                                    ['method', schema.properties.method],
+                                                    ['headers', schema.properties.headers],
+                                                    ['body', schema.properties.body],
+                                                    ['timeout', schema.properties.timeout],
+                                                ].map(([key, fieldSchema]) => {
+                                                    if (!fieldSchema) return null
+
+                                                    return (
+                                                        <div key={key} className="space-y-3">
+                                                            {renderFormField(key as string, fieldSchema)}
+                                                        </div>
+                                                    )
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Parameters Section */}
+                                    <div>
                                         <div className="mb-6">
                                             <h3 className="text-xl font-semibold">
-                                                {t("tools.configuration", "Configuration")}
+                                                {t("tools.parameters", "Parameters")}
                                             </h3>
                                             <p className="text-muted-foreground">
-                                                {t("tools.configuration_description", "Configure the parameters for your tool.")}
+                                                {t("tools.parameters_description", "Define the parameters that will be passed to this tool when executed.")}
                                             </p>
                                         </div>
 
-                                        <div className="space-y-6">
-                                            {/* Define the correct order based on the Go schema */}
-                                            {[
-                                                ['url', schema.properties.url],
-                                                ['method', schema.properties.method],
-                                                ['headers', schema.properties.headers],
-                                                ['body', schema.properties.body],
-                                                ['timeout', schema.properties.timeout],
-                                            ].map(([key, fieldSchema]) => {
-                                                if (!fieldSchema) return null
-
-                                                return (
-                                                    <div key={key} className="space-y-3">
-                                                        {renderFormField(key as string, fieldSchema)}
+                                    <div className="space-y-4">
+                                        {formData.parameters.map((param, index) => (
+                                            <div key={index} className="border rounded-lg p-4 bg-slate-50/50 dark:bg-slate-800/50">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <div className="space-y-2">
+                                                        <Label className="text-sm font-medium">
+                                                            {t("tools.param_name", "Name")} <span className="text-red-500">*</span>
+                                                        </Label>
+                                                        <Input
+                                                            value={param.name}
+                                                            onChange={(e) => handleParameterChange(index, 'name', e.target.value)}
+                                                            placeholder={t("tools.param_name_placeholder", "parameter_name")}
+                                                        />
                                                     </div>
-                                                )
-                                            })}
-                                        </div>
+                                                    <div className="space-y-2">
+                                                        <Label className="text-sm font-medium">
+                                                            {t("tools.param_type", "Type")}
+                                                        </Label>
+                                                        <Select
+                                                            value={param.type}
+                                                            onValueChange={(value) => handleParameterChange(index, 'type', value)}
+                                                        >
+                                                            <SelectTrigger>
+                                                                <SelectValue placeholder={t("tools.select_type", "Select type")} />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="string">{t("tools.types.string", "String")}</SelectItem>
+                                                                <SelectItem value="number">{t("tools.types.number", "Number")}</SelectItem>
+                                                                <SelectItem value="integer">{t("tools.types.integer", "Integer")}</SelectItem>
+                                                                <SelectItem value="boolean">{t("tools.types.boolean", "Boolean")}</SelectItem>
+                                                                <SelectItem value="object">{t("tools.types.object", "Object")}</SelectItem>
+                                                                <SelectItem value="array">{t("tools.types.array", "Array")}</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                    <div className="space-y-2 md:col-span-2">
+                                                        <Label className="text-sm font-medium">
+                                                            {t("tools.param_description", "Description")}
+                                                        </Label>
+                                                        <Textarea
+                                                            value={param.description}
+                                                            onChange={(e) => handleParameterChange(index, 'description', e.target.value)}
+                                                            placeholder={t("tools.param_desc_placeholder", "Parameter description")}
+                                                            rows={2}
+                                                            className="resize-none"
+                                                        />
+                                                    </div>
+                                                    <div className="flex items-center justify-between md:col-span-2">
+                                                        <div className="flex items-center space-x-2">
+                                                            <Checkbox
+                                                                id={`required-${index}`}
+                                                                checked={param.required}
+                                                                onCheckedChange={(checked) => handleParameterChange(index, 'required', checked)}
+                                                            />
+                                                            <Label htmlFor={`required-${index}`} className="text-sm">
+                                                                {t("tools.param_required", "Required")}
+                                                            </Label>
+                                                        </div>
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => removeParameter(index)}
+                                                            className="text-red-600 hover:text-red-700"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={addParameter}
+                                            className="w-full"
+                                        >
+                                            <Plus className="mr-2 h-4 w-4" />
+                                            {t("tools.add_parameter", "Add Parameter")}
+                                        </Button>
                                     </div>
-                                )}
+                                </div>
+                                </div>
 
                                 {/* Action Buttons */}
                                 <div className="flex justify-end gap-4 pt-8 ">

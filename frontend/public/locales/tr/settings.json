@@ -233,8 +233,23 @@
         "edit_description": "Araç yapılandırmasını güncelleyin.",
         "delete_confirm_title": "Aracı Sil",
         "delete_confirm_description": "Bu aracı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+        "parameters": "Parametreler",
+        "parameters_description": "Bu araç çalıştırıldığında geçilecek parametreleri tanımlayın.",
+        "param_name": "İsim",
+        "param_type": "Tür",
+        "param_description": "Açıklama",
+        "param_required": "Zorunlu",
+        "param_name_placeholder": "parametre_adi",
+        "param_desc_placeholder": "Parametre açıklaması",
+        "add_parameter": "Parametre Ekle",
         "types": {
-            "api": "API"
+            "api": "API",
+            "string": "Metin",
+            "number": "Sayı",
+            "integer": "Tamsayı",
+            "boolean": "Mantıksal",
+            "object": "Nesne",
+            "array": "Dizi"
         },
         "options": {
             "GET": "GET",

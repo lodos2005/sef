@@ -53,7 +53,7 @@ func (h *Controller) Create(c fiber.Ctx) error {
 
 	// Validate tool runner exists
 	factory := &toolrunners.ToolRunnerFactory{}
-	if _, err := factory.NewToolRunner(payload.Type, payload.Config); err != nil {
+	if _, err := factory.NewToolRunner(payload.Type, payload.Config, payload.Parameters); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
@@ -80,7 +80,7 @@ func (h *Controller) Update(c fiber.Ctx) error {
 	// Validate tool type if it's being updated
 	if payload.Type != "" {
 		factory := &toolrunners.ToolRunnerFactory{}
-		if _, err := factory.NewToolRunner(payload.Type, payload.Config); err != nil {
+		if _, err := factory.NewToolRunner(payload.Type, payload.Config, payload.Parameters); err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 		}
 	}
@@ -119,11 +119,11 @@ func (h *Controller) Schema(c fiber.Ctx) error {
 
 	// Create tool runner to get schema
 	factory := &toolrunners.ToolRunnerFactory{}
-	runner, err := factory.NewToolRunner(toolType, map[string]interface{}{})
+	runner, err := factory.NewToolRunner(toolType, map[string]interface{}{}, map[string]interface{}{})
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	schema := runner.GetParameterSchema()
+	schema := runner.GetConfigSchema()
 	return c.JSON(fiber.Map{"schema": schema})
 }

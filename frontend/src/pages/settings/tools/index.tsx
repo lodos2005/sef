@@ -8,6 +8,9 @@ import PageHeader from "@/components/ui/page-header"
 import { DivergentColumn } from "@/types/table"
 import { useEmitter } from "@/hooks/useEmitter"
 import { ITool } from "@/types/tool"
+import { Button } from "@/components/ui/button"
+import { PlusCircleIcon } from "lucide-react"
+import Link from "next/link"
 
 export default function ToolSettingsPage() {
   const [refetchTrigger, setRefetchTrigger] = useState<number>(0)
@@ -87,6 +90,12 @@ export default function ToolSettingsPage() {
         endpoint="/tools"
         refetchTrigger={refetchTrigger}
       >
+        <Link href="/settings/tools/create">
+          <Button variant="outline" size="sm" className="ml-auto h-8 lg:flex">
+            <PlusCircleIcon className="mr-2 size-4" />
+            {t("providers.create.button")}
+          </Button>
+        </Link>
       </AsyncDataTable>
     </>
   )

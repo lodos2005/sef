@@ -7,5 +7,6 @@ type Tool struct {
 	Description string      `json:"description" gorm:"type:text"`
 	Type        string      `json:"type" gorm:"not null;size:50"`
 	Config      SingleJSONB `json:"config" gorm:"type:jsonb"`
+	Parameters  JSONB       `json:"parameters" gorm:"type:jsonb"`
 	Chatbots    []Chatbot   `json:"chatbots,omitempty" gorm:"many2many:chatbot_tools;"`
 }

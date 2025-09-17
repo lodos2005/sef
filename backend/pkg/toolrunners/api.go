@@ -12,13 +12,21 @@ import (
 
 // APIToolRunner implements the ToolRunner interface for API calls
 type APIToolRunner struct {
-	config map[string]interface{}
+	config     map[string]interface{}
+	parameters []interface{}
 }
 
 // NewAPIToolRunner creates a new API tool runner
-func NewAPIToolRunner(config map[string]interface{}) *APIToolRunner {
+func NewAPIToolRunner(config map[string]interface{}, parameters interface{}) *APIToolRunner {
+	var params []interface{}
+	if parameters != nil {
+		if p, ok := parameters.([]interface{}); ok {
+			params = p
+		}
+	}
 	return &APIToolRunner{
-		config: config,
+		config:     config,
+		parameters: params,
 	}
 }
 
@@ -185,6 +193,55 @@ func (r *APIToolRunner) validateParameterType(paramName string, value interface{
 
 // GetParameterSchema returns the JSON schema for tool parameters
 func (r *APIToolRunner) GetParameterSchema() map[string]interface{} {
+	if len(r.parameters) > 0 {
+		// Convert parameters array to JSON schema
+		properties := make(map[string]interface{})
+		required := []string{}
+
+		for _, param := range r.parameters {
+			if paramMap, ok := param.(map[string]interface{}); ok {
+				name, nameOk := paramMap["name"].(string)
+				paramType, typeOk := paramMap["type"].(string)
+				description, descOk := paramMap["description"].(string)
+				req, reqOk := paramMap["required"].(bool)
+
+				if nameOk && typeOk {
+					prop := map[string]interface{}{
+						"type": paramType,
+					}
+					if descOk && description != "" {
+						prop["description"] = description
+					}
+					properties[name] = prop
+
+					if reqOk && req {
+						required = append(required, name)
+					}
+				}
+			}
+		}
+
+		return map[string]interface{}{
+			"type":       "object",
+			"properties": properties,
+			"required":   required,
+		}
+	}
+	// Fallback to default schema if no parameters defined
+	return map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"body": map[string]interface{}{
+				"type":        "string",
+				"description": "Request body (JSON string for POST/PUT/PATCH)",
+				"format":      "json",
+			},
+		},
+	}
+}
+
+// GetConfigSchema returns the JSON schema for tool configuration
+func (r *APIToolRunner) GetConfigSchema() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
 		"properties": map[string]interface{}{
@@ -205,11 +262,6 @@ func (r *APIToolRunner) GetParameterSchema() map[string]interface{} {
 				"additionalProperties": map[string]interface{}{
 					"type": "string",
 				},
-			},
-			"body": map[string]interface{}{
-				"type":        "string",
-				"description": "Request body (JSON string for POST/PUT/PATCH)",
-				"format":      "json",
 			},
 			"timeout": map[string]interface{}{
 				"type":        "integer",
