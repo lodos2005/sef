@@ -158,8 +158,8 @@ func (h *Controller) SendMessage(c fiber.Ctx) error {
 		})
 	}
 
-	// Load session with full data
-	session, err = h.MessagingService.LoadSessionWithChatbotAndMessages(sessionID, user.ID)
+	// Load session with full data including tools
+	session, err = h.MessagingService.LoadSessionWithChatbotToolsAndMessages(sessionID, user.ID)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			return fiber.NewError(fiber.StatusNotFound, err.Error())
@@ -175,20 +175,14 @@ func (h *Controller) SendMessage(c fiber.Ctx) error {
 	// Prepare chat messages
 	messages := h.MessagingService.PrepareChatMessages(session, req.Content)
 
-	// Create assistant message record
-	assistantMessage, err := h.MessagingService.CreateAssistantMessage(session.ID)
-	if err != nil {
-		return err
-	}
-
 	// Generate and stream response
-	return h.streamChatResponse(c, session, messages, assistantMessage)
+	return h.streamChatResponse(c, session, messages)
 }
 
 // streamChatResponse handles the streaming chat response
-func (h *Controller) streamChatResponse(c fiber.Ctx, session *entities.Session, messages []providers.ChatMessage, assistantMessage *entities.Message) error {
+func (h *Controller) streamChatResponse(c fiber.Ctx, session *entities.Session, messages []providers.ChatMessage) error {
 	// Generate response stream
-	stream, err := h.MessagingService.GenerateChatResponse(session, messages)
+	stream, finalMessage, err := h.MessagingService.GenerateChatResponse(session, messages)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -199,7 +193,7 @@ func (h *Controller) streamChatResponse(c fiber.Ctx, session *entities.Session, 
 	h.setStreamingHeaders(c)
 
 	// Stream the response
-	return h.streamResponse(c, stream, assistantMessage)
+	return h.streamResponse(c, stream, finalMessage)
 }
 
 // setStreamingHeaders sets the necessary headers for SSE streaming

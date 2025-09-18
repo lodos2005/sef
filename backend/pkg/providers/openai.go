@@ -2,6 +2,7 @@ package providers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	openai "github.com/sashabaranov/go-openai"
@@ -148,6 +149,138 @@ func (o *OpenAIProvider) GenerateChat(ctx context.Context, messages []ChatMessag
 			}
 		}
 		stream.Close()
+	}()
+
+	return ch, nil
+}
+
+// GenerateChatWithTools generates a response using OpenAI's chat API with tool calling support
+func (o *OpenAIProvider) GenerateChatWithTools(ctx context.Context, messages []ChatMessage, tools []ToolDefinition, options map[string]interface{}) (<-chan ChatResponse, error) {
+	model := "gpt-4" // Default model for tool calls
+	if m, ok := options["model"].(string); ok {
+		model = m
+	}
+
+	// Convert to OpenAI chat messages
+	openaiMessages := make([]openai.ChatCompletionMessage, len(messages))
+	for i, msg := range messages {
+		var role string
+		switch msg.Role {
+		case "user":
+			role = openai.ChatMessageRoleUser
+		case "assistant":
+			role = openai.ChatMessageRoleAssistant
+		case "system":
+			role = openai.ChatMessageRoleSystem
+		case "tool":
+			role = openai.ChatMessageRoleTool
+		default:
+			role = openai.ChatMessageRoleUser
+		}
+		openaiMessages[i] = openai.ChatCompletionMessage{
+			Role:    role,
+			Content: msg.Content,
+		}
+	}
+
+	// Convert tools to OpenAI format
+	var openaiTools []openai.Tool
+	for _, tool := range tools {
+		openaiTools = append(openaiTools, openai.Tool{
+			Type: openai.ToolType(tool.Type),
+			Function: &openai.FunctionDefinition{
+				Name:        tool.Function.Name,
+				Description: tool.Function.Description,
+				Parameters:  tool.Function.Parameters,
+			},
+		})
+	}
+
+	req := openai.ChatCompletionRequest{
+		Model:    model,
+		Messages: openaiMessages,
+		Stream:   true,
+	}
+
+	// Add tools if provided
+	if len(openaiTools) > 0 {
+		req.Tools = openaiTools
+	}
+
+	// Handle additional options
+	if temp, ok := options["temperature"].(float64); ok {
+		req.Temperature = float32(temp)
+	}
+	if maxTokens, ok := options["max_tokens"].(int); ok {
+		req.MaxTokens = maxTokens
+	}
+
+	stream, err := o.client.CreateChatCompletionStream(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	ch := make(chan ChatResponse)
+	go func() {
+		defer close(ch)
+		defer stream.Close()
+
+		for {
+			response, err := stream.Recv()
+			if err != nil {
+				break
+			}
+
+			if len(response.Choices) == 0 {
+				continue
+			}
+
+			choice := response.Choices[0]
+			chatResp := ChatResponse{}
+
+			// Handle content
+			if choice.Delta.Content != "" {
+				chatResp.Content = choice.Delta.Content
+			}
+
+			// Handle tool calls
+			if choice.Delta.ToolCalls != nil {
+				for _, toolCall := range choice.Delta.ToolCalls {
+					// Parse arguments JSON string if it's complete
+					var args map[string]interface{}
+					if toolCall.Function.Arguments != "" {
+						// Try to parse as JSON
+						if err := json.Unmarshal([]byte(toolCall.Function.Arguments), &args); err != nil {
+							// If not valid JSON yet (streaming), store raw
+							args = map[string]interface{}{"raw": toolCall.Function.Arguments}
+						}
+					}
+
+					chatResp.ToolCalls = append(chatResp.ToolCalls, ToolCall{
+						ID:   toolCall.ID,
+						Type: string(toolCall.Type),
+						Function: ToolCallFunction{
+							Name:      toolCall.Function.Name,
+							Arguments: args,
+						},
+					})
+				}
+			}
+
+			// Check if finished
+			if choice.FinishReason != "" {
+				chatResp.Done = true
+			}
+
+			// Send response if there's content or tool calls
+			if chatResp.Content != "" || len(chatResp.ToolCalls) > 0 || chatResp.Done {
+				ch <- chatResp
+			}
+
+			if choice.FinishReason != "" {
+				break
+			}
+		}
 	}()
 
 	return ch, nil

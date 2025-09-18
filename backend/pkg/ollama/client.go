@@ -1,6 +1,7 @@
 package ollama
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -8,6 +9,8 @@ import (
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/gofiber/fiber/v3/log"
 )
 
 // OllamaClient handles Ollama API interactions
@@ -16,26 +19,25 @@ type OllamaClient struct {
 	client  *http.Client
 }
 
-// OllamaGenerateRequest represents the request for text generation
-type OllamaGenerateRequest struct {
-	Model   string                 `json:"model"`
-	Prompt  string                 `json:"prompt"`
-	Stream  bool                   `json:"stream"`
-	Options map[string]interface{} `json:"options,omitempty"`
+// OllamaTool represents a tool/function that can be called
+type OllamaTool struct {
+	Type     string             `json:"type"`
+	Function OllamaToolFunction `json:"function"`
 }
 
-// OllamaChatRequest represents the request for chat completion
-type OllamaChatRequest struct {
-	Model    string                 `json:"model"`
-	Messages []OllamaChatMessage    `json:"messages"`
-	Stream   bool                   `json:"stream"`
-	Options  map[string]interface{} `json:"options,omitempty"`
+// OllamaToolFunction represents the function definition
+type OllamaToolFunction struct {
+	Name        string                 `json:"name"`
+	Description string                 `json:"description"`
+	Parameters  map[string]interface{} `json:"parameters"`
 }
 
 // OllamaChatMessage represents a message in chat format
 type OllamaChatMessage struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
+	Role      string           `json:"role"`
+	Content   string           `json:"content"`
+	Thinking  string           `json:"thinking,omitempty"`
+	ToolCalls []OllamaToolCall `json:"tool_calls,omitempty"`
 }
 
 // OllamaChatResponse represents the response from chat
@@ -44,11 +46,37 @@ type OllamaChatResponse struct {
 	Done    bool              `json:"done"`
 }
 
+// OllamaToolCall represents a tool call in the response
+type OllamaToolCall struct {
+	Function OllamaToolCallFunction `json:"function"`
+}
+
+// OllamaToolCallFunction represents the function call details
+type OllamaToolCallFunction struct {
+	Name      string                 `json:"name"`
+	Arguments map[string]interface{} `json:"arguments"`
+}
+
 // OllamaGenerateResponse represents the response from generation
 type OllamaGenerateResponse struct {
 	Response string `json:"response"`
 	Done     bool   `json:"done"`
 }
+
+// GenerateRequest represents a unified request for all generation types
+type GenerateRequest struct {
+	Mode     string                 `json:"-"`
+	Model    string                 `json:"model"`
+	Prompt   string                 `json:"prompt,omitempty"`   // For text mode
+	Messages []OllamaChatMessage    `json:"messages,omitempty"` // For chat mode
+	Tools    []OllamaTool           `json:"tools,omitempty"`    // For chat mode with tools
+	Options  map[string]interface{} `json:"options,omitempty"`
+	Stream   bool                   `json:"stream"`
+	Think    bool                   `json:"think,omitempty"` // For chat mode
+}
+
+// GenerateResponse represents a unified response interface
+type GenerateResponse interface{}
 
 // OllamaListResponse represents the response from /api/tags
 type OllamaListResponse struct {
@@ -72,15 +100,29 @@ func NewOllamaClient(baseURL string) *OllamaClient {
 	}
 }
 
-// GenerateText generates text using Ollama (non-streaming)
-func (oc *OllamaClient) GenerateText(ctx context.Context, model, prompt string, options map[string]interface{}) (string, error) {
-	req := OllamaGenerateRequest{
-		Model:   model,
-		Prompt:  prompt,
-		Stream:  false, // Non-streaming
-		Options: options,
+// Generate handles all types of generation (text, chat, with/without tools, streaming/non-streaming)
+func (oc *OllamaClient) Generate(ctx context.Context, req GenerateRequest) (GenerateResponse, error) {
+	switch req.Mode {
+	case "text":
+		if req.Stream {
+			return oc.generateTextStream(ctx, req)
+		} else {
+			return oc.generateText(ctx, req)
+		}
+	case "chat":
+		if req.Stream {
+			return oc.generateChatStream(ctx, req)
+		} else {
+			// For now, chat only supports streaming
+			return nil, fmt.Errorf("non-streaming chat not implemented")
+		}
+	default:
+		return nil, fmt.Errorf("unsupported mode: %s", req.Mode)
 	}
+}
 
+// generateText handles non-streaming text generation
+func (oc *OllamaClient) generateText(ctx context.Context, req GenerateRequest) (string, error) {
 	reqBody, err := json.Marshal(req)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal request: %w", err)
@@ -111,15 +153,8 @@ func (oc *OllamaClient) GenerateText(ctx context.Context, model, prompt string, 
 	return strings.TrimSpace(ollamaResp.Response), nil
 }
 
-// GenerateTextStream generates text using Ollama with streaming support
-func (oc *OllamaClient) GenerateTextStream(ctx context.Context, model, prompt string, options map[string]interface{}) (<-chan string, error) {
-	req := OllamaGenerateRequest{
-		Model:   model,
-		Prompt:  prompt,
-		Stream:  true,
-		Options: options,
-	}
-
+// generateTextStream handles streaming text generation
+func (oc *OllamaClient) generateTextStream(ctx context.Context, req GenerateRequest) (<-chan string, error) {
 	reqBody, err := json.Marshal(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
@@ -147,7 +182,6 @@ func (oc *OllamaClient) GenerateTextStream(ctx context.Context, model, prompt st
 			var ollamaResp OllamaGenerateResponse
 			if err := decoder.Decode(&ollamaResp); err != nil {
 				if err != io.EOF {
-					// Send error as message
 					ch <- fmt.Sprintf("Error: %v", err)
 				}
 				return
@@ -164,14 +198,9 @@ func (oc *OllamaClient) GenerateTextStream(ctx context.Context, model, prompt st
 	return ch, nil
 }
 
-// GenerateChatStream generates text using Ollama's chat API with proper message roles
-func (oc *OllamaClient) GenerateChatStream(ctx context.Context, model string, messages []OllamaChatMessage, options map[string]interface{}) (<-chan string, error) {
-	req := OllamaChatRequest{
-		Model:    model,
-		Messages: messages,
-		Stream:   true,
-		Options:  options,
-	}
+// generateChatStream handles streaming chat generation
+func (oc *OllamaClient) generateChatStream(ctx context.Context, req GenerateRequest) (<-chan OllamaChatResponse, error) {
+	log.Info("Ollama Chat Request: ", req)
 
 	reqBody, err := json.Marshal(req)
 	if err != nil {
@@ -189,27 +218,42 @@ func (oc *OllamaClient) GenerateChatStream(ctx context.Context, model string, me
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
 
-	ch := make(chan string)
+	ch := make(chan OllamaChatResponse)
 
 	go func() {
 		defer resp.Body.Close()
 		defer close(ch)
 
-		decoder := json.NewDecoder(resp.Body)
-		for {
+		scanner := bufio.NewScanner(resp.Body)
+		for scanner.Scan() {
+			line := scanner.Text()
+			log.Info("Raw response line: ", line)
+
 			var ollamaResp OllamaChatResponse
-			if err := decoder.Decode(&ollamaResp); err != nil {
-				if err != io.EOF {
-					// Send error as message
-					ch <- fmt.Sprintf("Error: %v", err)
+			if err := json.Unmarshal([]byte(line), &ollamaResp); err != nil {
+				ch <- OllamaChatResponse{
+					Message: OllamaChatMessage{
+						Role:    "assistant",
+						Content: fmt.Sprintf("Error: %v", err),
+					},
+					Done: true,
 				}
 				return
 			}
 
-			ch <- ollamaResp.Message.Content
+			ch <- ollamaResp
 
-			if ollamaResp.Done {
+			if ollamaResp.Done && len(ollamaResp.Message.ToolCalls) == 0 {
 				return
+			}
+		}
+		if err := scanner.Err(); err != nil {
+			ch <- OllamaChatResponse{
+				Message: OllamaChatMessage{
+					Role:    "assistant",
+					Content: fmt.Sprintf("Scanner error: %v", err),
+				},
+				Done: true,
 			}
 		}
 	}()

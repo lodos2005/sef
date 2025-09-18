@@ -63,6 +63,26 @@ export default function ChatbotSettingsPage() {
       ),
     },
     {
+      accessorKey: "tools",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={t("chatbots.tools")} />
+      ),
+      title: t("chatbots.tools"),
+      cell: ({ row }) => (
+        <div className="flex flex-wrap gap-1">
+          {row.original.tools && row.original.tools.length > 0 ? (
+            row.original.tools.map((tool) => (
+              <Badge key={tool.id} variant="outline" className="text-xs">
+                {tool.display_name}
+              </Badge>
+            ))
+          ) : (
+            <span className="text-xs text-muted-foreground">-</span>
+          )}
+        </div>
+      ),
+    },
+    {
       id: "actions",
       cell: ({ row }) => (
         <div className="flex justify-center">

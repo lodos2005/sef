@@ -24,9 +24,12 @@ import { Input } from "../ui/input"
 import { Label } from "../ui/label"
 import { Textarea } from "../ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
+import { Checkbox } from "../ui/checkbox"
 import { useToast } from "../ui/use-toast"
 import { IProvider } from "@/types/provider"
+import { ITool } from "@/types/tool"
 
+  
 export default function CreateChatbot() {
   const { toast } = useToast()
   const emitter = useEmitter()
@@ -34,7 +37,9 @@ export default function CreateChatbot() {
 
   const [providers, setProviders] = useState<IProvider[]>([])
   const [models, setModels] = useState<string[]>([])
+  const [tools, setTools] = useState<ITool[]>([])
   const [selectedProviderId, setSelectedProviderId] = useState<number | null>(null)
+  const [selectedTools, setSelectedTools] = useState<number[]>([])
 
   const formSchema = z
     .object({
@@ -75,6 +80,13 @@ export default function CreateChatbot() {
     }).catch((e) => {
       console.error('Error fetching providers:', e)
     })
+
+    // Fetch tools
+    http.get('/tools').then((res) => {
+      setTools(res.data.records || [])
+    }).catch((e) => {
+      console.error('Error fetching tools:', e)
+    })
   }, [])
 
   const fetchModels = (providerId: number) => {
@@ -92,8 +104,13 @@ export default function CreateChatbot() {
 
   const [open, setOpen] = useState<boolean>(false)
   const handleCreate = (values: z.infer<typeof formSchema>) => {
+    const payload = {
+      ...values,
+      tool_ids: selectedTools,
+    }
+
     http
-      .post(`/chatbots`, values)
+      .post(`/chatbots`, payload)
       .then((res) => {
         if (res.status === 200) {
           toast({
@@ -103,6 +120,7 @@ export default function CreateChatbot() {
           emitter.emit("REFETCH_CHATBOTS")
           setOpen(false)
           form.reset()
+          setSelectedTools([])
         } else {
           toast({
             title: t("error"),
@@ -242,6 +260,39 @@ export default function CreateChatbot() {
                 </div>
               )}
             />
+
+            <div className="flex flex-col gap-2">
+              <Label>{t("chatbots.create.tools")}</Label>
+              <div className="space-y-2 max-h-40 overflow-y-auto border rounded-md p-3">
+                {tools.map((tool) => (
+                  <div key={tool.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`tool-${tool.id}`}
+                      checked={selectedTools.includes(tool.id)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedTools([...selectedTools, tool.id])
+                        } else {
+                          setSelectedTools(selectedTools.filter(id => id !== tool.id))
+                        }
+                      }}
+                    />
+                    <label
+                      htmlFor={`tool-${tool.id}`}
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      {tool.display_name}
+                    </label>
+                    <span className="text-xs text-muted-foreground">
+                      ({tool.type})
+                    </span>
+                  </div>
+                ))}
+                {tools.length === 0 && (
+                  <p className="text-sm text-muted-foreground">Henüz araç tanımlanmamış.</p>
+                )}
+              </div>
+            </div>
 
             <SheetFooter>
               <Button type="submit">

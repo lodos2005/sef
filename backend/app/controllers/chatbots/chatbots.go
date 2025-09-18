@@ -40,22 +40,52 @@ func (h *Controller) Show(c fiber.Ctx) error {
 }
 
 func (h *Controller) Create(c fiber.Ctx) error {
-	var payload *entities.Chatbot
+	var payload map[string]interface{}
 	if err := c.Bind().JSON(&payload); err != nil {
 		return err
 	}
 
-	if err := h.DB.
-		Clauses(clause.Returning{}).
-		Create(&payload).Error; err != nil {
+	// Extract tool IDs if provided
+	var toolIDs []uint
+	if toolIDsInterface, ok := payload["tool_ids"]; ok && toolIDsInterface != nil {
+		if ids, ok := toolIDsInterface.([]interface{}); ok {
+			for _, id := range ids {
+				if idFloat, ok := id.(float64); ok {
+					toolIDs = append(toolIDs, uint(idFloat))
+				}
+			}
+		}
+	}
+
+	// Remove tool_ids from payload before creating chatbot
+	delete(payload, "tool_ids")
+
+	chatbot := &entities.Chatbot{}
+	if err := h.DB.Model(chatbot).Create(payload).Error; err != nil {
 		return err
 	}
 
-	return c.JSON(payload)
+	// Associate tools if provided
+	if len(toolIDs) > 0 {
+		var tools []entities.Tool
+		for _, id := range toolIDs {
+			tools = append(tools, entities.Tool{Base: entities.Base{ID: id}})
+		}
+		if err := h.DB.Model(chatbot).Association("Tools").Replace(tools); err != nil {
+			return err
+		}
+	}
+
+	// Return the created chatbot with associations
+	if err := h.DB.Preload("Tools").Preload("Provider").First(chatbot, chatbot.ID).Error; err != nil {
+		return err
+	}
+
+	return c.JSON(chatbot)
 }
 
 func (h *Controller) Update(c fiber.Ctx) error {
-	var payload *entities.Chatbot
+	var payload map[string]interface{}
 	if err := c.Bind().JSON(&payload); err != nil {
 		return err
 	}
@@ -65,15 +95,45 @@ func (h *Controller) Update(c fiber.Ctx) error {
 		return err
 	}
 
+	// Extract tool IDs if provided
+	var toolIDs []uint
+	if toolIDsInterface, ok := payload["tool_ids"]; ok && toolIDsInterface != nil {
+		if ids, ok := toolIDsInterface.([]interface{}); ok {
+			for _, id := range ids {
+				if idFloat, ok := id.(float64); ok {
+					toolIDs = append(toolIDs, uint(idFloat))
+				}
+			}
+		}
+	}
+
+	// Remove tool_ids from payload before updating
+	delete(payload, "tool_ids")
+
 	if err := h.DB.
-		Clauses(clause.Returning{}).
 		Model(&entities.Chatbot{}).
 		Where("id = ?", c.Params("id")).
 		Updates(&payload).Error; err != nil {
 		return err
 	}
 
-	return c.JSON(payload)
+	// Associate tools if provided
+	if len(toolIDs) > 0 {
+		var tools []entities.Tool
+		for _, id := range toolIDs {
+			tools = append(tools, entities.Tool{Base: entities.Base{ID: id}})
+		}
+		if err := h.DB.Model(chatbot).Association("Tools").Replace(tools); err != nil {
+			return err
+		}
+	}
+
+	// Return the updated chatbot with associations
+	if err := h.DB.Preload("Tools").Preload("Provider").First(chatbot, c.Params("id")).Error; err != nil {
+		return err
+	}
+
+	return c.JSON(chatbot)
 }
 
 func (h *Controller) Delete(c fiber.Ctx) error {
