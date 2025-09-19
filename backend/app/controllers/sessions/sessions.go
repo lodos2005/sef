@@ -121,6 +121,7 @@ func (h *Controller) Messages(c fiber.Ctx) error {
 
 	var messages []*entities.Message
 	if err := h.DB.Where("session_id = ?", session.ID).
+		Where("role != ?", "tool").
 		Order("created_at ASC").Find(&messages).Error; err != nil {
 		return err
 	}
@@ -265,7 +266,6 @@ func (h *Controller) sendEndEvent(w *bufio.Writer) {
 	}
 
 	endJson := string(endBytes) + "\n"
-	log.Info("Sending end event:", endJson)
 	fmt.Fprint(w, endJson)
 	w.Flush()
 }

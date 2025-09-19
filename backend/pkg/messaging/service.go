@@ -300,13 +300,11 @@ func (s *MessagingService) GenerateChatResponse(session *entities.Session, messa
 		log.Error("Failed to create assistant message:", err)
 		return nil, nil, fmt.Errorf("failed to create assistant message: %w", err)
 	}
-	finalAssistant := firstAssistant
 
 	go func() {
 		defer close(outputCh)
 
 		var assistantContent strings.Builder
-		var followupContent strings.Builder
 		thinkingStarted := false
 
 		for response := range chatStream {
@@ -332,15 +330,27 @@ func (s *MessagingService) GenerateChatResponse(session *entities.Session, messa
 
 			// Handle tool calls
 			if len(response.ToolCalls) > 0 {
-				// Add tool calls to content
-				for _, toolCall := range response.ToolCalls {
-					args, _ := json.Marshal(toolCall.Function.Arguments)
-					toolCallStr := fmt.Sprintf("<tool_call>%s(%s)</tool_call>", toolCall.Function.Name, string(args))
-					assistantContent.WriteString(toolCallStr)
+				// Close thinking if open
+				if thinkingStarted {
+					outputCh <- "</think>"
+					thinkingStarted = false
+					assistantContent.WriteString("</think>")
 				}
 
-				// Save first assistant message
-				s.UpdateAssistantMessage(firstAssistant, assistantContent.String())
+				// Add tool calls to content
+				for _, toolCall := range response.ToolCalls {
+					displayName := toolCall.Function.Name
+					// Extract tool display name from session.Chatbot.Tools
+					for _, t := range session.Chatbot.Tools {
+						if t.Name == toolCall.Function.Name {
+							displayName = t.DisplayName
+							break
+						}
+					}
+					toolCallStr := fmt.Sprintf("<tool_call>%s</tool_call>", displayName)
+					outputCh <- toolCallStr
+					assistantContent.WriteString(toolCallStr)
+				}
 
 				// Process tool calls
 				for _, toolCall := range response.ToolCalls {
@@ -364,15 +374,6 @@ func (s *MessagingService) GenerateChatResponse(session *entities.Session, messa
 					messages = append(messages, toolMessage)
 				}
 
-				// Create final assistant message
-				finalAssistant, err = s.CreateAssistantMessage(session.ID)
-				if err != nil {
-					log.Error("Failed to create final assistant message:", err)
-					// Close channel to signal error
-					close(outputCh)
-					return
-				}
-
 				// Generate followup
 				followupStream, err := provider.GenerateChatWithTools(context.Background(), messages, toolDefinitions, options)
 				if err != nil {
@@ -382,7 +383,6 @@ func (s *MessagingService) GenerateChatResponse(session *entities.Session, messa
 				}
 
 				// Process followup stream
-				thinkingStarted = false
 				for followupResp := range followupStream {
 					if followupResp.Thinking != "" {
 						if !thinkingStarted {
@@ -390,45 +390,43 @@ func (s *MessagingService) GenerateChatResponse(session *entities.Session, messa
 							thinkingStarted = true
 						}
 						outputCh <- followupResp.Thinking
-						followupContent.WriteString("<think>" + followupResp.Thinking)
+						assistantContent.WriteString("<think>" + followupResp.Thinking)
 					} else if thinkingStarted {
 						outputCh <- "</think>"
 						thinkingStarted = false
-						followupContent.WriteString("</think>")
+						assistantContent.WriteString("</think>")
 					}
 
 					if followupResp.Content != "" {
 						outputCh <- followupResp.Content
-						followupContent.WriteString(followupResp.Content)
+						assistantContent.WriteString(followupResp.Content)
 					}
 
 					if followupResp.Done {
 						if thinkingStarted {
 							outputCh <- "</think>"
 							thinkingStarted = false
+							assistantContent.WriteString("</think>")
 						}
 						break
 					}
 				}
-
-				// Update final assistant message
-				s.UpdateAssistantMessage(finalAssistant, followupContent.String())
 			}
 
 			if response.Done {
 				if thinkingStarted {
 					outputCh <- "</think>"
+					thinkingStarted = false
+					assistantContent.WriteString("</think>")
 				}
-				// If no tool calls, update first assistant
-				if finalAssistant == firstAssistant {
-					s.UpdateAssistantMessage(firstAssistant, assistantContent.String())
-				}
+				// Update the assistant message with full content
+				s.UpdateAssistantMessage(firstAssistant, assistantContent.String())
 				return
 			}
 		}
 	}()
 
-	return outputCh, finalAssistant, nil
+	return outputCh, firstAssistant, nil
 }
 
 // UpdateAssistantMessage updates the assistant message with the full response

@@ -9,8 +9,6 @@ import (
 	"io"
 	"net/http"
 	"strings"
-
-	"github.com/gofiber/fiber/v3/log"
 )
 
 // OllamaClient handles Ollama API interactions
@@ -200,8 +198,6 @@ func (oc *OllamaClient) generateTextStream(ctx context.Context, req GenerateRequ
 
 // generateChatStream handles streaming chat generation
 func (oc *OllamaClient) generateChatStream(ctx context.Context, req GenerateRequest) (<-chan OllamaChatResponse, error) {
-	log.Info("Ollama Chat Request: ", req)
-
 	reqBody, err := json.Marshal(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
@@ -227,7 +223,6 @@ func (oc *OllamaClient) generateChatStream(ctx context.Context, req GenerateRequ
 		scanner := bufio.NewScanner(resp.Body)
 		for scanner.Scan() {
 			line := scanner.Text()
-			log.Info("Raw response line: ", line)
 
 			var ollamaResp OllamaChatResponse
 			if err := json.Unmarshal([]byte(line), &ollamaResp); err != nil {
