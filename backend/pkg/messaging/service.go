@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"sef/app/entities"
 	"sef/internal/validation"
 	"sef/pkg/providers"
@@ -198,6 +199,23 @@ func (s *MessagingService) SaveUserMessage(sessionID uint, content string) error
 	return nil
 }
 
+// cleanAssistantContent removes internal tags from assistant content before saving
+func cleanAssistantContent(content string) string {
+	// Remove <think> tags and content
+	re := regexp.MustCompile(`<think>.*?</think>`)
+	content = re.ReplaceAllString(content, "")
+
+	// Remove <tool_executing> tags and content
+	re = regexp.MustCompile(`<tool_executing>.*?</tool_executing>`)
+	content = re.ReplaceAllString(content, "")
+
+	// Remove <tool_executed> tags and content
+	re = regexp.MustCompile(`<tool_executed>.*?</tool_executed>`)
+	content = re.ReplaceAllString(content, "")
+
+	return content
+}
+
 // PrepareChatMessages prepares the messages array for the chat API
 func (s *MessagingService) PrepareChatMessages(session *entities.Session, userContent string) []providers.ChatMessage {
 	var messages []providers.ChatMessage
@@ -214,7 +232,7 @@ func (s *MessagingService) PrepareChatMessages(session *entities.Session, userCo
 	for _, msg := range session.Messages {
 		messages = append(messages, providers.ChatMessage{
 			Role:    msg.Role,
-			Content: msg.Content,
+			Content: cleanAssistantContent(msg.Content),
 		})
 	}
 
@@ -337,7 +355,7 @@ func (s *MessagingService) GenerateChatResponse(session *entities.Session, messa
 					assistantContent.WriteString("</think>")
 				}
 
-				// Add tool calls to content
+				// Process tool calls
 				for _, toolCall := range response.ToolCalls {
 					displayName := toolCall.Function.Name
 					// Extract tool display name from session.Chatbot.Tools
@@ -347,18 +365,31 @@ func (s *MessagingService) GenerateChatResponse(session *entities.Session, messa
 							break
 						}
 					}
-					toolCallStr := fmt.Sprintf("<tool_call>%s</tool_call>", displayName)
-					outputCh <- toolCallStr
-					assistantContent.WriteString(toolCallStr)
-				}
 
-				// Process tool calls
-				for _, toolCall := range response.ToolCalls {
+					// Ensure we have a valid display name, fallback to function name if empty
+					if displayName == "" {
+						if toolCall.Function.Name != "" {
+							displayName = toolCall.Function.Name
+						} else {
+							displayName = "Unknown Tool"
+						}
+					}
+
+					// Send tool executing indicator
+					executingStr := fmt.Sprintf("<tool_executing>%s</tool_executing>", displayName)
+					outputCh <- executingStr
+					assistantContent.WriteString(executingStr)
+
 					toolResult, err := s.ExecuteToolCall(context.Background(), toolCall)
 					if err != nil {
 						log.Error("Tool execution failed:", err)
 						toolResult = fmt.Sprintf("[Error executing tool %s: %v]", toolCall.Function.Name, err)
 					}
+
+					// Send tool executed indicator
+					executedStr := fmt.Sprintf("<tool_executed>%s</tool_executed>", displayName)
+					outputCh <- executedStr
+					assistantContent.WriteString(executedStr)
 
 					// Save tool message
 					_, err = s.CreateToolMessage(session.ID, toolResult)

@@ -12,6 +12,158 @@ import {
 import { FilePreview } from "@/components/ui/file-preview"
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer"
 
+function parseContent(content: string): MessagePart[] {
+  const parts: MessagePart[] = []
+  let remainingContent = content
+  const globalActiveTools = new Map<string, number>() // Track tool execution across parsing contexts
+
+  // Handle all <think> tags
+  let thinkStartIndex = remainingContent.indexOf('<think>')
+  while (thinkStartIndex !== -1) {
+    // Add text before <think>
+    if (thinkStartIndex > 0) {
+      const text = remainingContent.slice(0, thinkStartIndex)
+      if (text.trim()) {
+        const textParts = parseTextForTools(text)
+        parts.push(...textParts)
+      }
+    }
+
+    // Find </think>
+    const thinkEndIndex = remainingContent.indexOf('</think>', thinkStartIndex)
+    let reasoningContent: string
+    if (thinkEndIndex !== -1) {
+      reasoningContent = remainingContent.slice(thinkStartIndex + 7, thinkEndIndex)
+      remainingContent = remainingContent.slice(thinkEndIndex + 8)
+    } else {
+      // No closing tag, treat everything after <think> as reasoning
+      reasoningContent = remainingContent.slice(thinkStartIndex + 7)
+      remainingContent = ''
+    }
+
+    parts.push({ 
+      type: "reasoning", 
+      reasoning: parseTextForTools(reasoningContent), 
+      isComplete: thinkEndIndex !== -1 
+    })
+
+    // Look for next <think> in remaining content
+    thinkStartIndex = remainingContent.indexOf('<think>')
+  }
+
+  // Now parse remaining content for tool tags
+  if (remainingContent.trim()) {
+    const toolParts = parseTextForTools(remainingContent)
+    parts.push(...toolParts)
+  }
+
+  return parts
+}
+
+function parseTextForTools(content: string): MessagePart[] {
+  const parts: MessagePart[] = []
+  const regex = /<(tool_executing)>((?:.|\n)*?)<\/tool_executing>|<(tool_executed)>((?:.|\n)*?)<\/tool_executed>/gi
+  let lastIndex = 0
+  let match
+  const activeTools = new Map<string, number>() // Track tool name to parts index
+
+  while ((match = regex.exec(content)) !== null) {
+    const [_, tag1, content1, tag2, content2] = match
+    const tag = tag1 || tag2
+    const innerContent = content1 || content2
+    const startIndex = match.index
+    const toolName = innerContent.trim()
+
+    // Debug logging for tool parsing issues
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Parsing tool tag: ${tag}, content: "${toolName}"`)
+    }
+
+    // Add text before the tag
+    if (startIndex > lastIndex) {
+      const text = content.slice(lastIndex, startIndex)
+      if (text.trim()) {
+        parts.push({ type: "text", text })
+      }
+    }
+
+    // Add the part based on tag
+    if (tag === "tool_executing") {
+      const partIndex = parts.length
+      // Ensure tool name is valid
+      const validToolName = toolName || "Unknown Tool"
+      if (!toolName && process.env.NODE_ENV === 'development') {
+        console.warn('Empty tool name detected in tool_executing tag')
+      }
+      parts.push({
+        type: "tool-invocation",
+        toolInvocation: { state: "call", toolName: validToolName },
+      })
+      activeTools.set(validToolName, partIndex)
+    } else if (tag === "tool_executed") {
+      // Ensure tool name is valid
+      const validToolName = toolName || "Unknown Tool"
+      if (!toolName && process.env.NODE_ENV === 'development') {
+        console.warn('Empty tool name detected in tool_executed tag')
+      }
+      // Check if we have a matching tool_executing part to replace
+      const executingPartIndex = activeTools.get(validToolName)
+      if (executingPartIndex !== undefined && executingPartIndex < parts.length) {
+        const executingPart = parts[executingPartIndex]
+        if (
+          executingPart &&
+          executingPart.type === "tool-invocation" &&
+          executingPart.toolInvocation.state === "call" &&
+          executingPart.toolInvocation.toolName === validToolName
+        ) {
+          // Replace the executing part with the result
+          parts[executingPartIndex] = {
+            type: "tool-invocation",
+            toolInvocation: {
+              state: "result",
+              toolName: validToolName,
+              result: {},
+            },
+          }
+          activeTools.delete(validToolName)
+        } else {
+          // If no matching executing part found, just add the result
+          parts.push({
+            type: "tool-invocation",
+            toolInvocation: {
+              state: "result",
+              toolName: validToolName,
+              result: {},
+            },
+          })
+        }
+      } else {
+        // No matching executing part found, just add the result
+        parts.push({
+          type: "tool-invocation",
+          toolInvocation: {
+            state: "result",
+            toolName: validToolName,
+            result: {},
+          },
+        })
+      }
+    }
+
+    lastIndex = regex.lastIndex
+  }
+
+  // Add remaining text after last tag
+  if (lastIndex < content.length) {
+    const text = content.slice(lastIndex)
+    if (text.trim()) {
+      parts.push({ type: "text", text })
+    }
+  }
+
+  return parts
+}
+
 const chatBubbleVariants = cva(
   "group/message relative break-words rounded-lg p-3 text-sm sm:max-w-[70%]",
   {
@@ -83,7 +235,8 @@ type ToolInvocation = PartialToolCall | ToolCall | ToolResult
 
 interface ReasoningPart {
   type: "reasoning"
-  reasoning: string
+  reasoning: MessagePart[]
+  isComplete: boolean
 }
 
 interface ToolInvocationPart {
@@ -196,8 +349,10 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     )
   }
 
-  if (parts && parts.length > 0) {
-    return parts.map((part, index) => {
+  const effectiveParts = parseContent(content)
+
+  if (effectiveParts.length > 0) {
+    return effectiveParts.map((part, index) => {
       if (part.type === "text") {
         return (
           <div
@@ -280,20 +435,30 @@ function dataUrlToUint8Array(data: string) {
 }
 
 const ReasoningBlock = ({ part }: { part: ReasoningPart }) => {
-  const [isOpen, setIsOpen] = useState(false)
+  // Auto-open when thinking is ongoing, auto-close when complete
+  const [isManuallyToggled, setIsManuallyToggled] = useState(false)
+  const shouldAutoOpen = !part.isComplete
+  const isOpen = isManuallyToggled ? !shouldAutoOpen : shouldAutoOpen
+
+  const handleToggle = () => {
+    setIsManuallyToggled(!isManuallyToggled)
+  }
 
   return (
     <div className="mb-2 flex flex-col items-start sm:max-w-[70%]">
       <Collapsible
         open={isOpen}
-        onOpenChange={setIsOpen}
+        onOpenChange={handleToggle}
         className="group w-full overflow-hidden rounded-lg border bg-muted/50"
       >
         <div className="flex items-center p-2">
           <CollapsibleTrigger asChild>
             <button className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
               <ChevronRight className="h-4 w-4 transition-transform group-data-[state=open]:rotate-90" />
-              <span>Thinking</span>
+              <span className="flex items-center gap-2">
+                {!part.isComplete && <Loader2 className="h-3 w-3 animate-spin" />}
+                {part.isComplete ? "Asistan düşündü" : "Asistan düşünüyor..."}
+              </span>
             </button>
           </CollapsibleTrigger>
         </div>
@@ -309,8 +474,15 @@ const ReasoningBlock = ({ part }: { part: ReasoningPart }) => {
             className="border-t"
           >
             <div className="p-2">
-              <div className="whitespace-pre-wrap text-xs">
-                {part.reasoning}
+              <div className="text-xs">
+                {part.reasoning.map((subPart, i) => {
+                  if (subPart.type === "text") {
+                    return <span key={i} className="whitespace-pre-wrap">{subPart.text}</span>
+                  } else if (subPart.type === "tool-invocation") {
+                    return <ToolCall key={i} toolInvocations={[subPart.toolInvocation]} />
+                  }
+                  return null
+                })}
               </div>
             </div>
           </motion.div>
@@ -326,7 +498,7 @@ function ToolCall({
   if (!toolInvocations?.length) return null
 
   return (
-    <div className="flex flex-col items-start gap-2">
+    <div className="mb-2 flex flex-col items-start sm:max-w-[70%]">
       {toolInvocations.map((invocation, index) => {
         const isCancelled =
           invocation.state === "result" &&
@@ -361,13 +533,7 @@ function ToolCall({
               >
                 <Terminal className="h-4 w-4" />
                 <span>
-                  Calling{" "}
-                  <span className="font-mono">
-                    {"`"}
-                    {invocation.toolName}
-                    {"`"}
-                  </span>
-                  ...
+                  {invocation.toolName} aracı çağrılıyor...
                 </span>
                 <Loader2 className="h-3 w-3 animate-spin" />
               </div>
@@ -376,22 +542,14 @@ function ToolCall({
             return (
               <div
                 key={index}
-                className="flex flex-col gap-1.5 rounded-lg border bg-muted/50 px-3 py-2 text-sm"
+                className="w-full flex flex-col gap-1.5 rounded-lg border bg-muted/50 px-3 py-2 text-sm"
               >
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Code2 className="h-4 w-4" />
                   <span>
-                    Result from{" "}
-                    <span className="font-mono">
-                      {"`"}
-                      {invocation.toolName}
-                      {"`"}
-                    </span>
+                    {invocation.toolName} aracından sonuç alındı, asistan yanıtını oluşturuyor
                   </span>
                 </div>
-                <pre className="overflow-x-auto whitespace-pre-wrap text-foreground">
-                  {JSON.stringify(invocation.result, null, 2)}
-                </pre>
               </div>
             )
           default:
