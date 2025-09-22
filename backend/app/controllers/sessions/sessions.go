@@ -9,6 +9,7 @@ import (
 	"sef/internal/search"
 	"sef/pkg/messaging"
 	"sef/pkg/providers"
+	"sef/pkg/summary"
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
@@ -21,6 +22,7 @@ import (
 type Controller struct {
 	DB               *gorm.DB
 	MessagingService messaging.MessagingServiceInterface
+	SummaryService   summary.SummaryServiceInterface
 }
 
 func (h *Controller) Index(c fiber.Ctx) error {
@@ -177,11 +179,11 @@ func (h *Controller) SendMessage(c fiber.Ctx) error {
 	messages := h.MessagingService.PrepareChatMessages(session, req.Content)
 
 	// Generate and stream response
-	return h.streamChatResponse(c, session, messages)
+	return h.streamChatResponse(c, session, messages, sessionID, user.ID)
 }
 
 // streamChatResponse handles the streaming chat response
-func (h *Controller) streamChatResponse(c fiber.Ctx, session *entities.Session, messages []providers.ChatMessage) error {
+func (h *Controller) streamChatResponse(c fiber.Ctx, session *entities.Session, messages []providers.ChatMessage, sessionID uint, userID uint) error {
 	// Generate response stream
 	stream, finalMessage, err := h.MessagingService.GenerateChatResponse(session, messages)
 	if err != nil {
@@ -193,29 +195,21 @@ func (h *Controller) streamChatResponse(c fiber.Ctx, session *entities.Session, 
 	// Set streaming headers
 	h.setStreamingHeaders(c)
 
-	// Stream the response
-	return h.streamResponse(c, stream, finalMessage)
+	// Stream the response with summary generation callback
+	return h.streamResponseWithCallback(c, stream, finalMessage, sessionID, userID)
 }
 
-// setStreamingHeaders sets the necessary headers for SSE streaming
-func (h *Controller) setStreamingHeaders(c fiber.Ctx) {
-	c.Set("Content-Type", "text/event-stream")
-	c.Set("Cache-Control", "no-cache")
-	c.Set("Connection", "keep-alive")
-	c.Set("Transfer-Encoding", "chunked")
-	c.Set("X-Accel-Buffering", "no") // Disable proxy buffering
-	c.Set("Access-Control-Allow-Origin", "*")
-	c.Set("Access-Control-Allow-Headers", "Cache-Control")
-}
-
-// streamResponse handles the actual streaming of the response
-func (h *Controller) streamResponse(c fiber.Ctx, stream <-chan string, assistantMessage *entities.Message) error {
+// streamResponseWithCallback handles the actual streaming of the response with callback
+func (h *Controller) streamResponseWithCallback(c fiber.Ctx, stream <-chan string, assistantMessage *entities.Message, sessionID uint, userID uint) error {
 	var fullResponse strings.Builder
 
 	c.Response().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
 		defer func() {
-			// Update the assistant message with full content (async)
-			go h.MessagingService.UpdateAssistantMessage(assistantMessage, fullResponse.String())
+			// Update the assistant message with full content and trigger summary generation (async)
+			go h.MessagingService.UpdateAssistantMessageWithCallback(assistantMessage, fullResponse.String(), func() {
+				// Trigger automatic summary generation after assistant message is saved
+				go h.SummaryService.AutoGenerateSummaryIfNeeded(sessionID, userID)
+			})
 		}()
 
 		for chunk := range stream {
@@ -237,6 +231,17 @@ func (h *Controller) streamResponse(c fiber.Ctx, stream <-chan string, assistant
 	}))
 
 	return nil
+}
+
+// setStreamingHeaders sets the necessary headers for SSE streaming
+func (h *Controller) setStreamingHeaders(c fiber.Ctx) {
+	c.Set("Content-Type", "text/event-stream")
+	c.Set("Cache-Control", "no-cache")
+	c.Set("Connection", "keep-alive")
+	c.Set("Transfer-Encoding", "chunked")
+	c.Set("X-Accel-Buffering", "no") // Disable proxy buffering
+	c.Set("Access-Control-Allow-Origin", "*")
+	c.Set("Access-Control-Allow-Headers", "Cache-Control")
 }
 
 // sendChunk sends a single chunk of the response

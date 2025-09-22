@@ -37,6 +37,7 @@ type MessagingServiceInterface interface {
 	CreateToolMessage(sessionID uint, content string) (*entities.Message, error)
 	GenerateChatResponse(session *entities.Session, messages []providers.ChatMessage) (<-chan string, *entities.Message, error)
 	UpdateAssistantMessage(assistantMessage *entities.Message, content string)
+	UpdateAssistantMessageWithCallback(assistantMessage *entities.Message, content string, callback func())
 	ConvertToolsToDefinitions(tools []entities.Tool) []providers.ToolDefinition
 	ExecuteToolCall(ctx context.Context, toolCall providers.ToolCall) (string, error)
 }
@@ -472,5 +473,13 @@ func (s *MessagingService) UpdateAssistantMessage(assistantMessage *entities.Mes
 	assistantMessage.Content = content
 	if err := s.DB.Save(&assistantMessage).Error; err != nil {
 		log.Error("Failed to update assistant message:", err)
+	}
+}
+
+// UpdateAssistantMessageWithCallback updates the assistant message and executes a callback
+func (s *MessagingService) UpdateAssistantMessageWithCallback(assistantMessage *entities.Message, content string, callback func()) {
+	s.UpdateAssistantMessage(assistantMessage, content)
+	if callback != nil {
+		callback()
 	}
 }

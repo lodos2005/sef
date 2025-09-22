@@ -14,6 +14,9 @@ export interface ApiMessage {
 
 export interface ChatSession {
   id: number
+  user_id: number
+  chatbot_id: number
+  summary?: string
   chatbot: {
     id: number
     name: string

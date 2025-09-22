@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { useRouter } from "next/router"
 import { Chat } from "@/components/ui/chat"
 import { useChatSession } from "@/hooks/useChatSession"
@@ -13,10 +13,37 @@ export default function ChatPage() {
   const { id: sessionId } = router.query
 
   const [input, setInput] = useState("")
+  const [isPollingForSummary, setIsPollingForSummary] = useState(false)
 
-  const { session, isLoading: sessionLoading, error: sessionError } = useChatSession(sessionId)
+  const { 
+    session, 
+    isLoading: sessionLoading, 
+    error: sessionError, 
+    refreshSession, 
+    startSummaryPolling 
+  } = useChatSession(sessionId)
   const { messages, setMessages, isLoading: messagesLoading, error: messagesError } = useMessages(sessionId)
-  const { sendMessage, isGenerating, error: sendError } = useSendMessage(sessionId, setMessages)
+  
+  const handleMessageComplete = useCallback(() => {
+    // Only start polling if there's no summary yet
+    if (session && !session.summary) {
+      setIsPollingForSummary(true)
+      startSummaryPolling()
+      // Stop polling indicator after 30 seconds max
+      setTimeout(() => setIsPollingForSummary(false), 30000)
+    }
+    // Also refresh sidebar sessions
+    window.dispatchEvent(new Event('refreshSessions'))
+  }, [startSummaryPolling, session])
+  
+  const { sendMessage, isGenerating, error: sendError } = useSendMessage(sessionId, setMessages, handleMessageComplete)
+
+  // Stop polling indicator when summary appears
+  useEffect(() => {
+    if (session?.summary) {
+      setIsPollingForSummary(false)
+    }
+  }, [session?.summary])
 
   const isLoading = sessionLoading || messagesLoading
   const error = sessionError || messagesError || sendError
@@ -50,6 +77,7 @@ export default function ChatPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-4.03rem)] p-0">
+      <ChatHeader session={session || undefined} isPolling={isPollingForSummary} />
       <ErrorBanner error={error} />
 
       <div className="flex-1 flex flex-col min-h-0">
@@ -61,7 +89,7 @@ export default function ChatPage() {
             handleInputChange={handleInputChange}
             isGenerating={isGenerating}
             setMessages={setMessages}
-            className="h-screen"
+            className="h-full"
           />
         </div>
       </div>

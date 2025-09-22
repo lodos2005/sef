@@ -174,7 +174,7 @@ export default function IndexPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-sm truncate">
-                      {session.chatbot?.name || "Chatbot"}
+                      {session.summary || session.chatbot?.name || "Chatbot"}
                     </div>
                     <div className="text-xs text-muted-foreground">
                       {new Date(session.created_at || '').toLocaleDateString('tr-TR', {

@@ -44,6 +44,12 @@ export function Sidebar({ className }: { className?: string }) {
   const router = useRouter()
 
   const getSessionTitle = (session: any) => {
+    // Prefer summary if available
+    if (session.summary && session.summary.trim()) {
+      return session.summary
+    }
+    
+    // Fallback to first user message
     if (session.messages && session.messages.length > 0) {
       const firstUserMessage = session.messages.find(
         (msg: any) => msg.role === "user"
@@ -54,6 +60,8 @@ export function Sidebar({ className }: { className?: string }) {
           : firstUserMessage.content
       }
     }
+    
+    // Final fallback
     return `${session.chatbot?.name || "Assistant"} ile Sohbet`
   }
 

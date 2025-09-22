@@ -2,18 +2,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { AlertCircle, Loader2 } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { SessionSummary } from "@/components/chat/session-summary"
+import { ChatSession } from "@/types/chat"
 
 interface ChatHeaderProps {
-  chatbotName?: string
+  session?: ChatSession
+  onSessionUpdate?: (session: ChatSession) => void
+  isPolling?: boolean
 }
 
-export function ChatHeader({ chatbotName }: ChatHeaderProps) {
+export function ChatHeader({ session, onSessionUpdate, isPolling = false }: ChatHeaderProps) {
   return (
-    <div className="flex-shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10 h-18 flex items-center">
-      <div className="container mx-auto px-8 py-3">
-        <div className="flex items-center gap-2">
-          <h1 className="font-semibold text-lg">{chatbotName || "Chat"}</h1>
-        </div>
+    <div className="flex-shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10 h-16 flex items-center">
+      <div className="container mx-auto px-8">
+        {session && (
+          <SessionSummary session={session} isPolling={isPolling} />
+        )}
       </div>
     </div>
   )

@@ -10,6 +10,7 @@ import (
 	"sef/app/middleware"
 	"sef/internal/database"
 	"sef/pkg/messaging"
+	"sef/pkg/summary"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -97,6 +98,7 @@ func Server(app *fiber.App) {
 		controller := &sessions.Controller{
 			DB:               database.Connection(),
 			MessagingService: &messaging.MessagingService{DB: database.Connection()},
+			SummaryService:   summary.NewSummaryService(database.Connection()),
 		}
 
 		sessionsAdminGroup := sessionsGroup.Group("/admin")

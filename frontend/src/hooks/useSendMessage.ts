@@ -1,7 +1,11 @@
 import { useState, useCallback } from "react"
 import { Message } from "@/types/chat"
 
-export function useSendMessage(sessionId: string | string[] | undefined, setMessages: React.Dispatch<React.SetStateAction<Message[]>>) {
+export function useSendMessage(
+  sessionId: string | string[] | undefined, 
+  setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
+  onMessageComplete?: () => void
+) {
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -86,6 +90,10 @@ export function useSendMessage(sessionId: string | string[] | undefined, setMess
                   ))
                 } else if (parsed.type === "done") {
                   setIsGenerating(false) // Set generating to false when done
+                  // Trigger callback for session updates (summary polling)
+                  if (onMessageComplete) {
+                    onMessageComplete()
+                  }
                   return // Success - exit retry loop
                 } else if (parsed.type === "ping") {
                   // Keep-alive ping, do nothing
@@ -98,6 +106,10 @@ export function useSendMessage(sessionId: string | string[] | undefined, setMess
           }
         }
         setIsGenerating(false) // Set generating to false when stream completes successfully
+        // Trigger callback for session updates (summary polling)
+        if (onMessageComplete) {
+          onMessageComplete()
+        }
         return // Success - exit retry loop
 
       } catch (err) {
@@ -122,7 +134,7 @@ export function useSendMessage(sessionId: string | string[] | undefined, setMess
     }
     
     setIsGenerating(false)
-  }, [sessionId, setMessages])
+  }, [sessionId, setMessages, onMessageComplete])
 
   return { sendMessage, isGenerating, error }
 }

@@ -15,6 +15,7 @@ export interface ISession {
   id: number
   user_id: number
   chatbot_id: number
+  summary?: string
   user?: IUser
   chatbot?: IChatbot
   messages?: IMessage[]

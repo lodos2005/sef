@@ -36,6 +36,7 @@ func (o *OllamaProvider) Generate(ctx context.Context, prompt string, options ma
 		Prompt:  prompt,
 		Options: options,
 		Stream:  true,
+		Think:   false,
 	}
 
 	resp, err := o.client.Generate(ctx, req)
