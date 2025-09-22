@@ -9,6 +9,7 @@ import (
 	"sef/internal/error_handler"
 	"sef/internal/migration"
 	"sef/pkg/seeds"
+	"time"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/compress"
@@ -23,6 +24,9 @@ var adminConfig = fiber.Config{
 	JSONEncoder:  json.Marshal,
 	JSONDecoder:  json.Unmarshal,
 	ErrorHandler: error_handler.ErrorHandler,
+	ReadTimeout:  5 * time.Minute, // Allow longer read timeouts for streaming
+	WriteTimeout: 5 * time.Minute, // Allow longer write timeouts for streaming
+	IdleTimeout:  2 * time.Minute, // Keep connections alive longer
 }
 
 var config, _ = bootstrap.NewConf()

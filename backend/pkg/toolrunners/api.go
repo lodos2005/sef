@@ -30,8 +30,13 @@ func NewAPIToolRunner(config map[string]interface{}, parameters interface{}) *AP
 	}
 }
 
-// Execute runs the API tool with given parameters
+// Execute runs the API tool with given parameters (backward compatibility)
 func (r *APIToolRunner) Execute(ctx context.Context, parameters map[string]interface{}) (interface{}, error) {
+	return r.ExecuteWithContext(ctx, parameters, nil)
+}
+
+// ExecuteWithContext runs the API tool with given parameters and additional context
+func (r *APIToolRunner) ExecuteWithContext(ctx context.Context, parameters map[string]interface{}, toolContext *ToolCallContext) (interface{}, error) {
 	// Extract configuration
 	method, ok := r.config["method"].(string)
 	if !ok {
@@ -95,10 +100,36 @@ func (r *APIToolRunner) Execute(ctx context.Context, parameters map[string]inter
 		result = string(body)
 	}
 
+	// Build tool call details
+	toolCallDetails := map[string]interface{}{
+		"tool_type":   "api",
+		"method":      method,
+		"url":         url,
+		"parameters":  parameters,
+		"executed_at": time.Now().UTC().Format(time.RFC3339),
+	}
+
+	// Add tool context information if provided
+	if toolContext != nil {
+		if toolContext.ToolCallID != "" {
+			toolCallDetails["tool_call_id"] = toolContext.ToolCallID
+		}
+		if toolContext.FunctionName != "" {
+			toolCallDetails["function_name"] = toolContext.FunctionName
+		}
+		if toolContext.ToolName != "" {
+			toolCallDetails["tool_name"] = toolContext.ToolName
+		}
+		if toolContext.Metadata != nil {
+			toolCallDetails["metadata"] = toolContext.Metadata
+		}
+	}
+
+	// Return detailed result with tool call information
 	return map[string]interface{}{
-		"status_code": resp.StatusCode,
-		"headers":     resp.Header,
-		"body":        result,
+		"tool_call_details": toolCallDetails,
+		"status_code":       resp.StatusCode,
+		"body":              result,
 	}, nil
 }
 

@@ -11,6 +11,7 @@ import (
 	"sef/pkg/toolrunners"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v3/log"
 	"gorm.io/gorm"
@@ -168,8 +169,20 @@ func (s *MessagingService) ExecuteToolCall(ctx context.Context, toolCall provide
 		return "", fmt.Errorf("failed to create tool runner: %w", err)
 	}
 
-	// Execute tool
-	result, err := runner.Execute(ctx, args)
+	// Create tool call context
+	toolContext := &toolrunners.ToolCallContext{
+		ToolCallID:   toolCall.ID,
+		FunctionName: toolCall.Function.Name,
+		ToolName:     tool.Name,
+		Metadata: map[string]interface{}{
+			"tool_type":        tool.Type,
+			"tool_id":          tool.ID,
+			"tool_description": tool.Description,
+		},
+	}
+
+	// Execute tool with context
+	result, err := runner.ExecuteWithContext(ctx, args, toolContext)
 	if err != nil {
 		return "", fmt.Errorf("tool execution failed: %w", err)
 	}
@@ -277,7 +290,60 @@ func (s *MessagingService) CreateToolMessage(sessionID uint, content string) (*e
 	return &toolMessage, nil
 }
 
-// GenerateChatResponse generates the chat response stream with tool support
+// processToolCalls handles the execution of tool calls and returns updated messages
+func (s *MessagingService) processToolCalls(session *entities.Session, toolCalls []providers.ToolCall, messages []providers.ChatMessage, outputCh chan<- string, assistantContent *strings.Builder) []providers.ChatMessage {
+	for _, toolCall := range toolCalls {
+		displayName := toolCall.Function.Name
+		// Extract tool display name from session.Chatbot.Tools
+		for _, t := range session.Chatbot.Tools {
+			if t.Name == toolCall.Function.Name {
+				displayName = t.DisplayName
+				break
+			}
+		}
+
+		// Ensure we have a valid display name, fallback to function name if empty
+		if displayName == "" {
+			if toolCall.Function.Name != "" {
+				displayName = toolCall.Function.Name
+			} else {
+				displayName = "Unknown Tool"
+			}
+		}
+
+		// Send tool executing indicator
+		executingStr := fmt.Sprintf("<tool_executing>%s</tool_executing>", displayName)
+		outputCh <- executingStr
+		assistantContent.WriteString(executingStr)
+
+		toolResult, err := s.ExecuteToolCall(context.Background(), toolCall)
+		if err != nil {
+			log.Error("Tool execution failed:", err)
+			toolResult = fmt.Sprintf("[Error executing tool %s: %v]", toolCall.Function.Name, err)
+		}
+
+		// Send tool executed indicator
+		executedStr := fmt.Sprintf("<tool_executed>%s</tool_executed>", displayName)
+		outputCh <- executedStr
+		assistantContent.WriteString(executedStr)
+
+		// Save tool message
+		_, err = s.CreateToolMessage(session.ID, toolResult)
+		if err != nil {
+			log.Error("Failed to save tool message:", err)
+		}
+
+		// Add to messages for followup
+		toolMessage := providers.ChatMessage{
+			Role:    "tool",
+			Content: toolResult,
+		}
+		messages = append(messages, toolMessage)
+	}
+	return messages
+}
+
+// GenerateChatResponse generates the chat response stream with infinite tool call chain support
 func (s *MessagingService) GenerateChatResponse(session *entities.Session, messages []providers.ChatMessage) (<-chan string, *entities.Message, error) {
 	// Create provider instance
 	factory := &providers.ProviderFactory{}
@@ -302,13 +368,6 @@ func (s *MessagingService) GenerateChatResponse(session *entities.Session, messa
 	// Convert tools to definitions
 	toolDefinitions := s.ConvertToolsToDefinitions(session.Chatbot.Tools)
 
-	// Use tool-enabled chat generation
-	chatStream, err := provider.GenerateChatWithTools(context.Background(), messages, toolDefinitions, options)
-	if err != nil {
-		log.Error("Failed to generate response:", err)
-		return nil, nil, fmt.Errorf("failed to generate response: %w", err)
-	}
-
 	// Create output channel
 	outputCh := make(chan string)
 
@@ -324,136 +383,80 @@ func (s *MessagingService) GenerateChatResponse(session *entities.Session, messa
 
 		var assistantContent strings.Builder
 		thinkingStarted := false
+		currentMessages := messages
 
-		for response := range chatStream {
-			// Handle thinking tokens
-			if response.Thinking != "" {
-				if !thinkingStarted {
-					outputCh <- "<think>"
-					thinkingStarted = true
+		// Keep-alive ticker to prevent timeouts
+		keepAliveTicker := time.NewTicker(30 * time.Second)
+		defer keepAliveTicker.Stop()
+
+		// Continuous loop to handle infinite tool call chains
+		for {
+			// Generate chat response
+			chatStream, err := provider.GenerateChatWithTools(context.Background(), currentMessages, toolDefinitions, options)
+			if err != nil {
+				log.Error("Failed to generate response:", err)
+				outputCh <- fmt.Sprintf("[Error generating response: %v]", err)
+				return
+			}
+
+			hasToolCalls := false
+			var pendingToolCalls []providers.ToolCall
+
+			// Process the stream
+			for response := range chatStream {
+				// Handle thinking tokens
+				if response.Thinking != "" {
+					if !thinkingStarted {
+						outputCh <- "<think>"
+						thinkingStarted = true
+					}
+					outputCh <- response.Thinking
+					assistantContent.WriteString("<think>" + response.Thinking)
+				} else if thinkingStarted {
+					outputCh <- "</think>"
+					thinkingStarted = false
+					assistantContent.WriteString("</think>")
 				}
-				outputCh <- response.Thinking
-				assistantContent.WriteString("<think>" + response.Thinking)
-			} else if thinkingStarted {
+
+				// Handle content
+				if response.Content != "" {
+					outputCh <- response.Content
+					assistantContent.WriteString(response.Content)
+				}
+
+				// Collect tool calls
+				if len(response.ToolCalls) > 0 {
+					hasToolCalls = true
+					pendingToolCalls = append(pendingToolCalls, response.ToolCalls...)
+				}
+
+				// If response is done, process any collected tool calls
+				if response.Done {
+					if thinkingStarted {
+						outputCh <- "</think>"
+						thinkingStarted = false
+						assistantContent.WriteString("</think>")
+					}
+					break
+				}
+			}
+
+			// If no tool calls were made, we're done
+			if !hasToolCalls {
+				// Update the assistant message with full content
+				s.UpdateAssistantMessage(firstAssistant, assistantContent.String())
+				return
+			}
+
+			// Close thinking if open before processing tools
+			if thinkingStarted {
 				outputCh <- "</think>"
 				thinkingStarted = false
 				assistantContent.WriteString("</think>")
 			}
 
-			// Handle content
-			if response.Content != "" {
-				outputCh <- response.Content
-				assistantContent.WriteString(response.Content)
-			}
-
-			// Handle tool calls
-			if len(response.ToolCalls) > 0 {
-				// Close thinking if open
-				if thinkingStarted {
-					outputCh <- "</think>"
-					thinkingStarted = false
-					assistantContent.WriteString("</think>")
-				}
-
-				// Process tool calls
-				for _, toolCall := range response.ToolCalls {
-					displayName := toolCall.Function.Name
-					// Extract tool display name from session.Chatbot.Tools
-					for _, t := range session.Chatbot.Tools {
-						if t.Name == toolCall.Function.Name {
-							displayName = t.DisplayName
-							break
-						}
-					}
-
-					// Ensure we have a valid display name, fallback to function name if empty
-					if displayName == "" {
-						if toolCall.Function.Name != "" {
-							displayName = toolCall.Function.Name
-						} else {
-							displayName = "Unknown Tool"
-						}
-					}
-
-					// Send tool executing indicator
-					executingStr := fmt.Sprintf("<tool_executing>%s</tool_executing>", displayName)
-					outputCh <- executingStr
-					assistantContent.WriteString(executingStr)
-
-					toolResult, err := s.ExecuteToolCall(context.Background(), toolCall)
-					if err != nil {
-						log.Error("Tool execution failed:", err)
-						toolResult = fmt.Sprintf("[Error executing tool %s: %v]", toolCall.Function.Name, err)
-					}
-
-					// Send tool executed indicator
-					executedStr := fmt.Sprintf("<tool_executed>%s</tool_executed>", displayName)
-					outputCh <- executedStr
-					assistantContent.WriteString(executedStr)
-
-					// Save tool message
-					_, err = s.CreateToolMessage(session.ID, toolResult)
-					if err != nil {
-						log.Error("Failed to save tool message:", err)
-					}
-
-					// Add to messages for followup
-					toolMessage := providers.ChatMessage{
-						Role:    "tool",
-						Content: toolResult,
-					}
-					messages = append(messages, toolMessage)
-				}
-
-				// Generate followup
-				followupStream, err := provider.GenerateChatWithTools(context.Background(), messages, toolDefinitions, options)
-				if err != nil {
-					log.Error("Failed to generate followup:", err)
-					outputCh <- fmt.Sprintf("[Error generating followup: %v]", err)
-					return
-				}
-
-				// Process followup stream
-				for followupResp := range followupStream {
-					if followupResp.Thinking != "" {
-						if !thinkingStarted {
-							outputCh <- "<think>"
-							thinkingStarted = true
-						}
-						outputCh <- followupResp.Thinking
-						assistantContent.WriteString("<think>" + followupResp.Thinking)
-					} else if thinkingStarted {
-						outputCh <- "</think>"
-						thinkingStarted = false
-						assistantContent.WriteString("</think>")
-					}
-
-					if followupResp.Content != "" {
-						outputCh <- followupResp.Content
-						assistantContent.WriteString(followupResp.Content)
-					}
-
-					if followupResp.Done {
-						if thinkingStarted {
-							outputCh <- "</think>"
-							thinkingStarted = false
-							assistantContent.WriteString("</think>")
-						}
-						break
-					}
-				}
-			}
-
-			if response.Done {
-				if thinkingStarted {
-					outputCh <- "</think>"
-					thinkingStarted = false
-					assistantContent.WriteString("</think>")
-				}
-				// Update the assistant message with full content
-				s.UpdateAssistantMessage(firstAssistant, assistantContent.String())
-				return
-			}
+			// Process tool calls and update messages for next iteration
+			currentMessages = s.processToolCalls(session, pendingToolCalls, currentMessages, outputCh, &assistantContent)
 		}
 	}()
 

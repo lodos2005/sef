@@ -203,6 +203,9 @@ func (h *Controller) setStreamingHeaders(c fiber.Ctx) {
 	c.Set("Cache-Control", "no-cache")
 	c.Set("Connection", "keep-alive")
 	c.Set("Transfer-Encoding", "chunked")
+	c.Set("X-Accel-Buffering", "no") // Disable proxy buffering
+	c.Set("Access-Control-Allow-Origin", "*")
+	c.Set("Access-Control-Allow-Headers", "Cache-Control")
 }
 
 // streamResponse handles the actual streaming of the response
@@ -225,7 +228,7 @@ func (h *Controller) streamResponse(c fiber.Ctx, stream <-chan string, assistant
 			// Send JSON formatted chunk
 			if err := h.sendChunk(w, chunk); err != nil {
 				log.Error("Error sending chunk:", err)
-				break
+				return // Exit gracefully on connection error
 			}
 		}
 
@@ -268,4 +271,19 @@ func (h *Controller) sendEndEvent(w *bufio.Writer) {
 	endJson := string(endBytes) + "\n"
 	fmt.Fprint(w, endJson)
 	w.Flush()
+}
+
+// sendKeepAlive sends a keep-alive ping to maintain connection
+func (h *Controller) sendKeepAlive(w *bufio.Writer) error {
+	keepAliveData := map[string]interface{}{
+		"type": "ping",
+	}
+	jsonBytes, err := json.Marshal(keepAliveData)
+	if err != nil {
+		return err
+	}
+
+	jsonData := string(jsonBytes) + "\n"
+	fmt.Fprint(w, jsonData)
+	return w.Flush()
 }

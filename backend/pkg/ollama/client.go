@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 )
 
 // OllamaClient handles Ollama API interactions
@@ -94,7 +95,9 @@ func NewOllamaClient(baseURL string) *OllamaClient {
 
 	return &OllamaClient{
 		baseURL: baseURL,
-		client:  &http.Client{},
+		client: &http.Client{
+			Timeout: 240 * time.Second, // 240 seconds timeout for slow LLM calls
+		},
 	}
 }
 

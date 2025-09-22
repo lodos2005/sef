@@ -19,76 +19,109 @@ export function useSendMessage(sessionId: string | string[] | undefined, setMess
     setIsGenerating(true)
     setError(null)
 
-    try {
-      const response = await fetch(`/api/v1/sessions/${sessionId}/messages`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({
-          content: content.trim(),
-        }),
-      })
+    let retryCount = 0
+    const maxRetries = 3
+    let assistantMessageId = (Date.now() + 1).toString()
 
-      if (!response.ok) {
-        throw new Error("Mesaj gönderilirken hata oluştu")
-      }
+    while (retryCount < maxRetries) {
+      try {
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 300000) // 5 minutes timeout
 
-      // Handle JSON streaming response
-      const reader = response.body?.getReader()
-      const decoder = new TextDecoder()
-      let assistantContent = ""
-      let assistantMessageId = (Date.now() + 1).toString()
-      let buffer = ""
+        const response = await fetch(`/api/v1/sessions/${sessionId}/messages`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${localStorage.getItem('token')}`,
+          },
+          body: JSON.stringify({
+            content: content.trim(),
+          }),
+          signal: controller.signal,
+        })
 
-      // Add empty assistant message
-      const assistantMessage: Message = {
-        id: assistantMessageId,
-        role: "assistant",
-        content: "",
-        createdAt: new Date(),
-      }
-      setMessages(prev => [...prev, assistantMessage])
+        clearTimeout(timeoutId)
 
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
+        if (!response.ok) {
+          throw new Error("Mesaj gönderilirken hata oluştu")
+        }
 
-          buffer += decoder.decode(value, { stream: true })
-          const lines = buffer.split('\n')
-          buffer = lines.pop() || "" // Keep incomplete line in buffer
+        // Handle JSON streaming response
+        const reader = response.body?.getReader()
+        const decoder = new TextDecoder()
+        let assistantContent = ""
+        let buffer = ""
+        let lastActivityTime = Date.now()
 
-          for (const line of lines) {
-            if (line.trim() === "") continue
-            try {
-              const parsed = JSON.parse(line)
-              if (parsed.type === "chunk") {
-                assistantContent += parsed.data
-                // Update the assistant message in real-time
-                setMessages(prev => prev.map(msg =>
-                  msg.id === assistantMessageId
-                    ? { ...msg, content: assistantContent }
-                    : msg
-                ))
-              } else if (parsed.type === "done") {
-                break
+        // Add empty assistant message
+        const assistantMessage: Message = {
+          id: assistantMessageId,
+          role: "assistant",
+          content: "",
+          createdAt: new Date(),
+        }
+        setMessages(prev => [...prev, assistantMessage])
+
+        if (reader) {
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+
+            lastActivityTime = Date.now()
+            buffer += decoder.decode(value, { stream: true })
+            const lines = buffer.split('\n')
+            buffer = lines.pop() || "" // Keep incomplete line in buffer
+
+            for (const line of lines) {
+              if (line.trim() === "") continue
+              try {
+                const parsed = JSON.parse(line)
+                if (parsed.type === "chunk") {
+                  assistantContent += parsed.data
+                  // Update the assistant message in real-time
+                  setMessages(prev => prev.map(msg =>
+                    msg.id === assistantMessageId
+                      ? { ...msg, content: assistantContent }
+                      : msg
+                  ))
+                } else if (parsed.type === "done") {
+                  setIsGenerating(false) // Set generating to false when done
+                  return // Success - exit retry loop
+                } else if (parsed.type === "ping") {
+                  // Keep-alive ping, do nothing
+                  continue
+                }
+              } catch (e) {
+                console.error("Failed to parse JSON line:", e, "Line:", line)
               }
-            } catch (e) {
-              console.error("Failed to parse JSON line:", e, "Line:", line)
             }
           }
         }
-      }
+        setIsGenerating(false) // Set generating to false when stream completes successfully
+        return // Success - exit retry loop
 
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Mesaj gönderilirken hata oluştu")
-      // Remove the failed assistant message
-      setMessages(prev => prev.filter(msg => msg.id !== (Date.now() + 1).toString()))
-    } finally {
-      setIsGenerating(false)
+      } catch (err) {
+        console.error(`Attempt ${retryCount + 1} failed:`, err)
+        retryCount++
+        
+        if (retryCount < maxRetries) {
+          // Remove the failed assistant message before retrying
+          setMessages(prev => prev.filter(msg => msg.id !== assistantMessageId))
+          assistantMessageId = (Date.now() + retryCount + 1).toString()
+          
+          // Wait before retrying (exponential backoff)
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000))
+          continue
+        } else {
+          // All retries failed
+          setError(err instanceof Error ? err.message : "Mesaj gönderilirken hata oluştu")
+          // Remove the failed assistant message
+          setMessages(prev => prev.filter(msg => msg.id !== assistantMessageId))
+        }
+      }
     }
+    
+    setIsGenerating(false)
   }, [sessionId, setMessages])
 
   return { sendMessage, isGenerating, error }

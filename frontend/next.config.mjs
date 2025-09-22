@@ -11,7 +11,29 @@ const nextConfig = {
         destination: `http://localhost:8110/api/:path*`,
       },
     ]
-  }
+  },
+  // Increase timeouts for long-running requests
+  experimental: {
+    proxyTimeout: 300000, // 5 minutes
+  },
+  // Headers for better streaming support
+  async headers() {
+    return [
+      {
+        source: '/api/:path*',
+        headers: [
+          {
+            key: 'X-Accel-Buffering',
+            value: 'no',
+          },
+          {
+            key: 'Cache-Control',
+            value: 'no-cache',
+          },
+        ],
+      },
+    ]
+  },
 }
 
 export default nextConfig
