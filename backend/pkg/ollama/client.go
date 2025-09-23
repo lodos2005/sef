@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/gofiber/fiber/v3/log"
 )
 
 // OllamaClient handles Ollama API interactions
@@ -226,6 +228,8 @@ func (oc *OllamaClient) generateChatStream(ctx context.Context, req GenerateRequ
 		scanner := bufio.NewScanner(resp.Body)
 		for scanner.Scan() {
 			line := scanner.Text()
+
+			log.Info("Ollama stream line:", line)
 
 			var ollamaResp OllamaChatResponse
 			if err := json.Unmarshal([]byte(line), &ollamaResp); err != nil {

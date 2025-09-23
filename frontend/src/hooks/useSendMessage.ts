@@ -88,6 +88,16 @@ export function useSendMessage(
                       ? { ...msg, content: assistantContent }
                       : msg
                   ))
+                } else if (parsed.type === "error") {
+                  // Handle error messages from the backend
+                  assistantContent += parsed.data
+                  setMessages(prev => prev.map(msg =>
+                    msg.id === assistantMessageId
+                      ? { ...msg, content: assistantContent }
+                      : msg
+                  ))
+                  // Set error state but don't stop the stream as the error is part of the response
+                  console.warn("Chat error:", parsed.data)
                 } else if (parsed.type === "done") {
                   setIsGenerating(false) // Set generating to false when done
                   // Trigger callback for session updates (summary polling)

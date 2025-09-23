@@ -133,16 +133,25 @@ func (o *OllamaProvider) GenerateChatWithTools(ctx context.Context, messages []C
 		Think:    false,
 	}
 
+	fmt.Printf("Ollama API Request - Model: %s, Messages: %d, Tools: %d\n", model, len(ollamaMessages), len(ollamaTools))
+
 	resp, err := o.client.Generate(ctx, req)
 	if err != nil {
-		return nil, err
+		// Log detailed error information for debugging
+		fmt.Printf("Ollama Chat with Tools API Error: %v\n", err)
+		return nil, fmt.Errorf("failed to generate Ollama chat response with tools: %w", err)
 	}
 
 	stream := resp.(<-chan ollama.OllamaChatResponse)
 	ch := make(chan ChatResponse)
 	go func() {
 		defer close(ch)
+		responseCount := 0
 		for resp := range stream {
+			responseCount++
+			fmt.Printf("Ollama Response %d - Content: %d chars, Thinking: %d chars, Done: %v\n",
+				responseCount, len(resp.Message.Content), len(resp.Message.Thinking), resp.Done)
+
 			chatResp := ChatResponse{
 				Content:  resp.Message.Content,
 				Thinking: resp.Message.Thinking,

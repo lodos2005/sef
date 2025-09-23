@@ -31,6 +31,20 @@ func NewOpenAIProvider(config map[string]interface{}) *OpenAIProvider {
 	}
 }
 
+// ValidateConfig validates the OpenAI provider configuration
+func (o *OpenAIProvider) ValidateConfig(config map[string]interface{}) error {
+	if baseURL, ok := config["base_url"].(string); ok && baseURL != "" {
+		// If using custom base URL, we don't require API key (might be local OpenAI-compatible API)
+		return nil
+	}
+
+	// For official OpenAI API, require API key
+	if apiKey, ok := config["api_key"].(string); !ok || apiKey == "" {
+		return fmt.Errorf("api_key is required for OpenAI provider")
+	}
+	return nil
+}
+
 // Generate generates a response from OpenAI with streaming support
 func (o *OpenAIProvider) Generate(ctx context.Context, prompt string, options map[string]interface{}) (<-chan string, error) {
 	model := "gpt-3.5-turbo" // Default model
@@ -298,15 +312,4 @@ func (o *OpenAIProvider) ListModels() ([]string, error) {
 		modelNames = append(modelNames, model.ID)
 	}
 	return modelNames, nil
-}
-
-// ValidateConfig validates the OpenAI provider configuration
-func (o *OpenAIProvider) ValidateConfig(config map[string]interface{}) error {
-	if apiKey, ok := config["api_key"].(string); !ok || apiKey == "" {
-		return fmt.Errorf("api_key is required and cannot be empty")
-	}
-	if baseURL, ok := config["base_url"].(string); ok && baseURL == "" {
-		return fmt.Errorf("base_url cannot be empty if provided")
-	}
-	return nil
 }

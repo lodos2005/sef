@@ -203,8 +203,11 @@ func (h *Controller) streamChatResponse(c fiber.Ctx, session *entities.Session, 
 func (h *Controller) streamResponseWithCallback(c fiber.Ctx, stream <-chan string, assistantMessage *entities.Message, sessionID uint, userID uint) error {
 	var fullResponse strings.Builder
 
+	log.Info("Starting stream response callback for session:", sessionID)
+
 	c.Response().SetBodyStreamWriter(fasthttp.StreamWriter(func(w *bufio.Writer) {
 		defer func() {
+			log.Info("Stream ended for session:", sessionID, "Full response length:", fullResponse.Len())
 			// Update the assistant message with full content and trigger summary generation (async)
 			go h.MessagingService.UpdateAssistantMessageWithCallback(assistantMessage, fullResponse.String(), func() {
 				// Trigger automatic summary generation after assistant message is saved
@@ -212,7 +215,11 @@ func (h *Controller) streamResponseWithCallback(c fiber.Ctx, stream <-chan strin
 			})
 		}()
 
+		chunkCount := 0
 		for chunk := range stream {
+			chunkCount++
+			log.Info("Received chunk", chunkCount, "for session", sessionID, "length:", len(chunk))
+
 			if chunk == "" {
 				continue
 			}
@@ -226,6 +233,7 @@ func (h *Controller) streamResponseWithCallback(c fiber.Ctx, stream <-chan strin
 			}
 		}
 
+		log.Info("Stream processing complete for session:", sessionID, "Total chunks:", chunkCount)
 		// Send end event
 		h.sendEndEvent(w)
 	}))
@@ -246,9 +254,28 @@ func (h *Controller) setStreamingHeaders(c fiber.Ctx) {
 
 // sendChunk sends a single chunk of the response
 func (h *Controller) sendChunk(w *bufio.Writer, chunk string) error {
+	var msgType string
+	var content string
+
+	// Detect if this is an error message
+	if strings.HasPrefix(chunk, "I apologize, but I'm having trouble") ||
+		strings.Contains(chunk, "Error details:") ||
+		strings.Contains(chunk, "Tool") && strings.Contains(chunk, "encountered an error") ||
+		strings.Contains(chunk, "not available or has been removed") ||
+		strings.Contains(chunk, "took too long to respond") {
+		msgType = "error"
+		content = chunk
+		log.Info("Sending error message:", chunk)
+	} else {
+		msgType = "chunk"
+		content = chunk
+	}
+
+	log.Info("Sending message type:", msgType, "length:", len(content))
+
 	data := map[string]interface{}{
-		"type": "chunk",
-		"data": chunk,
+		"type": msgType,
+		"data": content,
 	}
 	jsonBytes, err := json.Marshal(data)
 	if err != nil {

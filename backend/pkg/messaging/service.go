@@ -121,13 +121,45 @@ func (s *MessagingService) LoadSessionWithChatbotToolsAndMessages(sessionID, use
 func (s *MessagingService) ConvertToolsToDefinitions(tools []entities.Tool) []providers.ToolDefinition {
 	var definitions []providers.ToolDefinition
 	for _, tool := range tools {
-		// Convert JSONB parameters to map
-		parameters := make(map[string]interface{})
+		// Convert JSONB parameters to OpenAPI JSON Schema format
+		parameters := map[string]interface{}{
+			"type":       "object",
+			"properties": make(map[string]interface{}),
+			"required":   []string{},
+		}
+
 		if len(tool.Parameters) > 0 {
-			// Try to convert the JSONB array to a map
-			if paramMap, ok := tool.Parameters[0].(map[string]interface{}); ok {
-				parameters = paramMap
+			properties := make(map[string]interface{})
+			var required []string
+
+			// Process each parameter in the array
+			for _, param := range tool.Parameters {
+				if paramMap, ok := param.(map[string]interface{}); ok {
+					name, hasName := paramMap["name"].(string)
+					paramType, hasType := paramMap["type"].(string)
+					description, hasDesc := paramMap["description"].(string)
+					isRequired, hasRequired := paramMap["required"].(bool)
+
+					if hasName && hasType {
+						// Create property definition
+						property := map[string]interface{}{
+							"type": paramType,
+						}
+						if hasDesc {
+							property["description"] = description
+						}
+						properties[name] = property
+
+						// Add to required array if marked as required
+						if hasRequired && isRequired {
+							required = append(required, name)
+						}
+					}
+				}
 			}
+
+			parameters["properties"] = properties
+			parameters["required"] = required
 		}
 
 		definition := providers.ToolDefinition{
@@ -320,7 +352,16 @@ func (s *MessagingService) processToolCalls(session *entities.Session, toolCalls
 		toolResult, err := s.ExecuteToolCall(context.Background(), toolCall)
 		if err != nil {
 			log.Error("Tool execution failed:", err)
-			toolResult = fmt.Sprintf("[Error executing tool %s: %v]", toolCall.Function.Name, err)
+			// Provide more user-friendly tool error messages
+			if strings.Contains(err.Error(), "not found") {
+				toolResult = fmt.Sprintf("The tool '%s' is not available or has been removed.", displayName)
+			} else if strings.Contains(err.Error(), "timeout") {
+				toolResult = fmt.Sprintf("The tool '%s' took too long to respond. Please try again.", displayName)
+			} else if strings.Contains(err.Error(), "arguments") {
+				toolResult = fmt.Sprintf("There was an issue with the parameters provided to '%s'. Please try rephrasing your request.", displayName)
+			} else {
+				toolResult = fmt.Sprintf("Tool '%s' encountered an error: %v", displayName, err)
+			}
 		}
 
 		// Send tool executed indicator
@@ -351,20 +392,52 @@ func (s *MessagingService) GenerateChatResponse(session *entities.Session, messa
 	providerConfig := map[string]interface{}{
 		"base_url": session.Chatbot.Provider.BaseURL,
 	}
+
+	// Validate provider configuration
+	if session.Chatbot.Provider.Type == "" {
+		log.Error("Provider type is empty for chatbot:", session.Chatbot.Name)
+		return nil, nil, fmt.Errorf("provider type is not configured for chatbot: %s", session.Chatbot.Name)
+	}
+
+	if session.Chatbot.Provider.BaseURL == "" {
+		log.Error("Provider base URL is empty for chatbot:", session.Chatbot.Name)
+		return nil, nil, fmt.Errorf("provider base URL is not configured for chatbot: %s", session.Chatbot.Name)
+	}
+
+	log.Info("Creating provider with config:", map[string]interface{}{
+		"type":         session.Chatbot.Provider.Type,
+		"base_url":     session.Chatbot.Provider.BaseURL,
+		"chatbot_id":   session.Chatbot.ID,
+		"chatbot_name": session.Chatbot.Name,
+	})
+
 	provider, err := factory.NewProvider(session.Chatbot.Provider.Type, providerConfig)
 	if err != nil {
-		log.Error("Failed to create provider:", err)
+		log.Error("Failed to create provider:", err, "Provider type:", session.Chatbot.Provider.Type, "Config:", providerConfig)
 		return nil, nil, fmt.Errorf("failed to initialize provider: %w", err)
 	}
+
+	log.Info("Provider created successfully for chatbot:", session.Chatbot.Name)
 
 	// Prepare options
 	options := make(map[string]interface{})
 	if session.Chatbot.ModelName != "" {
 		options["model"] = session.Chatbot.ModelName
-		log.Info("Using model from chatbot:", session.Chatbot.ModelName)
+		log.Info("Using model from chatbot:", session.Chatbot.ModelName, "for chatbot:", session.Chatbot.Name)
 	} else {
-		log.Info("Using default model")
+		log.Info("Using default model for chatbot:", session.Chatbot.Name)
 	}
+
+	// Add additional logging for debugging
+	log.Info("Chat generation parameters:", map[string]interface{}{
+		"session_id":     session.ID,
+		"chatbot_id":     session.Chatbot.ID,
+		"chatbot_name":   session.Chatbot.Name,
+		"provider_type":  session.Chatbot.Provider.Type,
+		"model_name":     session.Chatbot.ModelName,
+		"tools_count":    len(session.Chatbot.Tools),
+		"messages_count": len(messages),
+	})
 
 	// Convert tools to definitions
 	toolDefinitions := s.ConvertToolsToDefinitions(session.Chatbot.Tools)
@@ -393,18 +466,41 @@ func (s *MessagingService) GenerateChatResponse(session *entities.Session, messa
 		// Continuous loop to handle infinite tool call chains
 		for {
 			// Generate chat response
+			log.Info("Calling GenerateChatWithTools for session:", session.ID, "with", len(currentMessages), "messages")
 			chatStream, err := provider.GenerateChatWithTools(context.Background(), currentMessages, toolDefinitions, options)
 			if err != nil {
 				log.Error("Failed to generate response:", err)
-				outputCh <- fmt.Sprintf("[Error generating response: %v]", err)
+				// Send a more user-friendly error message
+				errorMsg := "I apologize, but I'm having trouble generating a response right now. "
+				if strings.Contains(err.Error(), "connection") || strings.Contains(err.Error(), "timeout") {
+					errorMsg += "There seems to be a connection issue with the AI service. Please try again in a moment."
+				} else if strings.Contains(err.Error(), "authentication") || strings.Contains(err.Error(), "auth") {
+					errorMsg += "There's an authentication issue with the AI service. Please contact an administrator."
+				} else if strings.Contains(err.Error(), "model") {
+					errorMsg += "The selected AI model is not available. Please try a different chatbot or contact an administrator."
+				} else {
+					errorMsg += fmt.Sprintf("Error details: %v", err)
+				}
+
+				log.Info("Sending error message to client:", errorMsg)
+				outputCh <- errorMsg
+
+				// Update assistant message with error content
+				s.UpdateAssistantMessage(firstAssistant, errorMsg)
 				return
 			}
+
+			log.Info("GenerateChatWithTools call successful, processing stream...")
 
 			hasToolCalls := false
 			var pendingToolCalls []providers.ToolCall
 
 			// Process the stream
+			responseCount := 0
 			for response := range chatStream {
+				responseCount++
+				log.Info("Received response", responseCount, "- Content:", len(response.Content), "chars, Thinking:", len(response.Thinking), "chars, ToolCalls:", len(response.ToolCalls), "Done:", response.Done)
+
 				// Handle thinking tokens
 				if response.Thinking != "" {
 					if !thinkingStarted {
@@ -421,6 +517,7 @@ func (s *MessagingService) GenerateChatResponse(session *entities.Session, messa
 
 				// Handle content
 				if response.Content != "" {
+					log.Info("Sending content chunk:", response.Content)
 					outputCh <- response.Content
 					assistantContent.WriteString(response.Content)
 				}
@@ -433,6 +530,7 @@ func (s *MessagingService) GenerateChatResponse(session *entities.Session, messa
 
 				// If response is done, process any collected tool calls
 				if response.Done {
+					log.Info("Response marked as done after", responseCount, "responses")
 					if thinkingStarted {
 						outputCh <- "</think>"
 						thinkingStarted = false
@@ -441,6 +539,8 @@ func (s *MessagingService) GenerateChatResponse(session *entities.Session, messa
 					break
 				}
 			}
+
+			log.Info("Stream processing finished. Total responses:", responseCount, "HasToolCalls:", hasToolCalls)
 
 			// If no tool calls were made, we're done
 			if !hasToolCalls {
