@@ -83,7 +83,7 @@ export default function EditChatbot() {
     })
 
     // Fetch tools
-    http.get('/tools').then((res) => {
+    http.get('/tools?per_page=99999').then((res) => {
       setTools(res.data.records || [])
     }).catch((e) => {
       console.error('Error fetching tools:', e)
@@ -299,7 +299,7 @@ export default function EditChatbot() {
                       {tool.display_name}
                     </label>
                     <span className="text-xs text-muted-foreground">
-                      ({tool.type})
+                      ({tool.name})
                     </span>
                   </div>
                 ))}

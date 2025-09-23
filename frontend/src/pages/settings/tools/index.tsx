@@ -9,8 +9,10 @@ import { DivergentColumn } from "@/types/table"
 import { useEmitter } from "@/hooks/useEmitter"
 import { ITool } from "@/types/tool"
 import { Button } from "@/components/ui/button"
-import { PlusCircleIcon } from "lucide-react"
+import { PlusCircleIcon, Upload } from "lucide-react"
 import Link from "next/link"
+import ToolImportDialog from "@/components/settings/tools/ToolImportDialog"
+import { ToolRowActions } from "@/components/settings/tool-actions"
 
 export default function ToolSettingsPage() {
   const [refetchTrigger, setRefetchTrigger] = useState<number>(0)
@@ -63,11 +65,7 @@ export default function ToolSettingsPage() {
     },
     {
       id: "actions",
-      cell: ({ row }) => (
-        <div className="flex justify-center">
-          
-        </div>
-      ),
+      cell: ({ row }) => <ToolRowActions row={row} />,
     },
   ]
 
@@ -90,12 +88,20 @@ export default function ToolSettingsPage() {
         endpoint="/tools"
         refetchTrigger={refetchTrigger}
       >
-        <Link href="/settings/tools/create">
-          <Button variant="outline" size="sm" className="ml-auto h-8 lg:flex">
-            <PlusCircleIcon className="mr-2 size-4" />
-            {t("providers.create.button")}
-          </Button>
-        </Link>
+        <div className="flex gap-2">
+          <ToolImportDialog>
+            <Button variant="outline" size="sm" className="h-8 lg:flex">
+              <Upload className="mr-2 size-4" />
+              {t("tools.import.button", "Import")}
+            </Button>
+          </ToolImportDialog>
+          <Link href="/settings/tools/create">
+            <Button variant="outline" size="sm" className="h-8 lg:flex">
+              <PlusCircleIcon className="mr-2 size-4" />
+              {t("providers.create.button")}
+            </Button>
+          </Link>
+        </div>
       </AsyncDataTable>
     </>
   )

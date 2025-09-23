@@ -1,0 +1,121 @@
+openapi: 3.0.0
+info:
+  title: Sample API
+  description: A sample API specification for testing YAML import
+  version: 1.0.0
+servers:
+  - url: https://api.example.com
+    description: Production server
+paths:
+  /users:
+    get:
+      summary: Get all users
+      description: Retrieve a list of all users
+      operationId: getUsers
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of users to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - name: offset
+          in: query
+          description: Number of users to skip
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      tags:
+        - users
+    post:
+      summary: Create a user
+      description: Create a new user account
+      operationId: createUser
+      requestBody:
+        description: User data
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Full name of the user
+                email:
+                  type: string
+                  format: email
+                  description: Email address of the user
+                age:
+                  type: integer
+                  minimum: 18
+                  description: Age of the user
+              required:
+                - name
+                - email
+      tags:
+        - users
+  /users/{id}:
+    get:
+      summary: Get user by ID
+      description: Retrieve a specific user by their ID
+      operationId: getUserById
+      parameters:
+        - name: id
+          in: path
+          description: User ID
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      tags:
+        - users
+    put:
+      summary: Update user
+      description: Update an existing user
+      operationId: updateUser
+      parameters:
+        - name: id
+          in: path
+          description: User ID
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        description: Updated user data
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                age:
+                  type: integer
+                  minimum: 18
+      tags:
+        - users
+    delete:
+      summary: Delete user
+      description: Delete a user by ID
+      operationId: deleteUser
+      parameters:
+        - name: id
+          in: path
+          description: User ID
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      tags:
+        - users

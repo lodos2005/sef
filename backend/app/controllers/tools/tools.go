@@ -1,10 +1,14 @@
 package tools
 
 import (
+	"fmt"
+	"io"
 	"sef/app/entities"
 	"sef/internal/paginator"
 	"sef/internal/search"
+	"sef/pkg/importservice"
 	"sef/pkg/toolrunners"
+	"strings"
 
 	"github.com/gofiber/fiber/v3"
 	"gorm.io/gorm"
@@ -126,4 +130,96 @@ func (h *Controller) Schema(c fiber.Ctx) error {
 
 	schema := runner.GetConfigSchema()
 	return c.JSON(fiber.Map{"schema": schema})
+}
+
+func (h *Controller) Import(c fiber.Ctx) error {
+	// Get the uploaded file
+	file, err := c.FormFile("file")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "no file uploaded"})
+	}
+
+	// Check file extension
+	filename := strings.ToLower(file.Filename)
+	if !strings.HasSuffix(filename, ".json") && !strings.HasSuffix(filename, ".yaml") && !strings.HasSuffix(filename, ".yml") {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "only JSON, YAML, and YML files are supported"})
+	}
+
+	// Open and read the file
+	fileReader, err := file.Open()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to open file"})
+	}
+	defer fileReader.Close()
+
+	fileData, err := io.ReadAll(fileReader)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to read file"})
+	}
+
+	// Create import service and process the file
+	importService := importservice.NewImportService()
+	var result *importservice.ImportResult
+
+	// Determine file format and call appropriate import method
+	if strings.HasSuffix(filename, ".yaml") || strings.HasSuffix(filename, ".yml") {
+		result, err = importService.ImportFromYAML(fileData)
+	} else {
+		result, err = importService.ImportFromJSON(fileData)
+	}
+
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	// If import failed, return the errors
+	if !result.Success {
+		return c.Status(fiber.StatusBadRequest).JSON(result)
+	}
+
+	// Save the imported tools to database
+	var savedTools []entities.Tool
+	var saveErrors []string
+
+	for _, tool := range result.Tools {
+		// Validate tool type
+		factory := &toolrunners.ToolRunnerFactory{}
+		if _, err := factory.NewToolRunner(tool.Type, map[string]interface{}(tool.Config), tool.Parameters); err != nil {
+			saveErrors = append(saveErrors, fmt.Sprintf("failed to validate tool '%s': %v", tool.Name, err))
+			continue
+		}
+
+		// Check if tool with same name already exists
+		var existingTool entities.Tool
+		if err := h.DB.Where("name = ?", tool.Name).First(&existingTool).Error; err == nil {
+			// Tool exists, skip or update based on query parameter
+			if c.Query("update_existing") == "true" {
+				// Update existing tool
+				if err := h.DB.Model(&existingTool).Updates(&tool).Error; err != nil {
+					saveErrors = append(saveErrors, fmt.Sprintf("failed to update tool '%s': %v", tool.Name, err))
+					continue
+				}
+				savedTools = append(savedTools, existingTool)
+			} else {
+				saveErrors = append(saveErrors, fmt.Sprintf("tool '%s' already exists (use update_existing=true to overwrite)", tool.Name))
+				continue
+			}
+		} else {
+			// Create new tool
+			if err := h.DB.Create(&tool).Error; err != nil {
+				saveErrors = append(saveErrors, fmt.Sprintf("failed to save tool '%s': %v", tool.Name, err))
+				continue
+			}
+			savedTools = append(savedTools, tool)
+		}
+	}
+
+	// Return the result
+	return c.JSON(fiber.Map{
+		"success":        len(saveErrors) == 0,
+		"imported_count": len(savedTools),
+		"total_count":    len(result.Tools),
+		"tools":          savedTools,
+		"errors":         append(result.Errors, saveErrors...),
+	})
 }

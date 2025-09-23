@@ -40,35 +40,35 @@ func (h *Controller) Show(c fiber.Ctx) error {
 }
 
 func (h *Controller) Create(c fiber.Ctx) error {
-	var payload map[string]interface{}
+	var payload struct {
+		Name         string `json:"name"`
+		Description  string `json:"description"`
+		ProviderID   uint   `json:"provider_id"`
+		SystemPrompt string `json:"system_prompt"`
+		ModelName    string `json:"model_name"`
+		ToolIDs      []uint `json:"tool_ids"`
+	}
 	if err := c.Bind().JSON(&payload); err != nil {
 		return err
 	}
 
-	// Extract tool IDs if provided
-	var toolIDs []uint
-	if toolIDsInterface, ok := payload["tool_ids"]; ok && toolIDsInterface != nil {
-		if ids, ok := toolIDsInterface.([]interface{}); ok {
-			for _, id := range ids {
-				if idFloat, ok := id.(float64); ok {
-					toolIDs = append(toolIDs, uint(idFloat))
-				}
-			}
-		}
+	// Create chatbot entity
+	chatbot := &entities.Chatbot{
+		Name:         payload.Name,
+		Description:  payload.Description,
+		ProviderID:   payload.ProviderID,
+		SystemPrompt: payload.SystemPrompt,
+		ModelName:    payload.ModelName,
 	}
 
-	// Remove tool_ids from payload before creating chatbot
-	delete(payload, "tool_ids")
-
-	chatbot := &entities.Chatbot{}
-	if err := h.DB.Model(chatbot).Create(payload).Error; err != nil {
+	if err := h.DB.Create(chatbot).Error; err != nil {
 		return err
 	}
 
 	// Associate tools if provided
-	if len(toolIDs) > 0 {
+	if len(payload.ToolIDs) > 0 {
 		var tools []entities.Tool
-		for _, id := range toolIDs {
+		for _, id := range payload.ToolIDs {
 			tools = append(tools, entities.Tool{Base: entities.Base{ID: id}})
 		}
 		if err := h.DB.Model(chatbot).Association("Tools").Replace(tools); err != nil {

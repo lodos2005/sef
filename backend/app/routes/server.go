@@ -89,6 +89,7 @@ func Server(app *fiber.App) {
 		toolsGroup.Get("/schema", controller.Schema)
 		toolsGroup.Get("/:id", controller.Show)
 		toolsGroup.Post("/", controller.Create)
+		toolsGroup.Post("/import", controller.Import)
 		toolsGroup.Patch("/:id", controller.Update)
 		toolsGroup.Delete("/:id", controller.Delete)
 	}

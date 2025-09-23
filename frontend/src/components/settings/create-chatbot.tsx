@@ -82,7 +82,7 @@ export default function CreateChatbot() {
     })
 
     // Fetch tools
-    http.get('/tools').then((res) => {
+    http.get('/tools?per_page=9999').then((res) => {
       setTools(res.data.records || [])
     }).catch((e) => {
       console.error('Error fetching tools:', e)
@@ -262,7 +262,25 @@ export default function CreateChatbot() {
             />
 
             <div className="flex flex-col gap-2">
-              <Label>{t("chatbots.create.tools")}</Label>
+              <div className="flex items-center justify-between">
+                <Label>{t("chatbots.create.tools")}</Label>
+                {tools.length > 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (selectedTools.length === tools.length) {
+                        setSelectedTools([])
+                      } else {
+                        setSelectedTools(tools.map(tool => tool.id))
+                      }
+                    }}
+                  >
+                    {selectedTools.length === tools.length ? "Deselect All" : "Select All"}
+                  </Button>
+                )}
+              </div>
               <div className="space-y-2 max-h-40 overflow-y-auto border rounded-md p-3">
                 {tools.map((tool) => (
                   <div key={tool.id} className="flex items-center space-x-2">
@@ -284,7 +302,7 @@ export default function CreateChatbot() {
                       {tool.display_name}
                     </label>
                     <span className="text-xs text-muted-foreground">
-                      ({tool.type})
+                      ({tool.name})
                     </span>
                   </div>
                 ))}

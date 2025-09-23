@@ -1,6 +1,7 @@
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
+import { useRouter } from "next/router"
 
 import {
   AlertDialog,
@@ -24,22 +25,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { useEmitter } from "@/hooks/useEmitter"
 import { http } from "@/services"
-
-interface ITool {
-  id: number
-  name: string
-  description: string
-  type: string
-  config: Record<string, any>
-  parameters: Array<{
-    name: string
-    type: string
-    description: string
-    required: boolean
-  }>
-  created_at: string
-  updated_at: string
-}
+import { ITool } from "@/types/tool"
 
 interface ToolRowActionsProps {
   row: {
@@ -50,6 +36,7 @@ interface ToolRowActionsProps {
 export function ToolRowActions({ row }: ToolRowActionsProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   const emitter = useEmitter()
+  const router = useRouter()
   const { t } = useTranslation("settings")
 
   const handleDelete = async () => {
@@ -65,7 +52,7 @@ export function ToolRowActions({ row }: ToolRowActionsProps) {
   }
 
   const handleEdit = () => {
-    emitter.emit("EDIT_TOOL", row.original)
+    router.push(`/settings/tools/${row.original.id}/edit`)
   }
 
   return (

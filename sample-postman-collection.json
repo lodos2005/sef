@@ -1,0 +1,57 @@
+{
+  "info": {
+    "name": "Sample API Collection",
+    "description": "A sample Postman collection for testing",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Get Users",
+      "description": "Retrieve all users from the API",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "https://api.example.com/users",
+          "host": ["api", "example", "com"],
+          "path": ["users"],
+          "query": [
+            {
+              "key": "limit",
+              "value": "10"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Create User",
+      "description": "Create a new user",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\"\n}"
+        },
+        "url": {
+          "raw": "https://api.example.com/users",
+          "host": ["api", "example", "com"],
+          "path": ["users"]
+        }
+      }
+    }
+  ]
+}
