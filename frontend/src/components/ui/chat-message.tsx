@@ -1,7 +1,7 @@
-import React, { useMemo, useState } from "react"
+import React, { useMemo, useState, memo, useCallback } from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { motion } from "framer-motion"
-import { Ban, ChevronRight, Code2, Loader2, Terminal } from "lucide-react"
+import { Ban, Brain, ChevronRight, Code2, Loader2, Loader2Icon, Terminal } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import {
@@ -12,156 +12,151 @@ import {
 import { FilePreview } from "@/components/ui/file-preview"
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer"
 
-function parseContent(content: string): MessagePart[] {
-  const parts: MessagePart[] = []
-  let remainingContent = content
-  const globalActiveTools = new Map<string, number>() // Track tool execution across parsing contexts
+// Performance optimizations and constants
+const AVATAR_URLS = {
+  user: "https://raw.githubusercontent.com/origin-space/origin-images/refs/heads/main/exp2/user-02_mlqqqt.png",
+  assistant: "https://raw.githubusercontent.com/origin-space/origin-images/refs/heads/main/exp2/user-01_i5l7tp.png"
+} as const
 
-  // Handle all <think> tags
-  let thinkStartIndex = remainingContent.indexOf('<think>')
-  while (thinkStartIndex !== -1) {
-    // Add text before <think>
-    if (thinkStartIndex > 0) {
-      const text = remainingContent.slice(0, thinkStartIndex)
-      if (text.trim()) {
-        const textParts = parseTextForTools(text)
-        parts.push(...textParts)
-      }
-    }
+const TIME_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
+  hour: "2-digit",
+  minute: "2-digit",
+} as const
 
-    // Find </think>
-    const thinkEndIndex = remainingContent.indexOf('</think>', thinkStartIndex)
-    let reasoningContent: string
-    if (thinkEndIndex !== -1) {
-      reasoningContent = remainingContent.slice(thinkStartIndex + 7, thinkEndIndex)
-      remainingContent = remainingContent.slice(thinkEndIndex + 8)
-    } else {
-      // No closing tag, treat everything after <think> as reasoning
-      reasoningContent = remainingContent.slice(thinkStartIndex + 7)
-      remainingContent = ''
-    }
-
-    parts.push({ 
-      type: "reasoning", 
-      reasoning: parseTextForTools(reasoningContent), 
-      isComplete: thinkEndIndex !== -1 
-    })
-
-    // Look for next <think> in remaining content
-    thinkStartIndex = remainingContent.indexOf('<think>')
-  }
-
-  // Now parse remaining content for tool tags
-  if (remainingContent.trim()) {
-    const toolParts = parseTextForTools(remainingContent)
-    parts.push(...toolParts)
-  }
-
-  return parts
-}
-
+// Optimized parsing functions with error handling
 function parseTextForTools(content: string): MessagePart[] {
-  const parts: MessagePart[] = []
-  const regex = /<(tool_executing)>((?:.|\n)*?)<\/tool_executing>|<(tool_executed)>((?:.|\n)*?)<\/tool_executed>/gi
-  let lastIndex = 0
-  let match
-  const activeTools = new Map<string, number>() // Track tool name to parts index
+  if (!content?.trim()) return []
 
-  while ((match = regex.exec(content)) !== null) {
-    const [_, tag1, content1, tag2, content2] = match
-    const tag = tag1 || tag2
-    const innerContent = content1 || content2
-    const startIndex = match.index
-    const toolName = innerContent.trim()
+  try {
+    const parts: MessagePart[] = []
+    const toolRegex = /<(tool_executing|tool_executed)>(.*?)<\/\1>/gi
+    let lastIndex = 0
+    let match: RegExpExecArray | null
+    let iterationCount = 0
+    const MAX_ITERATIONS = 1000 // Prevent infinite loops
 
-    // Debug logging for tool parsing issues
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`Parsing tool tag: ${tag}, content: "${toolName}"`)
-    }
+    // Track executing tools to replace them when they complete
+    const executingToolIndices = new Map<string, number>()
 
-    // Add text before the tag
-    if (startIndex > lastIndex) {
-      const text = content.slice(lastIndex, startIndex)
-      if (text.trim()) {
-        parts.push({ type: "text", text })
+    while ((match = toolRegex.exec(content)) !== null && iterationCount < MAX_ITERATIONS) {
+      iterationCount++
+      const [fullMatch, tag, toolName] = match
+      const startIndex = match.index
+
+      // Add text before the tag
+      if (startIndex > lastIndex) {
+        const text = content.slice(lastIndex, startIndex)
+        if (text.trim()) {
+          parts.push({ type: "text", text })
+        }
       }
-    }
 
-    // Add the part based on tag
-    if (tag === "tool_executing") {
-      const partIndex = parts.length
-      // Ensure tool name is valid
-      const validToolName = toolName || "Unknown Tool"
-      if (!toolName && process.env.NODE_ENV === 'development') {
-        console.warn('Empty tool name detected in tool_executing tag')
-      }
-      parts.push({
-        type: "tool-invocation",
-        toolInvocation: { state: "call", toolName: validToolName },
-      })
-      activeTools.set(validToolName, partIndex)
-    } else if (tag === "tool_executed") {
-      // Ensure tool name is valid
-      const validToolName = toolName || "Unknown Tool"
-      if (!toolName && process.env.NODE_ENV === 'development') {
-        console.warn('Empty tool name detected in tool_executed tag')
-      }
-      // Check if we have a matching tool_executing part to replace
-      const executingPartIndex = activeTools.get(validToolName)
-      if (executingPartIndex !== undefined && executingPartIndex < parts.length) {
-        const executingPart = parts[executingPartIndex]
-        if (
-          executingPart &&
-          executingPart.type === "tool-invocation" &&
-          executingPart.toolInvocation.state === "call" &&
-          executingPart.toolInvocation.toolName === validToolName
-        ) {
-          // Replace the executing part with the result
-          parts[executingPartIndex] = {
+      const validToolName = toolName?.trim() || "Unknown Tool"
+
+      if (tag === "tool_executing") {
+        const partIndex = parts.length
+        parts.push({
+          type: "tool-invocation",
+          toolInvocation: {
+            state: "call",
+            toolName: validToolName
+          },
+        })
+        // Remember where this executing tool is in the parts array
+        executingToolIndices.set(validToolName, partIndex)
+      } else if (tag === "tool_executed") {
+        // Check if we have a matching executing tool to replace
+        const executingIndex = executingToolIndices.get(validToolName)
+        if (executingIndex !== undefined && executingIndex < parts.length) {
+          // Replace the executing indicator with completed indicator
+          parts[executingIndex] = {
             type: "tool-invocation",
             toolInvocation: {
               state: "result",
               toolName: validToolName,
-              result: {},
+              result: {}
             },
           }
-          activeTools.delete(validToolName)
+          // Remove from tracking map
+          executingToolIndices.delete(validToolName)
         } else {
-          // If no matching executing part found, just add the result
+          // If no matching executing tool found, just add the result
           parts.push({
             type: "tool-invocation",
             toolInvocation: {
               state: "result",
               toolName: validToolName,
-              result: {},
+              result: {}
             },
           })
         }
-      } else {
-        // No matching executing part found, just add the result
-        parts.push({
-          type: "tool-invocation",
-          toolInvocation: {
-            state: "result",
-            toolName: validToolName,
-            result: {},
-          },
-        })
+      }
+
+      lastIndex = startIndex + fullMatch.length
+    }
+
+    // Add remaining text
+    if (lastIndex < content.length) {
+      const text = content.slice(lastIndex)
+      if (text.trim()) {
+        parts.push({ type: "text", text })
       }
     }
 
-    lastIndex = regex.lastIndex
+    return parts
+  } catch (error) {
+    console.error('Error parsing text for tools:', error)
+    return [{ type: "text", text: content }]
   }
+}
 
-  // Add remaining text after last tag
-  if (lastIndex < content.length) {
-    const text = content.slice(lastIndex)
-    if (text.trim()) {
-      parts.push({ type: "text", text })
+function parseContent(content: string): MessagePart[] {
+  if (!content?.trim()) return []
+
+  try {
+    const parts: MessagePart[] = []
+    const thinkRegex = /<think>([\s\S]*?)(?:<\/think>|$)/gi
+    let lastIndex = 0
+    let match: RegExpExecArray | null
+    let iterationCount = 0
+    const MAX_ITERATIONS = 100 // Prevent infinite loops
+
+    while ((match = thinkRegex.exec(content)) !== null && iterationCount < MAX_ITERATIONS) {
+      iterationCount++
+      const [fullMatch, reasoningContent] = match
+      const startIndex = match.index
+      const isComplete = fullMatch.endsWith('</think>')
+
+      // Add text before the <think> tag
+      if (startIndex > lastIndex) {
+        const text = content.slice(lastIndex, startIndex)
+        if (text.trim()) {
+          parts.push(...parseTextForTools(text))
+        }
+      }
+
+      parts.push({
+        type: "reasoning",
+        reasoning: parseTextForTools(reasoningContent || ''),
+        isComplete
+      })
+
+      lastIndex = startIndex + fullMatch.length
     }
-  }
 
-  return parts
+    // Add remaining text after last <think> tag
+    if (lastIndex < content.length) {
+      const text = content.slice(lastIndex)
+      if (text.trim()) {
+        parts.push(...parseTextForTools(text))
+      }
+    }
+
+    return parts
+  } catch (error) {
+    console.error('Error parsing content:', error)
+    return [{ type: "text", text: content }]
+  }
 }
 
 const chatBubbleVariants = cva(
@@ -289,7 +284,102 @@ export interface ChatMessageProps extends Message {
   actions?: React.ReactNode
 }
 
-export const ChatMessage: React.FC<ChatMessageProps> = ({
+function dataUrlToUint8Array(data: string) {
+  const base64 = data.split(",")[1]
+  const buf = Buffer.from(base64, "base64")
+  return new Uint8Array(buf)
+}
+
+// Memoized Avatar component to avoid re-renders
+const Avatar = memo(({ isUser }: { isUser: boolean }) => (
+  <img
+    className={cn(
+      "rounded-full w-10 h-10",
+      isUser ? "order-1" : "border border-black/[0.08] shadow-sm",
+    )}
+    src={isUser ? AVATAR_URLS.user : AVATAR_URLS.assistant}
+    alt={isUser ? "User profile" : "Assistant logo"}
+    width={40}
+    height={40}
+    loading="lazy"
+  />
+))
+Avatar.displayName = "Avatar"
+
+// Memoized MessageContent component
+const MessageContent = memo(({
+  isUser,
+  files,
+  parsedParts,
+  toolInvocations,
+  content
+}: {
+  isUser: boolean
+  files?: File[]
+  parsedParts: MessagePart[]
+  toolInvocations?: ToolInvocation[]
+  content: string
+}) => {
+  if (isUser) {
+    return (
+      <>
+        {files && files.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-2">
+            {files.map((file, index) => (
+              <FilePreview file={file} key={index} />
+            ))}
+          </div>
+        )}
+        <MarkdownRenderer>{content}</MarkdownRenderer>
+      </>
+    )
+  }
+
+  return (
+    <>
+      {files && files.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-2">
+          {files.map((file, index) => (
+            <FilePreview file={file} key={index} />
+          ))}
+        </div>
+      )}
+
+      <div>
+        {toolInvocations && toolInvocations.length > 0 && (
+          <ToolCallComponent toolInvocations={toolInvocations} />
+        )}
+
+        {parsedParts.length > 0 ? (
+          parsedParts.map((part, index) => {
+            if (part.type === "text") {
+              return (
+                <MarkdownRenderer key={`text-${index}`}>
+                  {part.text}
+                </MarkdownRenderer>
+              )
+            } else if (part.type === "reasoning") {
+              return <ReasoningBlock key={`reasoning-${index}`} part={part} />
+            } else if (part.type === "tool-invocation") {
+              return (
+                <ToolCallComponent
+                  key={`tool-${index}`}
+                  toolInvocations={[part.toolInvocation]}
+                />
+              )
+            }
+            return null
+          })
+        ) : (
+          <MarkdownRenderer>{content}</MarkdownRenderer>
+        )}
+      </div>
+    </>
+  )
+})
+MessageContent.displayName = "MessageContent"
+
+export const ChatMessage = memo<ChatMessageProps>(({
   role,
   content,
   createdAt,
@@ -301,204 +391,145 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   parts,
 }) => {
   const files = useMemo(() => {
-    return experimental_attachments?.map((attachment) => {
+    if (!experimental_attachments?.length) return undefined
+
+    return experimental_attachments.map((attachment) => {
       const dataArray = dataUrlToUint8Array(attachment.url)
-      const file = new File([dataArray], attachment.name ?? "Unknown", {
+      return new File([dataArray], attachment.name ?? "Unknown", {
         type: attachment.contentType,
       })
-      return file
     })
   }, [experimental_attachments])
 
   const isUser = role === "user"
 
-  const formattedTime = createdAt?.toLocaleTimeString("tr-TR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  })
+  const formattedTime = useMemo(() =>
+    createdAt?.toLocaleTimeString("tr-TR", TIME_FORMAT_OPTIONS)
+    , [createdAt])
 
-  if (isUser) {
-    return (
+  // Memoize expensive parsing operation
+  const parsedParts = useMemo(() => parseContent(content), [content])
+
+  return (
+    <article
+      className={cn(
+        "flex items-start gap-4 text-[15px] leading-relaxed group/message",
+        isUser && "justify-end",
+      )}
+    >
+      <Avatar isUser={isUser} />
+
       <div
-        className={cn("flex flex-col", isUser ? "items-end" : "items-start")}
+        className={cn(isUser ? "bg-muted px-4 py-3 rounded-xl max-w-[70%]" : "space-y-4 flex-1 relative")}
       >
-        {files ? (
-          <div className="mb-1 flex flex-wrap gap-2">
-            {files.map((file, index) => {
-              return <FilePreview file={file} key={index} />
-            })}
-          </div>
-        ) : null}
+        <div className="flex flex-col gap-3">
+          <p className="sr-only">{isUser ? "You" : "Assistant"} said:</p>
 
-        <div className={cn(chatBubbleVariants({ isUser, animation }))}>
-          <MarkdownRenderer>{content}</MarkdownRenderer>
+          <MessageContent
+            isUser={isUser}
+            files={files}
+            parsedParts={parsedParts}
+            toolInvocations={toolInvocations}
+            content={content}
+          />
         </div>
 
-        {showTimeStamp && createdAt ? (
+        {/* Actions and timestamps - positioned absolutely to not take up space */}
+        {!isUser && actions && (
+          <div className="absolute top-0 right-0 inline-flex bg-white rounded-md border border-black/[0.08] shadow-sm -space-x-px opacity-0 group-hover/message:opacity-100 transition-opacity">
+            {actions}
+          </div>
+        )}
+        {showTimeStamp && createdAt && (
           <time
             dateTime={createdAt.toISOString()}
-            className={cn(
-              "mt-1 block px-1 text-xs opacity-50",
-              animation !== "none" && "duration-500 animate-in fade-in-0"
-            )}
+            className="absolute -bottom-5 right-0 text-xs text-muted-foreground opacity-0 group-hover/message:opacity-100 transition-opacity"
           >
             {formattedTime}
           </time>
-        ) : null}
+        )}
       </div>
-    )
-  }
-
-  const effectiveParts = parseContent(content)
-
-  if (effectiveParts.length > 0) {
-    return effectiveParts.map((part, index) => {
-      if (part.type === "text") {
-        return (
-          <div
-            className={cn(
-              "flex flex-col",
-              isUser ? "items-end" : "items-start"
-            )}
-            key={`text-${index}`}
-          >
-            <div className={cn(chatBubbleVariants({ isUser, animation }))}>
-              <MarkdownRenderer>{part.text}</MarkdownRenderer>
-              {actions ? (
-                <div className="absolute -bottom-4 right-2 flex space-x-1 rounded-lg border bg-background p-1 text-foreground opacity-0 transition-opacity group-hover/message:opacity-100">
-                  {actions}
-                </div>
-              ) : null}
-            </div>
-
-            {showTimeStamp && createdAt ? (
-              <time
-                dateTime={createdAt.toISOString()}
-                className={cn(
-                  "mt-1 block px-1 text-xs opacity-50",
-                  animation !== "none" && "duration-500 animate-in fade-in-0"
-                )}
-              >
-                {formattedTime}
-              </time>
-            ) : null}
-          </div>
-        )
-      } else if (part.type === "reasoning") {
-        return <ReasoningBlock key={`reasoning-${index}`} part={part} />
-      } else if (part.type === "tool-invocation") {
-        return (
-          <ToolCall
-            key={`tool-${index}`}
-            toolInvocations={[part.toolInvocation]}
-          />
-        )
-      }
-      return null
-    })
-  }
-
-  if (toolInvocations && toolInvocations.length > 0) {
-    return <ToolCall toolInvocations={toolInvocations} />
-  }
-
-  return (
-    <div className={cn("flex flex-col", isUser ? "items-end" : "items-start")}>
-      <div className={cn(chatBubbleVariants({ isUser, animation }))}>
-        <MarkdownRenderer>{content}</MarkdownRenderer>
-        {actions ? (
-          <div className="absolute -bottom-4 right-2 flex space-x-1 rounded-lg border bg-background p-1 text-foreground opacity-0 transition-opacity group-hover/message:opacity-100">
-            {actions}
-          </div>
-        ) : null}
-      </div>
-
-      {showTimeStamp && createdAt ? (
-        <time
-          dateTime={createdAt.toISOString()}
-          className={cn(
-            "mt-1 block px-1 text-xs opacity-50",
-            animation !== "none" && "duration-500 animate-in fade-in-0"
-          )}
-        >
-          {formattedTime}
-        </time>
-      ) : null}
-    </div>
+    </article>
   )
-}
+})
+ChatMessage.displayName = "ChatMessage"
 
-function dataUrlToUint8Array(data: string) {
-  const base64 = data.split(",")[1]
-  const buf = Buffer.from(base64, "base64")
-  return new Uint8Array(buf)
-}
-
-const ReasoningBlock = ({ part }: { part: ReasoningPart }) => {
-  // Auto-open when thinking is ongoing, auto-close when complete
+const ReasoningBlock = memo(({ part }: { part: ReasoningPart }) => {
   const [isManuallyToggled, setIsManuallyToggled] = useState(false)
   const shouldAutoOpen = !part.isComplete
   const isOpen = isManuallyToggled ? !shouldAutoOpen : shouldAutoOpen
 
-  const handleToggle = () => {
-    setIsManuallyToggled(!isManuallyToggled)
-  }
+  const handleToggle = useCallback(() => {
+    setIsManuallyToggled(prev => !prev)
+  }, [])
 
   return (
-    <div className="mb-2 flex flex-col items-start sm:max-w-[70%]">
-      <Collapsible
-        open={isOpen}
-        onOpenChange={handleToggle}
-        className="group w-full overflow-hidden rounded-lg border bg-muted/50"
-      >
-        <div className="flex items-center p-2">
-          <CollapsibleTrigger asChild>
-            <button className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-              <ChevronRight className="h-4 w-4 transition-transform group-data-[state=open]:rotate-90" />
-              <span className="flex items-center gap-2">
-                {!part.isComplete && <Loader2 className="h-3 w-3 animate-spin" />}
-                {part.isComplete ? "Asistan düşündü" : "Asistan düşünüyor..."}
-              </span>
-            </button>
-          </CollapsibleTrigger>
-        </div>
-        <CollapsibleContent forceMount>
-          <motion.div
-            initial={false}
-            animate={isOpen ? "open" : "closed"}
-            variants={{
-              open: { height: "auto", opacity: 1 },
-              closed: { height: 0, opacity: 0 },
-            }}
-            transition={{ duration: 0.3, ease: [0.04, 0.62, 0.23, 0.98] }}
-            className="border-t"
-          >
-            <div className="p-2">
-              <div className="text-xs">
-                {part.reasoning.map((subPart, i) => {
-                  if (subPart.type === "text") {
-                    return <span key={i} className="whitespace-pre-wrap">{subPart.text}</span>
-                  } else if (subPart.type === "tool-invocation") {
-                    return <ToolCall key={i} toolInvocations={[subPart.toolInvocation]} />
-                  }
-                  return null
-                })}
-              </div>
+    <Collapsible
+      open={isOpen}
+      onOpenChange={handleToggle}
+      className="group w-full overflow-hidden"
+    >
+      <div className="flex items-center">
+        <CollapsibleTrigger asChild>
+          <button className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+            <span className="flex items-center gap-2">
+              {part.isComplete ? (
+                <span className="relative overflow-hidden flex items-center">
+                  <Brain className="size-3 mr-1" />
+                  <span>
+                    Asistan düşündü
+                  </span>
+                </span>
+              ) : (
+                <span className="relative overflow-hidden flex items-center">
+                  <Loader2Icon className="size-3 animate-spin mr-1" />
+                  <span className="animate-shine bg-gradient-to-r from-muted-foreground via-foreground to-muted-foreground bg-[length:200%_100%] bg-clip-text text-transparent">
+                    Asistan düşünüyor...
+                  </span>
+                </span>
+              )}
+            </span>
+            <ChevronRight className="h-4 w-4 transition-transform group-data-[state=open]:rotate-90" />
+          </button>
+        </CollapsibleTrigger>
+      </div>
+      <CollapsibleContent forceMount>
+        <motion.div
+          initial={false}
+          animate={isOpen ? "open" : "closed"}
+          variants={{
+            open: { height: "auto", opacity: 1 },
+            closed: { height: 0, opacity: 0 },
+          }}
+          transition={{ duration: 0.3, ease: [0.04, 0.62, 0.23, 0.98] }}
+          className="mt-2 pl-3 border-l-2"
+        >
+          <div>
+            <div className="text-sm text-muted-foreground mb-3">
+              {part.reasoning.map((subPart, i) => {
+                if (subPart.type === "text") {
+                  return <span key={i} className="whitespace-pre-wrap">{subPart.text}</span>
+                } else if (subPart.type === "tool-invocation") {
+                  return <ToolCallComponent key={i} toolInvocations={[subPart.toolInvocation]} />
+                }
+                return null
+              })}
             </div>
-          </motion.div>
-        </CollapsibleContent>
-      </Collapsible>
-    </div>
+          </div>
+        </motion.div>
+      </CollapsibleContent>
+    </Collapsible>
   )
-}
+})
+ReasoningBlock.displayName = "ReasoningBlock"
 
-function ToolCall({
+const ToolCallComponent = memo(({
   toolInvocations,
-}: Pick<ChatMessageProps, "toolInvocations">) {
+}: Pick<ChatMessageProps, "toolInvocations">) => {
   if (!toolInvocations?.length) return null
 
   return (
-    <div className="mb-2 flex flex-col items-start sm:max-w-[70%]">
+    <div>
       {toolInvocations.map((invocation, index) => {
         const isCancelled =
           invocation.state === "result" &&
@@ -508,15 +539,13 @@ function ToolCall({
           return (
             <div
               key={index}
-              className="flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2 text-sm text-muted-foreground"
+              className="flex items-center gap-2 rounded-lg border bg-red-50 border-red-200 px-3 py-2 text-sm text-red-700"
             >
               <Ban className="h-4 w-4" />
               <span>
                 Cancelled{" "}
-                <span className="font-mono">
-                  {"`"}
+                <span className="font-mono font-semibold">
                   {invocation.toolName}
-                  {"`"}
                 </span>
               </span>
             </div>
@@ -527,30 +556,28 @@ function ToolCall({
           case "partial-call":
           case "call":
             return (
-              <div
+              <span
                 key={index}
-                className="flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2 text-sm text-muted-foreground"
+                className="flex items-center  text-muted-foreground text-sm mb-2"
               >
                 <Terminal className="h-4 w-4" />
-                <span>
-                  {invocation.toolName} aracı çağrılıyor...
+                <span className="animate-shine bg-gradient-to-r from-muted-foreground via-foreground to-muted-foreground bg-[length:200%_100%] bg-clip-text text-transparent">
+                  <span className="font-mono font-semibold">{invocation.toolName}</span> aracı çağrılıyor...
                 </span>
                 <Loader2 className="h-3 w-3 animate-spin" />
-              </div>
+              </span>
             )
           case "result":
             return (
-              <div
+              <span
                 key={index}
-                className="w-full flex flex-col gap-1.5 rounded-lg border bg-muted/50 px-3 py-2 text-sm"
+                className="flex items-center gap-1 text-muted-foreground text-sm mb-2"
               >
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Code2 className="h-4 w-4" />
-                  <span>
-                    {invocation.toolName} aracından sonuç alındı, asistan yanıtını oluşturuyor
-                  </span>
-                </div>
-              </div>
+                <Code2 className="size-3" />
+                <span>
+                  <span className="font-mono font-semibold">{invocation.toolName}</span> aracından sonuç alındı
+                </span>
+              </span>
             )
           default:
             return null
@@ -558,4 +585,5 @@ function ToolCall({
       })}
     </div>
   )
-}
+})
+ToolCallComponent.displayName = "ToolCallComponent"

@@ -1,23 +1,23 @@
 "use client"
 
+import { ArrowDown, ArrowUp, Mic, Paperclip, Square, ThumbsDown, ThumbsUp } from "lucide-react"
 import {
   forwardRef,
   useCallback,
-  useEffect,
   useRef,
   useState,
-  type ReactElement,
+  type ReactElement
 } from "react"
-import { ArrowDown, ThumbsDown, ThumbsUp } from "lucide-react"
 
-import { cn } from "@/lib/utils"
-import { useAutoScroll } from "@/hooks/use-auto-scroll"
 import { Button } from "@/components/ui/button"
 import { type Message } from "@/components/ui/chat-message"
 import { CopyButton } from "@/components/ui/copy-button"
-import { MessageInput } from "@/components/ui/message-input"
 import { MessageList } from "@/components/ui/message-list"
 import { PromptSuggestions } from "@/components/ui/prompt-suggestions"
+import { useAutoScroll } from "@/hooks/use-auto-scroll"
+import { useAutosizeTextArea } from "@/hooks/use-autosize-textarea"
+import { cn } from "@/lib/utils"
+import { ScrollArea } from "./scroll-area"
 
 interface ChatPropsBase {
   handleSubmit: (
@@ -194,41 +194,51 @@ export function Chat({
 
   return (
     <ChatContainer className={className}>
-      {isEmpty && append && suggestions ? (
-        <PromptSuggestions
-          label="Try these prompts ✨"
-          append={append}
-          suggestions={suggestions}
-        />
-      ) : null}
+      {/* Chat Content - Scrollable Area */}
+      <div className="flex-1 min-h-0">
+        {isEmpty && append && suggestions ? (
+          <div className="h-full flex items-center justify-center">
+            <div className="max-w-3xl mx-auto">
+              <PromptSuggestions
+                label="Try these prompts ✨"
+                append={append}
+                suggestions={suggestions}
+              />
+            </div>
+          </div>
+        ) : null}
 
-      {messages.length > 0 ? (
-        <ChatMessages messages={messages}>
-          <MessageList
-            messages={messages}
-            isTyping={isTyping}
-            messageOptions={messageOptions}
-          />
-        </ChatMessages>
-      ) : null}
+        {messages.length > 0 ? (
+          <ChatMessages messages={messages}>
+            <MessageList
+              messages={messages}
+              isTyping={isTyping}
+              messageOptions={messageOptions}
+            />
+          </ChatMessages>
+        ) : null}
+      </div>
 
-      <ChatForm
-        className="mt-auto"
-        isPending={isGenerating || isTyping}
-        handleSubmit={handleSubmit}
-      >
-        {({ files, setFiles }) => (
-          <MessageInput
-            value={input}
-            onChange={handleInputChange}
-            allowAttachments={false}
-            stop={handleStop}
-            isGenerating={isGenerating}
-            transcribeAudio={transcribeAudio}
-            placeholder="Şef'e sorun..."
-          />
-        )}
-      </ChatForm>
+      {/* Chat Input - Fixed at bottom */}
+      <div className="flex-shrink-0 pt-4 md:pt-8 px-4 md:px-6 lg:px-8 z-50">
+        <div className="max-w-3xl mx-auto bg-background pb-4 md:pb-8">
+          <ChatForm
+            isPending={isGenerating || isTyping}
+            handleSubmit={handleSubmit}
+          >
+            {({ files, setFiles }) => (
+              <ChatInput
+                value={input}
+                onChange={handleInputChange}
+                stop={handleStop}
+                isGenerating={isGenerating}
+                transcribeAudio={transcribeAudio}
+                placeholder="Şef'e sorun..."
+              />
+            )}
+          </ChatForm>
+        </div>
+      </div>
     </ChatContainer>
   )
 }
@@ -249,31 +259,31 @@ export function ChatMessages({
   } = useAutoScroll([messages])
 
   return (
-    <div
-      className="grid grid-cols-1 overflow-y-auto pb-4 pt-4"
-      ref={containerRef}
-      onScroll={handleScroll}
-      onTouchStart={handleTouchStart}
-    >
-      <div className="max-w-full [grid-column:1/1] [grid-row:1/1]">
-        {children}
+    <ScrollArea className="relative h-full flex flex-col">
+      <div
+        className="flex-1 px-4 md:px-6 lg:px-8 pb-4 pt-6"
+        ref={containerRef}
+        onScroll={handleScroll}
+        onTouchStart={handleTouchStart}
+      >
+        <div className="max-w-3xl mx-auto space-y-6">
+          {children}
+        </div>
       </div>
 
       {!shouldAutoScroll && (
-        <div className="pointer-events-none flex flex-1 items-end justify-end [grid-column:1/1] [grid-row:1/1]">
-          <div className="sticky bottom-0 left-0 flex w-full justify-end">
-            <Button
-              onClick={scrollToBottom}
-              className="pointer-events-auto h-8 w-8 rounded-full ease-in-out animate-in fade-in-0 slide-in-from-bottom-1"
-              size="icon"
-              variant="ghost"
-            >
-              <ArrowDown className="h-4 w-4" />
-            </Button>
-          </div>
+        <div className="absolute bottom-4 right-4 md:right-6 lg:right-8">
+          <Button
+            onClick={scrollToBottom}
+            className="h-8 w-8 rounded-full ease-in-out animate-in fade-in-0 slide-in-from-bottom-1 hover:bg-background hover:shadow-md transition-[box-shadow]"
+            size="icon"
+            variant="outline"
+          >
+            <ArrowDown className="h-4 w-4" />
+          </Button>
         </div>
       )}
-    </div>
+    </ScrollArea>
   )
 }
 
@@ -284,7 +294,7 @@ export const ChatContainer = forwardRef<
   return (
     <div
       ref={ref}
-      className={cn("grid max-h-full w-full grid-rows-[1fr_auto]", className)}
+      className={cn("h-full flex flex-col", className)}
       {...props}
     />
   )
@@ -334,4 +344,110 @@ function createFileList(files: File[] | FileList): FileList {
     dataTransfer.items.add(file)
   }
   return dataTransfer.files
+}
+
+interface ChatInputProps {
+  value: string
+  onChange: React.ChangeEventHandler<HTMLTextAreaElement>
+  placeholder?: string
+  stop?: () => void
+  isGenerating: boolean
+  transcribeAudio?: (blob: Blob) => Promise<string>
+}
+
+function ChatInput({
+  value,
+  onChange,
+  placeholder = "Ask me anything...",
+  stop,
+  isGenerating,
+  transcribeAudio,
+}: ChatInputProps) {
+  const textAreaRef = useRef<HTMLTextAreaElement>(null)
+
+  useAutosizeTextArea({
+    ref: textAreaRef as React.RefObject<HTMLTextAreaElement>,
+    maxHeight: 200,
+    borderWidth: 0,
+    dependencies: [value],
+  })
+
+  const onKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault()
+      event.currentTarget.form?.requestSubmit()
+    }
+  }
+
+  return (
+    <div className="relative rounded-[20px] border border-transparent bg-muted transition-colors focus-within:bg-muted/50 focus-within:border-input">
+      <textarea
+        ref={textAreaRef}
+        value={value}
+        onChange={onChange}
+        onKeyDown={onKeyDown}
+        disabled={isGenerating}
+        className="flex sm:min-h-[84px] w-full bg-transparent px-4 py-3 text-[15px] leading-relaxed text-foreground placeholder:text-muted-foreground/70 focus-visible:outline-none [resize:none] border-none rounded-[20px]"
+        placeholder={placeholder}
+        aria-label="Enter your prompt"
+      />
+      {/* Input buttons */}
+      <div className="flex items-center justify-between gap-2 p-3">
+        {/* Left buttons */}
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="rounded-full size-8 border-none hover:bg-background hover:shadow-md transition-[box-shadow]"
+          >
+            <Paperclip
+              className="text-muted-foreground/70 size-5"
+              size={20}
+              aria-hidden="true"
+            />
+            <span className="sr-only">Attach</span>
+          </Button>
+          {transcribeAudio && (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="rounded-full size-8 border-none hover:bg-background hover:shadow-md transition-[box-shadow]"
+            >
+              <Mic
+                className="text-muted-foreground/70 size-5"
+                size={20}
+                aria-hidden="true"
+              />
+              <span className="sr-only">Audio</span>
+            </Button>
+          )}
+        </div>
+        {/* Right buttons */}
+        <div className="flex items-center gap-2">
+          {isGenerating && stop ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="rounded-full size-8 border-none hover:bg-background hover:shadow-md transition-[box-shadow]"
+              onClick={stop}
+            >
+              <Square className="h-3 w-3" fill="currentColor" />
+              <span className="sr-only">Stop</span>
+            </Button>
+          ) : (
+            <Button
+              type="submit"
+              className="rounded-full p-2 h-8"
+              disabled={!value.trim() || isGenerating}
+            >
+              <ArrowUp className="size-4" />
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
 }

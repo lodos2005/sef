@@ -22,8 +22,9 @@ export function MessageList({
   isTyping = false,
   messageOptions,
 }: MessageListProps) {
+  
   return (
-    <div className="space-y-4 overflow-visible">
+    <>
       {messages.map((message, index) => {
         const additionalOptions =
           typeof messageOptions === "function"
@@ -40,6 +41,6 @@ export function MessageList({
         )
       })}
       {isTyping && <TypingIndicator />}
-    </div>
+    </>
   )
 }

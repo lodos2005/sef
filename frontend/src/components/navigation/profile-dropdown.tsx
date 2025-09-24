@@ -58,7 +58,7 @@ export default function ProfileDropdown() {
           <ChevronDown className="size-3 text-muted-foreground" />
         </div>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="mr-5 w-[420px]">
+      <DropdownMenuContent className="mr-5 min-w-[340px]">
         {Object.keys(user).length > 0 && (
           <>
             <div className="flex">
@@ -89,8 +89,6 @@ export default function ProfileDropdown() {
 
         <div className="flex gap-1">
           <div className="flex items-center">
-            <ThemeToggle />
-
             <LanguageSelector />
 
             <FullScreenToggle />
