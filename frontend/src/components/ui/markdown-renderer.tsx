@@ -169,17 +169,17 @@ const COMPONENTS = {
   li: withClass("li", "my-1.5"),
   table: withClass(
     "table",
-    "w-full border-collapse overflow-y-auto rounded-md border border-foreground/20"
+    "w-full border-separate border-spacing-0 overflow-hidden rounded-lg border border-border/50 bg-card/30 shadow-sm"
   ),
   th: withClass(
     "th",
-    "border border-foreground/20 px-4 py-2 text-left font-bold [&[align=center]]:text-center [&[align=right]]:text-right"
+    "border-r border-b border-border/30 bg-muted/50 px-4 py-3 text-left text-sm font-semibold text-muted-foreground last:border-r-0 [&[align=center]]:text-center [&[align=right]]:text-right"
   ),
   td: withClass(
     "td",
-    "border border-foreground/20 px-4 py-2 text-left [&[align=center]]:text-center [&[align=right]]:text-right"
+    "border-r border-b border-border/20 px-4 py-3 text-sm last:border-r-0 [&[align=center]]:text-center [&[align=right]]:text-right"
   ),
-  tr: withClass("tr", "m-0 border-t p-0 even:bg-muted"),
+  tr: withClass("tr", "hover:bg-muted/30 transition-colors"),
   p: withClass("p", "whitespace-pre-wrap"),
   hr: withClass("hr", "border-foreground/20"),
 }

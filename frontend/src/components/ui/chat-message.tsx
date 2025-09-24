@@ -455,7 +455,6 @@ export const ChatMessage = memo<ChatMessageProps>(({
             )}
           </div>
         )}
-
       </div>
     </article>
   )
