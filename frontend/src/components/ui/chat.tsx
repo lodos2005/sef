@@ -157,37 +157,11 @@ export function Chat({
 
   const messageOptions = useCallback(
     (message: Message) => ({
-      actions: onRateResponse ? (
-        <>
-          <div className="border-r pr-1">
-            <CopyButton
-              content={message.content}
-              copyMessage="Yanıt panoya kopyalandı."
-            />
-          </div>
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-6 w-6"
-            onClick={() => onRateResponse(message.id, "thumbs-up")}
-          >
-            <ThumbsUp className="h-4 w-4" />
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-6 w-6"
-            onClick={() => onRateResponse(message.id, "thumbs-down")}
-          >
-            <ThumbsDown className="h-4 w-4" />
-          </Button>
-        </>
-      ) : (
+      actions: 
         <CopyButton
           content={message.content}
           copyMessage="Yanıt panoya kopyalandı."
-        />
-      ),
+        />,
     }),
     [onRateResponse]
   )
@@ -395,19 +369,6 @@ function ChatInput({
       <div className="flex items-center justify-between gap-2 p-3">
         {/* Left buttons */}
         <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="rounded-full size-8 border-none hover:bg-background hover:shadow-md transition-[box-shadow]"
-          >
-            <Paperclip
-              className="text-muted-foreground/70 size-5"
-              size={20}
-              aria-hidden="true"
-            />
-            <span className="sr-only">Attach</span>
-          </Button>
           {transcribeAudio && (
             <Button
               type="button"

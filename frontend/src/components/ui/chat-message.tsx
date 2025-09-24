@@ -11,13 +11,11 @@ import {
 } from "@/components/ui/collapsible"
 import { FilePreview } from "@/components/ui/file-preview"
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer"
+import { Avatar, AvatarFallback, AvatarImage } from "./avatar"
+import { useCurrentUser } from "@/hooks/auth/useCurrentUser"
+import md5 from "blueimp-md5"
 
 // Performance optimizations and constants
-const AVATAR_URLS = {
-  user: "https://raw.githubusercontent.com/origin-space/origin-images/refs/heads/main/exp2/user-02_mlqqqt.png",
-  assistant: "https://raw.githubusercontent.com/origin-space/origin-images/refs/heads/main/exp2/user-01_i5l7tp.png"
-} as const
-
 const TIME_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
   hour: "2-digit",
   minute: "2-digit",
@@ -291,20 +289,30 @@ function dataUrlToUint8Array(data: string) {
 }
 
 // Memoized Avatar component to avoid re-renders
-const Avatar = memo(({ isUser }: { isUser: boolean }) => (
-  <img
-    className={cn(
-      "rounded-full w-10 h-10",
-      isUser ? "order-1" : "border border-black/[0.08] shadow-sm",
-    )}
-    src={isUser ? AVATAR_URLS.user : AVATAR_URLS.assistant}
-    alt={isUser ? "User profile" : "Assistant logo"}
-    width={40}
-    height={40}
-    loading="lazy"
-  />
-))
-Avatar.displayName = "Avatar"
+const AvatarView = memo(({ isUser }: { isUser: boolean }) => {
+  const user = useCurrentUser()
+  return isUser ? (
+    <Avatar className={cn(
+      "size-12 border border-black/[0.08] shadow-sm",
+      isUser && "order-1",
+    )}>
+      <AvatarImage
+        src={`https://gravatar.com/avatar/${md5(user.username)}?d=404`}
+        alt={user.name}
+      />
+      <AvatarFallback>{user && user.name[0]}</AvatarFallback>
+    </Avatar>
+  ) : (
+    <Avatar className={cn(
+      "size-12 border border-black/[0.08] shadow-sm",
+    )}>
+      <AvatarFallback>
+        <Brain className="size-6" />
+      </AvatarFallback>
+    </Avatar>
+  )
+})
+AvatarView.displayName = "AvatarView"
 
 // Memoized MessageContent component
 const MessageContent = memo(({
@@ -417,14 +425,12 @@ export const ChatMessage = memo<ChatMessageProps>(({
         isUser && "justify-end",
       )}
     >
-      <Avatar isUser={isUser} />
+      <AvatarView isUser={isUser} />
 
       <div
         className={cn(isUser ? "bg-muted px-4 py-3 rounded-xl max-w-[70%]" : "space-y-4 flex-1 relative")}
       >
         <div className="flex flex-col gap-3">
-          <p className="sr-only">{isUser ? "You" : "Assistant"} said:</p>
-
           <MessageContent
             isUser={isUser}
             files={files}
@@ -434,20 +440,22 @@ export const ChatMessage = memo<ChatMessageProps>(({
           />
         </div>
 
-        {/* Actions and timestamps - positioned absolutely to not take up space */}
-        {!isUser && actions && (
-          <div className="absolute top-0 right-0 inline-flex bg-white rounded-md border border-black/[0.08] shadow-sm -space-x-px opacity-0 group-hover/message:opacity-100 transition-opacity">
-            {actions}
+        {actions && (
+          <div className="absolute bottom-0 right-0 flex items-center gap-2 opacity-0 group-hover/message:opacity-100 transition-opacity">
+            <div className="flex bg-white rounded-md border border-black/[0.08] shadow-sm">
+              {actions}
+            </div>
+            {showTimeStamp && createdAt && (
+              <time
+                dateTime={createdAt.toISOString()}
+                className="text-xs text-muted-foreground bg-white/80 backdrop-blur-sm px-2 py-1 rounded"
+              >
+                {formattedTime}
+              </time>
+            )}
           </div>
         )}
-        {showTimeStamp && createdAt && (
-          <time
-            dateTime={createdAt.toISOString()}
-            className="absolute -bottom-5 right-0 text-xs text-muted-foreground opacity-0 group-hover/message:opacity-100 transition-opacity"
-          >
-            {formattedTime}
-          </time>
-        )}
+
       </div>
     </article>
   )
