@@ -5,6 +5,7 @@ import { sessionsService } from "@/services"
 export function useUserSessions() {
   const [sessions, setSessions] = useState<ISession[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -21,7 +22,7 @@ export function useUserSessions() {
   }, [])
 
   const refreshSessions = useCallback(async () => {
-    setIsLoading(true)
+    setIsRefreshing(true)
     try {
       const response = await sessionsService.getUserSessions()
       setSessions(response.data.records)
@@ -29,7 +30,7 @@ export function useUserSessions() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load sessions")
     } finally {
-      setIsLoading(false)
+      setIsRefreshing(false)
     }
   }, [])
 
@@ -75,5 +76,5 @@ export function useUserSessions() {
     }
   }
 
-  return { sessions, isLoading, error, deleteSession, refreshSessions }
+  return { sessions, isLoading, isRefreshing, error, deleteSession, refreshSessions }
 }
