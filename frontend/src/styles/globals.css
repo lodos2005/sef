@@ -232,3 +232,18 @@
 .animate-shine {
   animation: shine 2s ease-in-out infinite;
 }
+
+/* Typing dot bounce animation */
+@keyframes typing-dot-bounce {
+  0%, 40% {
+    transform: translateY(0);
+  }
+  20% {
+    transform: translateY(-0.25rem);
+  }
+}
+
+.animate-typing-dot-bounce {
+  animation: typing-dot-bounce 1.25s ease-out infinite;
+  animation-delay: var(--animation-delay, 0ms);
+}

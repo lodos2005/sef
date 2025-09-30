@@ -178,7 +178,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 {((isLoading && sessions.length > 0) || (!isLoading && !error)) &&
                   sessions.map((session) => (
                     <SidebarMenuItem key={session.id}>
-                      <div className="relative group">
+                      <div className="relative group/session">
                         <SidebarMenuButton
                           asChild
                           className="group/menu-button font-medium gap-3 h-9 rounded-md data-[active=true]:hover:bg-transparent data-[active=true]:bg-gradient-to-b data-[active=true]:from-sidebar-primary data-[active=true]:to-sidebar-primary/70 data-[active=true]:shadow-[0_1px_2px_0_rgb(0_0_0/.05),inset_0_1px_0_0_rgb(255_255_255/.12)] [&>svg]:size-auto"
@@ -207,7 +207,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                 "absolute right-2 top-1/2 -translate-y-1/2 transition-opacity h-8 w-8 p-0",
                                 dropdownOpen[session.id] || false
                                   ? "opacity-100"
-                                  : "opacity-0 group-hover:opacity-100"
+                                  : "opacity-0 group-hover/session:opacity-100"
                               )}
                             >
                               <MoreHorizontal className="h-4 w-4" />

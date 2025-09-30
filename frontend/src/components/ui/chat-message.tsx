@@ -428,7 +428,7 @@ export const ChatMessage = memo<ChatMessageProps>(({
       <AvatarView isUser={isUser} />
 
       <div
-        className={cn(isUser ? "bg-muted px-4 py-3 rounded-xl max-w-[70%]" : "space-y-4 flex-1 relative")}
+        className={cn(isUser ? "bg-muted px-4 py-3 rounded-xl max-w-[70%] relative" : "space-y-4 flex-1 relative overflow-hidden")}
       >
         <div className="flex flex-col gap-3">
           <MessageContent
@@ -441,7 +441,7 @@ export const ChatMessage = memo<ChatMessageProps>(({
         </div>
 
         {actions && (
-          <div className="absolute bottom-0 right-0 flex items-center gap-2 opacity-0 group-hover/message:opacity-100 transition-opacity">
+          <div className={cn("absolute bottom-0 right-0 flex items-center gap-2 opacity-0 group-hover/message:opacity-100 transition-opacity", isUser && "-bottom-3")}>
             <div className="flex bg-white rounded-md border border-black/[0.08] shadow-sm">
               {actions}
             </div>

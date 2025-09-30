@@ -9,16 +9,54 @@ export function useAutoScroll(dependencies: React.DependencyList) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const previousScrollTop = useRef<number | null>(null)
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true)
+  const [isScrollable, setIsScrollable] = useState(false)
 
-  const scrollToBottom = () => {
+  const checkIfScrollable = () => {
     if (containerRef.current) {
-      containerRef.current.scrollTop = containerRef.current.scrollHeight
+      // Check if we're inside a ScrollArea component
+      const scrollAreaViewport = containerRef.current.closest('[data-slot="scroll-area-viewport"]')
+      const scrollElement = scrollAreaViewport || containerRef.current
+      
+      const { scrollHeight, clientHeight } = scrollElement
+      const scrollableContent = scrollHeight > clientHeight
+      setIsScrollable(scrollableContent)
+      
+      return scrollableContent
     }
+    return false
+  }
+
+  const scrollToBottom = (smooth = false) => {
+    if (containerRef.current) {
+      // Check if we're inside a ScrollArea component
+      const scrollAreaViewport = containerRef.current.closest('[data-slot="scroll-area-viewport"]')
+      const scrollElement = scrollAreaViewport || containerRef.current
+      
+      if (smooth) {
+        scrollElement.scrollTo({
+          top: scrollElement.scrollHeight,
+          behavior: 'smooth'
+        })
+      } else {
+        scrollElement.scrollTop = scrollElement.scrollHeight
+      }
+    }
+  }
+
+  const scrollToBottomSmooth = () => {
+    scrollToBottom(true)
   }
 
   const handleScroll = () => {
     if (containerRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } = containerRef.current
+      // Check if we're inside a ScrollArea component
+      const scrollAreaViewport = containerRef.current.closest('[data-slot="scroll-area-viewport"]')
+      const scrollElement = scrollAreaViewport || containerRef.current
+      
+      const { scrollTop, scrollHeight, clientHeight } = scrollElement
+
+      // Check if content is scrollable
+      checkIfScrollable()
 
       const distanceFromBottom = Math.abs(
         scrollHeight - scrollTop - clientHeight
@@ -52,7 +90,13 @@ export function useAutoScroll(dependencies: React.DependencyList) {
 
   useEffect(() => {
     if (containerRef.current) {
-      previousScrollTop.current = containerRef.current.scrollTop
+      // Check if we're inside a ScrollArea component
+      const scrollAreaViewport = containerRef.current.closest('[data-slot="scroll-area-viewport"]')
+      const scrollElement = scrollAreaViewport || containerRef.current
+      
+      previousScrollTop.current = scrollElement.scrollTop
+      // Check initial scrollable state
+      checkIfScrollable()
     }
   }, [])
 
@@ -60,14 +104,18 @@ export function useAutoScroll(dependencies: React.DependencyList) {
     if (shouldAutoScroll) {
       scrollToBottom()
     }
+    // Check scrollable state when dependencies change
+    checkIfScrollable()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, dependencies)
 
   return {
     containerRef,
     scrollToBottom,
+    scrollToBottomSmooth,
     handleScroll,
     shouldAutoScroll,
     handleTouchStart,
+    isScrollable,
   }
 }

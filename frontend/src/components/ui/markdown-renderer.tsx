@@ -167,9 +167,13 @@ const COMPONENTS = {
   ol: withClass("ol", "list-decimal space-y-2 pl-6"),
   ul: withClass("ul", "list-disc space-y-2 pl-6"),
   li: withClass("li", "my-1.5"),
-  table: withClass(
-    "table",
-    "w-full border-separate border-spacing-0 overflow-hidden rounded-lg border border-border/50 bg-card/30 shadow-sm"
+  table: ({ node, ...props }: any) => (
+    <div className="w-full overflow-x-auto my-4 rounded-lg border border-border/50 bg-card/30 shadow-sm [scrollbar-width:thin] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-border/50 [&::-webkit-scrollbar-thumb]:rounded-full">
+      <table
+        className="min-w-full border-separate border-spacing-0"
+        {...props}
+      />
+    </div>
   ),
   th: withClass(
     "th",

@@ -6,6 +6,7 @@ import {
   useCallback,
   useRef,
   useState,
+  useEffect,
   type ReactElement
 } from "react"
 
@@ -194,8 +195,8 @@ export function Chat({
       </div>
 
       {/* Chat Input - Fixed at bottom */}
-      <div className="flex-shrink-0 pt-4 md:pt-8 px-4 md:px-6 lg:px-8 z-50">
-        <div className="max-w-3xl mx-auto bg-background pb-4 md:pb-8">
+      <div className="flex-shrink-0 px-4 md:px-6 lg:px-8 z-50">
+        <div className="max-w-4xl mx-auto bg-background pb-3 md:pb-6">
           <ChatForm
             isPending={isGenerating || isTyping}
             handleSubmit={handleSubmit}
@@ -227,28 +228,44 @@ export function ChatMessages({
   const {
     containerRef,
     scrollToBottom,
+    scrollToBottomSmooth,
     handleScroll,
     shouldAutoScroll,
     handleTouchStart,
+    isScrollable,
   } = useAutoScroll([messages])
+
+  // Attach scroll events to ScrollArea viewport
+  useEffect(() => {
+    if (containerRef.current) {
+      const scrollAreaViewport = containerRef.current.closest('[data-slot="scroll-area-viewport"]')
+      if (scrollAreaViewport) {
+        scrollAreaViewport.addEventListener('scroll', handleScroll)
+        scrollAreaViewport.addEventListener('touchstart', handleTouchStart)
+        
+        return () => {
+          scrollAreaViewport.removeEventListener('scroll', handleScroll)
+          scrollAreaViewport.removeEventListener('touchstart', handleTouchStart)
+        }
+      }
+    }
+  }, [handleScroll, handleTouchStart])
 
   return (
     <ScrollArea className="relative h-full flex flex-col">
       <div
         className="flex-1 px-4 md:px-6 lg:px-8 pb-4 pt-6"
         ref={containerRef}
-        onScroll={handleScroll}
-        onTouchStart={handleTouchStart}
       >
-        <div className="max-w-3xl mx-auto space-y-6">
+        <div className="max-w-[54rem] mx-auto space-y-6">
           {children}
         </div>
       </div>
 
-      {!shouldAutoScroll && (
+      {!shouldAutoScroll && isScrollable && (
         <div className="absolute bottom-4 right-4 md:right-6 lg:right-8">
           <Button
-            onClick={scrollToBottom}
+            onClick={scrollToBottomSmooth}
             className="h-8 w-8 rounded-full ease-in-out animate-in fade-in-0 slide-in-from-bottom-1 hover:bg-background hover:shadow-md transition-[box-shadow]"
             size="icon"
             variant="outline"
@@ -361,12 +378,12 @@ function ChatInput({
         onChange={onChange}
         onKeyDown={onKeyDown}
         disabled={isGenerating}
-        className="flex sm:min-h-[84px] w-full bg-transparent px-4 py-3 text-[15px] leading-relaxed text-foreground placeholder:text-muted-foreground/70 focus-visible:outline-none [resize:none] border-none rounded-[20px]"
+        className="flex w-full bg-transparent px-4 py-3 pr-[60px] text-[15px] leading-relaxed text-foreground placeholder:text-muted-foreground/70 focus-visible:outline-none [resize:none] border-none rounded-[20px]"
         placeholder={placeholder}
         aria-label="Enter your prompt"
       />
       {/* Input buttons */}
-      <div className="flex items-center justify-between gap-2 p-3">
+      <div className="flex items-center justify-between gap-2 p-3 absolute bottom-0 right-0">
         {/* Left buttons */}
         <div className="flex items-center gap-2">
           {transcribeAudio && (
