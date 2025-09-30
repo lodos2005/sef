@@ -56,8 +56,7 @@ export default function IndexPage() {
 
   return (
     <div
-      className="flex flex-col gap-6 p-8 overflow-x-hidden"
-      style={{ height: "var(--container-height)" }}
+      className="flex flex-col gap-6 p-8"
     >
       {/* Header */}
       <div className="flex items-center justify-between">

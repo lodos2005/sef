@@ -76,22 +76,20 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4.03rem)] p-0">
+    <div className="flex flex-col h-[calc(100vh-4.05rem)] p-0">
       <ChatHeader session={session || undefined} isPolling={isPollingForSummary} />
       <ErrorBanner error={error} />
 
-      <div className="flex-1 flex flex-col min-h-0">
-        <div className="flex-1 overflow-hidden max-w-4xl mx-auto w-full">
-          <Chat
-            messages={messages}
-            handleSubmit={handleSubmit}
-            input={input}
-            handleInputChange={handleInputChange}
-            isGenerating={isGenerating}
-            setMessages={setMessages}
-            className="h-full"
-          />
-        </div>
+      <div className="flex-1 min-h-0">
+        <Chat
+          messages={messages}
+          handleSubmit={handleSubmit}
+          input={input}
+          handleInputChange={handleInputChange}
+          isGenerating={isGenerating}
+          setMessages={setMessages}
+          className="h-full"
+        />
       </div>
     </div>
   )

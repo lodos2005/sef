@@ -1,47 +1,19 @@
-import { useAutoAnimate } from "@formkit/auto-animate/react"
-import { Router, useRouter } from "next/router"
-import nProgress from "nprogress"
-import { ReactNode, useCallback, useEffect, useRef } from "react"
-import { ImperativePanelHandle } from "react-resizable-panels"
-
-import { Sidebar } from "@/components/navigation/sidebar"
-import { SiteHeader } from "@/components/navigation/site-header"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { useCurrentUser } from "@/hooks/auth/useCurrentUser"
-import { cn } from "@/lib/utils"
-
-import { opacityAnimation } from "@/lib/anim"
-import GradientSvg from "../bg/gradient"
+import { AppSidebar } from "@/components/app-sidebar";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "../ui/resizable"
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
+import { useCurrentUser } from "@/hooks/auth/useCurrentUser";
+import { useRouter } from "next/router";
+import { ReactNode, useCallback } from "react";
+
+import ProfileDropdown from "../navigation/profile-dropdown";
 
 const Layout = ({ Component, pageProps }: any) => {
   const router = useRouter()
-  const [animated] = useAutoAnimate(opacityAnimation)
-  const panel = useRef<ImperativePanelHandle>(null)
-
   const user = useCurrentUser()
-
-  useEffect(() => {
-    const handleRouteChangeStart = () => nProgress.start()
-    const handleRouteChangeComplete = () => {
-      nProgress.done()
-    }
-    const handleRouteChangeError = () => nProgress.done()
-
-    Router.events.on("routeChangeStart", handleRouteChangeStart)
-    Router.events.on("routeChangeComplete", handleRouteChangeComplete)
-    Router.events.on("routeChangeError", handleRouteChangeError)
-
-    return () => {
-      Router.events.off("routeChangeStart", handleRouteChangeStart)
-      Router.events.off("routeChangeComplete", handleRouteChangeComplete)
-      Router.events.off("routeChangeError", handleRouteChangeError)
-    }
-  }, [])
 
   const getLayout = useCallback(
     Component.getLayout ?? ((page: ReactNode) => page),
@@ -53,55 +25,28 @@ const Layout = ({ Component, pageProps }: any) => {
   }
 
   return (
-    <>
-      <SiteHeader />
-      <div className="flex-1">
-        <ResizablePanelGroup
-          className="min-h-[var(--container-height)]"
-          direction="horizontal"
-          autoSaveId="sefLayout"
-        >
-          <ResizablePanel
-            defaultSize={20}
-            minSize={20}
-            collapsible={true}
-            className={cn("md:block")}
-            ref={panel}
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset className="bg-sidebar group/sidebar-inset">
+        <header className="dark flex h-16 shrink-0 items-center gap-2 px-4 md:px-6 lg:px-8 bg-sidebar text-sidebar-foreground relative before:absolute before:inset-y-3 before:-left-px before:w-px before:bg-gradient-to-b before:from-white/5 before:via-white/15 before:to-white/5 before:z-50">
+          <SidebarTrigger className="-ms-2" />
+          <div className="flex items-center gap-8 ml-auto -mr-2">
+            <ProfileDropdown />
+          </div>
+        </header>
+        <div className="flex bg-background overflow-hidden rounded-l-3xl">
+          <ScrollArea
+            className="flex-1 h-[var(--container-height)]"
           >
-            <Sidebar />
-          </ResizablePanel>
-          <ResizableHandle
-            withHandle
-            onDoubleClick={() => {
-              panel.current?.isCollapsed()
-                ? panel.current?.expand()
-                : panel.current?.collapse()
-            }}
-          />
-          <ResizablePanel defaultSize={82} minSize={75}>
-            <ScrollArea
-              className="relative"
-              style={{
-                height: "var(--container-height)",
-              }}
-            >
-              <main>
-                <div className="relative z-10" ref={animated}>
-                  {getLayout(<Component {...pageProps} key={router.route} />)}
-                </div>
-                <div className="pointer-events-none absolute top-0 z-10 -ml-48 mt-40 flex h-[2px] w-96 rotate-90">
-                  <div className="gradient w-full flex-none blur-xs"></div>
-                  <div className="gradient ml-[-100%] w-full flex-none blur-[1px]"></div>
-                  <div className="gradient ml-[-100%] w-full flex-none blur-xs"></div>
-                  <div className="gradient ml-[-100%] w-full flex-none blur-[1px]"></div>
-                </div>
-                <GradientSvg className="pointer-events-none absolute top-0 z-0 h-auto w-full rotate-180 opacity-30 dark:opacity-60" />
-              </main>
-            </ScrollArea>
-          </ResizablePanel>
-        </ResizablePanelGroup>
-      </div>
-    </>
+            <main>
+              <div className="relative z-10">
+                {getLayout(<Component {...pageProps} key={router.route} />)}
+              </div>
+            </main>
+          </ScrollArea>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   )
 }
 

@@ -470,22 +470,22 @@ func (s *MessagingService) GenerateChatResponse(session *entities.Session, messa
 			chatStream, err := provider.GenerateChatWithTools(context.Background(), currentMessages, toolDefinitions, options)
 			if err != nil {
 				log.Error("Failed to generate response:", err)
-				// Send a more user-friendly error message
-				errorMsg := "I apologize, but I'm having trouble generating a response right now. "
+				// Kullanıcı dostu hata mesajı gönder
+				errorMsg := "Özür dilerim, şu anda yanıt oluşturmakta zorlanıyorum. "
 				if strings.Contains(err.Error(), "connection") || strings.Contains(err.Error(), "timeout") {
-					errorMsg += "There seems to be a connection issue with the AI service. Please try again in a moment."
+					errorMsg += "AI servisi ile bağlantı sorunu yaşanıyor gibi görünüyor. Lütfen bir süre sonra tekrar deneyin."
 				} else if strings.Contains(err.Error(), "authentication") || strings.Contains(err.Error(), "auth") {
-					errorMsg += "There's an authentication issue with the AI service. Please contact an administrator."
+					errorMsg += "AI servisi ile kimlik doğrulama sorunu yaşanıyor. Lütfen bir yönetici ile iletişime geçin."
 				} else if strings.Contains(err.Error(), "model") {
-					errorMsg += "The selected AI model is not available. Please try a different chatbot or contact an administrator."
+					errorMsg += "Seçilen AI modeli kullanılamıyor. Lütfen farklı bir chatbot deneyin veya bir yönetici ile iletişime geçin."
 				} else {
-					errorMsg += fmt.Sprintf("Error details: %v", err)
+					errorMsg += fmt.Sprintf("Hata detayları: %v", err)
 				}
 
 				log.Info("Sending error message to client:", errorMsg)
 				outputCh <- errorMsg
 
-				// Update assistant message with error content
+				// Assistant mesajını hata içeriği ile güncelle
 				s.UpdateAssistantMessage(firstAssistant, errorMsg)
 				return
 			}
