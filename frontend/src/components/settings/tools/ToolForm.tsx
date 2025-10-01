@@ -361,7 +361,7 @@ export default function ToolForm({ mode, tool, onSuccess }: ToolFormProps) {
                         <div className="w-8 h-8 bg-red-500 rounded-full"></div>
                     </div>
                     <h2 className="text-2xl font-bold mb-2">{t("tools.not_found", "Tool not found")}</h2>
-                    <p className="text-muted-foreground mb-6">The tool you're looking for doesn't exist or has been deleted.</p>
+                    <p className="text-muted-foreground mb-6">The tool youre looking for doesnt exist or has been deleted.</p>
                     <Button
                         variant="outline"
                         onClick={() => router.push("/settings/tools")}
