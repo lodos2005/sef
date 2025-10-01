@@ -73,7 +73,6 @@ type GenerateRequest struct {
 	Tools    []OllamaTool           `json:"tools,omitempty"`    // For chat mode with tools
 	Options  map[string]interface{} `json:"options,omitempty"`
 	Stream   bool                   `json:"stream"`
-	Think    bool                   `json:"think,omitempty"` // For chat mode
 }
 
 // GenerateResponse represents a unified response interface

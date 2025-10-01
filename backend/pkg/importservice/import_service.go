@@ -383,6 +383,10 @@ func (s *ImportService) convertOpenAPIOperationToTool(apiTitle, path, method str
 		displayName = strings.ToUpper(method) + " " + path
 	}
 
+	if len(operation.Tags) > 0 {
+		displayName = operation.Tags[0] + " / " + displayName
+	}
+
 	fullURL := baseURL + path
 	if baseURL == "" {
 		fullURL = "https://api.example.com" + path
@@ -412,10 +416,70 @@ func (s *ImportService) convertOpenAPIOperationToTool(apiTitle, path, method str
 	}
 
 	if len(operation.RequestBody.Content) > 0 {
+		// Build detailed description from schema
+		description := operation.RequestBody.Description
+		for contentType, mediaType := range operation.RequestBody.Content {
+			if strings.Contains(contentType, "json") {
+				schema := mediaType.Schema
+				if schemaType, ok := schema["type"].(string); ok && schemaType == "object" {
+					if props, ok := schema["properties"].(map[string]interface{}); ok {
+						description += "\n\nRequest Body Schema (JSON):\n"
+						var requiredFields []string
+						if req, ok := schema["required"].([]interface{}); ok {
+							for _, r := range req {
+								if s, ok := r.(string); ok {
+									requiredFields = append(requiredFields, s)
+								}
+							}
+						}
+						for propName, propSchemaInterface := range props {
+							if propSchema, ok := propSchemaInterface.(map[string]interface{}); ok {
+								required := false
+								for _, rf := range requiredFields {
+									if rf == propName {
+										required = true
+										break
+									}
+								}
+								reqStr := ""
+								if required {
+									reqStr = " (required)"
+								}
+								description += fmt.Sprintf("- %s: %s%s\n", propName, propSchema["type"], reqStr)
+								if desc, ok := propSchema["description"].(string); ok && desc != "" {
+									description += fmt.Sprintf("  Description: %s\n", desc)
+								}
+								if example, ok := propSchema["example"]; ok {
+									description += fmt.Sprintf("  Example: %v\n", example)
+								}
+								// Handle nested objects like labels
+								if nestedProps, ok := propSchema["properties"].(map[string]interface{}); ok {
+									description += "  Properties:\n"
+									for nestedName, nestedSchemaInterface := range nestedProps {
+										if nestedSchema, ok := nestedSchemaInterface.(map[string]interface{}); ok {
+											description += fmt.Sprintf("    - %s: %s\n", nestedName, nestedSchema["type"])
+											if nestedExample, ok := nestedSchema["example"]; ok {
+												description += fmt.Sprintf("      Example: %v\n", nestedExample)
+											}
+										}
+									}
+								}
+							}
+						}
+						if examples, ok := schema["examples"].(map[string]interface{}); ok {
+							description += "\nExamples:\n"
+							for exampleName, exampleValue := range examples {
+								description += fmt.Sprintf("- %s: %v\n", exampleName, exampleValue)
+							}
+						}
+					}
+				}
+			}
+		}
 		parameters = append(parameters, map[string]interface{}{
 			"name":        "body",
 			"type":        "string",
-			"description": operation.RequestBody.Description,
+			"description": description,
 			"required":    operation.RequestBody.Required,
 		})
 	}

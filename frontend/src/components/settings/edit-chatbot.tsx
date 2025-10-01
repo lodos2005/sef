@@ -166,7 +166,7 @@ export default function EditChatbot() {
 
   return (
     <Sheet open={open} onOpenChange={(o) => setOpen(o)}>
-      <SheetContent side="right" className="sm:w-[500px] sm:max-w-full">
+      <SheetContent side="right" className="sm:w-[800px] sm:max-w-full">
         <SheetHeader className="mb-8">
           <SheetTitle>{t("chatbots.edit.title")}</SheetTitle>
           <SheetDescription>{t("chatbots.edit.description")}</SheetDescription>
@@ -277,7 +277,25 @@ export default function EditChatbot() {
             />
 
             <div className="flex flex-col gap-2">
-              <Label>{t("chatbots.edit.tools")}</Label>
+              <div className="flex items-center justify-between">
+                <Label>{t("chatbots.edit.tools")}</Label>
+                {tools.length > 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (selectedTools.length === tools.length) {
+                        setSelectedTools([])
+                      } else {
+                        setSelectedTools(tools.map(tool => tool.id))
+                      }
+                    }}
+                  >
+                    {selectedTools.length === tools.length ? "Deselect All" : "Select All"}
+                  </Button>
+                )}
+              </div>
               <div className="space-y-2 max-h-40 overflow-y-auto border rounded-md p-3">
                 {tools.map((tool) => (
                   <div key={tool.id} className="flex items-center space-x-2">

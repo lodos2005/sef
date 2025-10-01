@@ -551,7 +551,7 @@ const ToolCallComponent = memo(({
               <Ban className="h-4 w-4" />
               <span>
                 Cancelled{" "}
-                <span className="font-mono font-semibold">
+                <span className="font-semibold">
                   {invocation.toolName}
                 </span>
               </span>
@@ -569,7 +569,7 @@ const ToolCallComponent = memo(({
               >
                 <Terminal className="h-4 w-4" />
                 <span className="animate-shine bg-gradient-to-r from-muted-foreground via-foreground to-muted-foreground bg-[length:200%_100%] bg-clip-text text-transparent">
-                  <span className="font-mono font-semibold">{invocation.toolName}</span> aracı çağrılıyor...
+                  <span className="font-semibold">{invocation.toolName}</span> aracı çağrılıyor...
                 </span>
                 <Loader2 className="h-3 w-3 animate-spin" />
               </span>
@@ -582,7 +582,7 @@ const ToolCallComponent = memo(({
               >
                 <Code2 className="size-3" />
                 <span>
-                  <span className="font-mono font-semibold">{invocation.toolName}</span> aracından sonuç alındı
+                  <span className="font-semibold">{invocation.toolName}</span> aracından sonuç alındı
                 </span>
               </span>
             )

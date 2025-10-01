@@ -36,7 +36,6 @@ func (o *OllamaProvider) Generate(ctx context.Context, prompt string, options ma
 		Prompt:  prompt,
 		Options: options,
 		Stream:  true,
-		Think:   false,
 	}
 
 	resp, err := o.client.Generate(ctx, req)
@@ -69,7 +68,6 @@ func (o *OllamaProvider) GenerateChat(ctx context.Context, messages []ChatMessag
 		Messages: ollamaMessages,
 		Options:  options,
 		Stream:   true,
-		Think:    false,
 	}
 
 	resp, err := o.client.Generate(ctx, req)
@@ -130,7 +128,6 @@ func (o *OllamaProvider) GenerateChatWithTools(ctx context.Context, messages []C
 		Tools:    ollamaTools,
 		Options:  options,
 		Stream:   true,
-		Think:    false,
 	}
 
 	fmt.Printf("Ollama API Request - Model: %s, Messages: %d, Tools: %d\n", model, len(ollamaMessages), len(ollamaTools))

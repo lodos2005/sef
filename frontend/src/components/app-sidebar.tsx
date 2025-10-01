@@ -61,7 +61,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const getSessionTitle = (session: any) => {
     // Prefer summary if available
     if (session.summary && session.summary.trim()) {
-      return session.summary;
+
+      return session.summary.length > 20 ? session.summary.substring(0, 20) + "..." : session.summary;
     }
     
     // Fallback to first user message

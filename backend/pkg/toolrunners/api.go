@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -43,10 +45,13 @@ func (r *APIToolRunner) ExecuteWithContext(ctx context.Context, parameters map[s
 		method = "GET"
 	}
 
-	url, ok := r.config["url"].(string)
+	urlTemplate, ok := r.config["url"].(string)
 	if !ok {
 		return nil, fmt.Errorf("url is required in tool configuration")
 	}
+
+	// Process URL parameters (replace {PARAM_NAME} placeholders)
+	url := r.processURLParameters(urlTemplate, parameters)
 
 	headers, _ := r.config["headers"].(map[string]interface{})
 	timeout := 30 * time.Second
@@ -131,6 +136,62 @@ func (r *APIToolRunner) ExecuteWithContext(ctx context.Context, parameters map[s
 		"status_code":       resp.StatusCode,
 		"body":              result,
 	}, nil
+}
+
+// processURLParameters replaces {PARAM_NAME} placeholders in URL with parameter values
+func (r *APIToolRunner) processURLParameters(urlStr string, parameters map[string]interface{}) string {
+	// Find all placeholders in the URL using regex
+	re := regexp.MustCompile(`\{([^}]+)\}`)
+	matches := re.FindAllStringSubmatch(urlStr, -1)
+
+	processedURL := urlStr
+	for _, match := range matches {
+		if len(match) == 2 {
+			paramName := match[1]
+			if paramValue, exists := parameters[paramName]; exists {
+				// Convert parameter value to string
+				var strValue string
+				switch v := paramValue.(type) {
+				case string:
+					strValue = v
+				case int, int32, int64:
+					strValue = fmt.Sprintf("%d", v)
+				case float64:
+					strValue = fmt.Sprintf("%g", v)
+				case bool:
+					strValue = fmt.Sprintf("%t", v)
+				default:
+					// For complex types, convert to JSON string
+					if jsonBytes, err := json.Marshal(v); err == nil {
+						strValue = string(jsonBytes)
+					} else {
+						strValue = fmt.Sprintf("%v", v)
+					}
+				}
+				// URL encode the parameter value
+				processedURL = strings.ReplaceAll(processedURL, "{"+paramName+"}", url.QueryEscape(strValue))
+			}
+		}
+	}
+
+	return processedURL
+}
+
+// extractURLParameters extracts parameter names and their types from URL placeholders
+func (r *APIToolRunner) extractURLParameters(url string) map[string]string {
+	params := make(map[string]string)
+	re := regexp.MustCompile(`\{([^}]+)\}`)
+	matches := re.FindAllStringSubmatch(url, -1)
+
+	for _, match := range matches {
+		if len(match) == 2 {
+			paramName := match[1]
+			// Default to string type for URL parameters
+			params[paramName] = "string"
+		}
+	}
+
+	return params
 }
 
 // ValidateParameters validates the input parameters against the tool's schema
@@ -224,40 +285,55 @@ func (r *APIToolRunner) validateParameterType(paramName string, value interface{
 
 // GetParameterSchema returns the JSON schema for tool parameters
 func (r *APIToolRunner) GetParameterSchema() map[string]interface{} {
-	if len(r.parameters) > 0 {
-		// Convert parameters array to JSON schema
-		properties := make(map[string]interface{})
-		required := []string{}
+	properties := make(map[string]interface{})
+	required := []string{}
 
-		for _, param := range r.parameters {
-			if paramMap, ok := param.(map[string]interface{}); ok {
-				name, nameOk := paramMap["name"].(string)
-				paramType, typeOk := paramMap["type"].(string)
-				description, descOk := paramMap["description"].(string)
-				req, reqOk := paramMap["required"].(bool)
+	// Add parameters from the parameters array
+	for _, param := range r.parameters {
+		if paramMap, ok := param.(map[string]interface{}); ok {
+			name, nameOk := paramMap["name"].(string)
+			paramType, typeOk := paramMap["type"].(string)
+			description, descOk := paramMap["description"].(string)
+			req, reqOk := paramMap["required"].(bool)
 
-				if nameOk && typeOk {
-					prop := map[string]interface{}{
-						"type": paramType,
-					}
-					if descOk && description != "" {
-						prop["description"] = description
-					}
-					properties[name] = prop
+			if nameOk && typeOk {
+				prop := map[string]interface{}{
+					"type": paramType,
+				}
+				if descOk && description != "" {
+					prop["description"] = description
+				}
+				properties[name] = prop
 
-					if reqOk && req {
-						required = append(required, name)
-					}
+				if reqOk && req {
+					required = append(required, name)
 				}
 			}
 		}
+	}
 
+	// Add URL parameters extracted from URL placeholders
+	if urlStr, ok := r.config["url"].(string); ok {
+		urlParams := r.extractURLParameters(urlStr)
+		for paramName, paramType := range urlParams {
+			if _, exists := properties[paramName]; !exists {
+				properties[paramName] = map[string]interface{}{
+					"type":        paramType,
+					"description": fmt.Sprintf("URL parameter %s", paramName),
+				}
+				required = append(required, paramName)
+			}
+		}
+	}
+
+	if len(properties) > 0 {
 		return map[string]interface{}{
 			"type":       "object",
 			"properties": properties,
 			"required":   required,
 		}
 	}
+
 	// Fallback to default schema if no parameters defined
 	return map[string]interface{}{
 		"type": "object",

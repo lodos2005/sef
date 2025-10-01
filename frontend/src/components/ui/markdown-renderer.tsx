@@ -92,7 +92,7 @@ const CodeBlock = ({
       : childrenTakeAllStringContents(children)
 
   const preClass = cn(
-    "overflow-x-scroll rounded-md border bg-background/50 p-4 font-mono text-sm [scrollbar-width:none]",
+    "overflow-x-scroll rounded-md border bg-muted-foreground/10 p-4 font-mono text-sm [scrollbar-width:none]",
     className
   )
 
@@ -155,7 +155,7 @@ const COMPONENTS = {
     ) : (
       <code
         className={cn(
-          "font-mono [:not(pre)>&]:rounded-md [:not(pre)>&]:bg-background/50 [:not(pre)>&]:px-1 [:not(pre)>&]:py-0.5"
+          "font-mono [:not(pre)>&]:rounded-md [:not(pre)>&]:bg-muted-foreground/10 [:not(pre)>&]:px-1 [:not(pre)>&]:py-0.5"
         )}
         {...rest}
       >

@@ -60,6 +60,49 @@ paths:
                 - email
       tags:
         - users
+  /deployments/labels:
+    patch:
+      tags:
+        - Deployments
+      summary: Update Labels
+      description: Bir deployment'ın etiketlerini (labels) günceller. Bu, genellikle Kubernetes service'lerinin bu deployment'ı hedeflemesi için kullanılır.
+      operationId: deployment_update_labels
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                cluster_id:
+                  type: string
+                  example: 92f1eea5-a05d-4e50-b349-59e8b6875176
+                deployment_name:
+                  type: string
+                  example: deployment
+                labels:
+                  type: object
+                  properties:
+                    en:
+                      type: string
+                      example: buyuk
+                    fene:
+                      type: string
+                      example: r
+                namespace:
+                  type: string
+                  example: namespace
+            examples:
+              Update Labels:
+                value:
+                  cluster_id: 92f1eea5-a05d-4e50-b349-59e8b6875176
+                  deployment_name: deployment
+                  labels:
+                    en: buyuk
+                    fene: r
+                  namespace: namespace
+      responses:
+        '200':
+          description: ''
   /users/{id}:
     get:
       summary: Get user by ID

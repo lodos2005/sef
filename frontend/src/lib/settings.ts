@@ -9,12 +9,11 @@ import {
 export const Settings = {
   system: [
     {
-      id: "users",
-      title: "Kullanıcılar",
-      description:
-        "Bu sayfa aracılığıyla kullanıcılara roller ekleyebilir, kullanıcı profillerini düzenleyebilir ve yenilerini ekleyebilirsiniz.",
-      icon: Users2,
-      href: "/settings/users",
+      id: "providers",
+      title: "Sağlayıcılar",
+      description: "Sistemdeki AI sağlayıcılarını yönetin.",
+      icon: CloudCog,
+      href: "/settings/providers",
     },
     {
       id: "chatbots",
@@ -24,18 +23,19 @@ export const Settings = {
       href: "/settings/chatbots",
     },
     {
-      id: "providers",
-      title: "Sağlayıcılar",
-      description: "Sistemdeki AI sağlayıcılarını yönetin.",
-      icon: CloudCog,
-      href: "/settings/providers",
-    },
-    {
       id: "tools",
       title: "Araçlar",
       description: "AI araçlarınızı ve yapılandırmalarınızı yönetin.",
       icon: Wrench,
       href: "/settings/tools",
+    },
+    {
+      id: "users",
+      title: "Kullanıcılar",
+      description:
+        "Bu sayfa aracılığıyla kullanıcılara roller ekleyebilir, kullanıcı profillerini düzenleyebilir ve yenilerini ekleyebilirsiniz.",
+      icon: Users2,
+      href: "/settings/users",
     },
     {
       id: "sessions",
