@@ -10,6 +10,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/itchyny/gojq"
 )
 
 // APIToolRunner implements the ToolRunner interface for API calls
@@ -103,6 +105,15 @@ func (r *APIToolRunner) ExecuteWithContext(ctx context.Context, parameters map[s
 	if err := json.Unmarshal(body, &result); err != nil {
 		// If not JSON, return as string
 		result = string(body)
+	}
+
+	// Apply jq filtering if query is provided
+	if jqQuery, ok := r.config["jq_query"].(string); ok && jqQuery != "" {
+		filteredResult, err := r.ApplyJqFilter(result, jqQuery)
+		if err != nil {
+			return nil, fmt.Errorf("failed to apply jq filter: %w", err)
+		}
+		result = filteredResult
 	}
 
 	// Build tool call details
@@ -286,7 +297,7 @@ func (r *APIToolRunner) validateParameterType(paramName string, value interface{
 // GetParameterSchema returns the JSON schema for tool parameters
 func (r *APIToolRunner) GetParameterSchema() map[string]interface{} {
 	properties := make(map[string]interface{})
-	required := []string{}
+	required := make([]interface{}, 0)
 
 	// Add parameters from the parameters array
 	for _, param := range r.parameters {
@@ -377,7 +388,43 @@ func (r *APIToolRunner) GetConfigSchema() map[string]interface{} {
 				"maximum":     300,
 				"default":     30,
 			},
+			"jq_query": map[string]interface{}{
+				"type":        "string",
+				"description": "Optional jq query to filter/transform the JSON response",
+				"examples":    []string{".", ".data", ".[] | select(.status == \"active\")", "{results: .items, count: (.items | length)}"},
+			},
 		},
 		"required": []string{"url"},
 	}
+}
+
+// ApplyJqFilter applies a jq query to filter/transform JSON data
+func (r *APIToolRunner) ApplyJqFilter(input interface{}, query string) (interface{}, error) {
+	// Compile the jq query
+	compiledQuery, err := gojq.Parse(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse jq query: %w", err)
+	}
+
+	// Create iterator for the query
+	iter := compiledQuery.Run(input)
+
+	// Collect results
+	var results []interface{}
+	for {
+		v, ok := iter.Next()
+		if !ok {
+			break
+		}
+		if err, ok := v.(error); ok {
+			return nil, fmt.Errorf("jq query execution error: %w", err)
+		}
+		results = append(results, v)
+	}
+
+	// Return single result or array based on count
+	if len(results) == 1 {
+		return results[0], nil
+	}
+	return results, nil
 }

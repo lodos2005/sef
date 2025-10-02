@@ -1,4 +1,4 @@
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react"
+import { MoreHorizontal, Pencil, Trash2, Play } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useRouter } from "next/router"
@@ -51,6 +51,10 @@ export function ToolRowActions({ row }: ToolRowActionsProps) {
     }
   }
 
+  const handleTest = () => {
+    router.push(`/settings/tools/${row.original.id}/test`)
+  }
+
   const handleEdit = () => {
     router.push(`/settings/tools/${row.original.id}/edit`)
   }
@@ -68,6 +72,10 @@ export function ToolRowActions({ row }: ToolRowActionsProps) {
         <DropdownMenuItem onClick={handleEdit}>
           <Pencil className="mr-2 h-4 w-4" />
           {t("tools.edit", "Edit")}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={handleTest}>
+          <Play className="mr-2 h-4 w-4" />
+          {t("tools.test", "Test")}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <AlertDialog>

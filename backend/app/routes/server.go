@@ -92,6 +92,9 @@ func Server(app *fiber.App) {
 		toolsGroup.Post("/import", controller.Import)
 		toolsGroup.Patch("/:id", controller.Update)
 		toolsGroup.Delete("/:id", controller.Delete)
+		toolsGroup.Post("/:id/test", controller.Test)
+		toolsGroup.Post("/:id/test-jq", controller.TestJq)
+		toolsGroup.Post("/:id/generate-jq", controller.GenerateJq)
 	}
 
 	sessionsGroup := apiV1.Group("/sessions")

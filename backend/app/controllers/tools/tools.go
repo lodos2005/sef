@@ -1,12 +1,15 @@
 package tools
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"sef/app/entities"
 	"sef/internal/paginator"
 	"sef/internal/search"
 	"sef/pkg/importservice"
+	"sef/pkg/providers"
 	"sef/pkg/toolrunners"
 	"strings"
 
@@ -221,5 +224,150 @@ func (h *Controller) Import(c fiber.Ctx) error {
 		"total_count":    len(result.Tools),
 		"tools":          savedTools,
 		"errors":         append(result.Errors, saveErrors...),
+	})
+}
+
+func (h *Controller) Test(c fiber.Ctx) error {
+	var payload struct {
+		Parameters map[string]interface{} `json:"parameters"`
+	}
+	if err := c.Bind().JSON(&payload); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	// Get the tool
+	var tool entities.Tool
+	if err := h.DB.First(&tool, c.Params("id")).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Tool not found"})
+	}
+
+	// Create tool runner
+	factory := &toolrunners.ToolRunnerFactory{}
+	runner, err := factory.NewToolRunner(tool.Type, tool.Config, tool.Parameters)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": fmt.Sprintf("Failed to create tool runner: %v", err)})
+	}
+
+	// Validate parameters
+	if err := runner.ValidateParameters(payload.Parameters); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": fmt.Sprintf("Parameter validation failed: %v", err)})
+	}
+
+	// Execute the tool
+	ctx := context.Background()
+	result, err := runner.Execute(ctx, payload.Parameters)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": fmt.Sprintf("Tool execution failed: %v", err)})
+	}
+
+	return c.JSON(result)
+}
+
+func (h *Controller) TestJq(c fiber.Ctx) error {
+	var payload struct {
+		Data  interface{} `json:"data"`
+		Query string      `json:"query"`
+	}
+	if err := c.Bind().JSON(&payload); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	if payload.Query == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "query is required"})
+	}
+
+	// Create a temporary API tool runner to use the jq filter method
+	runner := &toolrunners.APIToolRunner{}
+	filteredResult, err := runner.ApplyJqFilter(payload.Data, payload.Query)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": fmt.Sprintf("JQ query failed: %v", err)})
+	}
+
+	return c.JSON(fiber.Map{
+		"success": true,
+		"result":  filteredResult,
+	})
+}
+
+func (h *Controller) GenerateJq(c fiber.Ctx) error {
+	var payload struct {
+		Data        interface{} `json:"data"`
+		Description string      `json:"description"`
+		ProviderID  uint        `json:"provider_id"`
+		Model       string      `json:"model"`
+	}
+	if err := c.Bind().JSON(&payload); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	if payload.Description == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "description is required"})
+	}
+
+	if payload.ProviderID == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "provider_id is required"})
+	}
+
+	if payload.Model == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "model is required"})
+	}
+
+	// Get the provider
+	var provider *entities.Provider
+	if err := h.DB.First(&provider, payload.ProviderID).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Provider not found"})
+	}
+
+	// Create provider instance
+	factory := &providers.ProviderFactory{}
+	config := map[string]interface{}{
+		"base_url": provider.BaseURL,
+	}
+
+	llmProvider, err := factory.NewProvider(provider.Type, config)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	// Prepare the prompt for JQ query generation
+	dataStr := "No sample data provided"
+	if payload.Data != nil {
+		dataBytes, _ := json.MarshalIndent(payload.Data, "", "  ")
+		dataStr = string(dataBytes)
+	}
+
+	prompt := fmt.Sprintf(`You are an expert at writing JQ queries. Given the following JSON data and user description, generate a JQ query that extracts the requested information.
+
+JSON Data:
+%s
+
+User Description: %s
+
+Please provide only the JQ query without any explanation or markdown formatting. The query should be valid JQ syntax.`, dataStr, payload.Description)
+
+	// Generate the JQ query using the LLM
+	messages := []providers.ChatMessage{
+		{Role: "user", Content: prompt},
+	}
+
+	options := map[string]interface{}{
+		"model": payload.Model,
+	}
+
+	resultChan, err := llmProvider.GenerateChat(context.Background(), messages, options)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": fmt.Sprintf("Failed to generate JQ query: %v", err)})
+	}
+
+	var generatedQuery strings.Builder
+	for chunk := range resultChan {
+		generatedQuery.WriteString(chunk)
+	}
+
+	query := strings.TrimSpace(generatedQuery.String())
+
+	return c.JSON(fiber.Map{
+		"success": true,
+		"query":   query,
 	})
 }
