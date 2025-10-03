@@ -64,6 +64,8 @@ export default function TestTool() {
     '{}'
   )
   const [jqQuery, setJqQuery] = useState("")
+  const [jqParameters, setJqParameters] = useState<Record<string, any>>({})
+  const [jqParametersInput, setJqParametersInput] = useState('{}')
 
   // AI JQ Generation state
   const [providers, setProviders] = useState<Provider[]>([])
@@ -71,6 +73,9 @@ export default function TestTool() {
   const [models, setModels] = useState<string[]>([])
   const [selectedModel, setSelectedModel] = useState<string>("")
   const [jqDescription, setJqDescription] = useState("")
+  const [jqExistingQuery, setJqExistingQuery] = useState("")
+  const [jqGenerationParameters, setJqGenerationParameters] = useState<Record<string, any>>({})
+  const [jqGenerationParametersInput, setJqGenerationParametersInput] = useState('{}')
   const [isGeneratingJq, setIsGeneratingJq] = useState(false)
   const [generateJqError, setGenerateJqError] = useState<string | null>(null)
 
@@ -112,6 +117,7 @@ export default function TestTool() {
         // Initialize JQ query from tool config if available
         if (toolData.config?.jq_query) {
           setJqQuery(toolData.config.jq_query)
+          setJqExistingQuery(toolData.config.jq_query)
         }
       } catch (error) {
         console.error("Failed to load tool:", error)
@@ -202,6 +208,7 @@ export default function TestTool() {
       const response = await http.post(`/tools/${tool.id}/test-jq`, {
         data: sampleData,
         query: jqQuery,
+        parameters: jqParameters,
       })
 
       setJqTestResult(response.data.result)
@@ -235,14 +242,27 @@ export default function TestTool() {
         sampleData = null // Allow generation without sample data
       }
 
-      const response = await http.post(`/tools/${tool.id}/generate-jq`, {
+      const payload: any = {
         data: sampleData,
         description: jqDescription,
         provider_id: parseInt(selectedProvider),
         model: selectedModel,
-      })
+      }
+
+      if (jqExistingQuery.trim()) {
+        payload.existing_query = jqExistingQuery
+      }
+
+      if (Object.keys(jqGenerationParameters).length > 0) {
+        payload.parameters = jqGenerationParameters
+      }
+
+      const response = await http.post(`/tools/${tool.id}/generate-jq`, payload)
 
       setJqQuery(response.data.query)
+      if (response.data.existing_query) {
+        setJqExistingQuery(response.data.existing_query)
+      }
     } catch (error: any) {
       console.error("JQ generation failed:", error)
       setGenerateJqError(
@@ -260,6 +280,11 @@ export default function TestTool() {
     resetJqTest()
     setGenerateJqError(null)
     setJqDescription("")
+    setJqExistingQuery("")
+    setJqGenerationParameters({})
+    setJqGenerationParametersInput('{}')
+    setJqParameters({})
+    setJqParametersInput('{}')
   }
 
   if (isLoadingData) {
@@ -699,6 +724,48 @@ export default function TestTool() {
                     />
                   </div>
 
+                  {/* Existing Query Input */}
+                  <div className="space-y-2 mb-4">
+                    <Label className="text-sm">
+                      {t("tools.existing_jq_query", "Existing JQ Query (optional)")}
+                    </Label>
+                    <Input
+                      value={jqExistingQuery}
+                      onChange={(e) => setJqExistingQuery(e.target.value)}
+                      placeholder=".name"
+                      className="font-mono text-sm"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {t("tools.existing_query_help", "Provide an existing query to refine or improve")}
+                    </p>
+                  </div>
+
+                  {/* Generation Parameters Input */}
+                  <div className="space-y-2 mb-4">
+                    <Label className="text-sm">
+                      {t("tools.generation_parameters", "Parameters for Generation (JSON, optional)")}
+                    </Label>
+                    <Textarea
+                      value={jqGenerationParametersInput}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        setJqGenerationParametersInput(value)
+                        try {
+                          const parsed = JSON.parse(value)
+                          setJqGenerationParameters(parsed)
+                        } catch (error) {
+                          // Invalid JSON, keep current parsed value
+                        }
+                      }}
+                      rows={3}
+                      placeholder='{"user_id": "123", "filter": "active"}'
+                      className="font-mono text-sm"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {t("tools.generation_params_help", "Parameters that can be used in the generated query")}
+                    </p>
+                  </div>
+
                   {/* Generate Button */}
                   <Button
                     onClick={onGenerateJq}
@@ -749,6 +816,32 @@ export default function TestTool() {
                       <code>{tool.config.jq_query}</code>
                     </p>
                   )}
+                </div>
+
+                {/* JQ Parameters Input */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">
+                    {t("tools.jq_parameters", "JQ Parameters (JSON, optional)")}
+                  </Label>
+                  <Textarea
+                    value={jqParametersInput}
+                    onChange={(e) => {
+                      const value = e.target.value
+                      setJqParametersInput(value)
+                      try {
+                        const parsed = JSON.parse(value)
+                        setJqParameters(parsed)
+                      } catch (error) {
+                        // Invalid JSON, keep current parsed value
+                      }
+                    }}
+                    rows={3}
+                    placeholder='{"user_id": "123", "filter": "active"}'
+                    className="font-mono text-sm"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {t("tools.jq_params_help", "Parameters to pass to the JQ query for filtering")}
+                  </p>
                 </div>
 
                 {/* Test Button */}

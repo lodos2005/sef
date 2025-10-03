@@ -265,8 +265,9 @@ func (h *Controller) Test(c fiber.Ctx) error {
 
 func (h *Controller) TestJq(c fiber.Ctx) error {
 	var payload struct {
-		Data  interface{} `json:"data"`
-		Query string      `json:"query"`
+		Data       interface{}            `json:"data"`
+		Query      string                 `json:"query"`
+		Parameters map[string]interface{} `json:"parameters,omitempty"`
 	}
 	if err := c.Bind().JSON(&payload); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
@@ -278,7 +279,7 @@ func (h *Controller) TestJq(c fiber.Ctx) error {
 
 	// Create a temporary API tool runner to use the jq filter method
 	runner := &toolrunners.APIToolRunner{}
-	filteredResult, err := runner.ApplyJqFilter(payload.Data, payload.Query)
+	filteredResult, err := runner.ApplyJqFilter(payload.Data, payload.Query, payload.Parameters)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": fmt.Sprintf("JQ query failed: %v", err)})
 	}
@@ -291,10 +292,12 @@ func (h *Controller) TestJq(c fiber.Ctx) error {
 
 func (h *Controller) GenerateJq(c fiber.Ctx) error {
 	var payload struct {
-		Data        interface{} `json:"data"`
-		Description string      `json:"description"`
-		ProviderID  uint        `json:"provider_id"`
-		Model       string      `json:"model"`
+		Data          interface{}            `json:"data"`
+		Description   string                 `json:"description"`
+		ProviderID    uint                   `json:"provider_id"`
+		Model         string                 `json:"model"`
+		ExistingQuery string                 `json:"existing_query,omitempty"`
+		Parameters    map[string]interface{} `json:"parameters,omitempty"`
 	}
 	if err := c.Bind().JSON(&payload); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
@@ -336,14 +339,39 @@ func (h *Controller) GenerateJq(c fiber.Ctx) error {
 		dataStr = string(dataBytes)
 	}
 
-	prompt := fmt.Sprintf(`You are an expert at writing JQ queries. Given the following JSON data and user description, generate a JQ query that extracts the requested information.
+	paramsStr := "No parameters provided"
+	if payload.Parameters != nil {
+		paramsBytes, _ := json.MarshalIndent(payload.Parameters, "", "  ")
+		paramsStr = string(paramsBytes)
+	}
+
+	prompt := fmt.Sprintf(`You are an expert at writing JQ queries. Given the following JSON data, user description, and available parameters, generate a JQ query that extracts the requested information.
 
 JSON Data:
 %s
 
 User Description: %s
 
-Please provide only the JQ query without any explanation or markdown formatting. The query should be valid JQ syntax.`, dataStr, payload.Description)
+Available Parameters: %s
+You can use these parameters as variables in your JQ query (e.g., $param_name for filtering).
+
+Please provide only the JQ query without any explanation or markdown formatting. The query should be valid JQ syntax.`, dataStr, payload.Description, paramsStr)
+
+	if payload.ExistingQuery != "" {
+		prompt = fmt.Sprintf(`You are an expert at writing JQ queries. Given the following JSON data, user description, existing JQ query, and available parameters, generate an improved JQ query that extracts the requested information while respecting the existing query.
+
+JSON Data:
+%s
+
+User Description: %s
+
+Existing Query: %s
+
+Available Parameters: %s
+You can use these parameters as variables in your JQ query (e.g., $param_name for filtering).
+
+Please provide only the JQ query without any explanation or markdown formatting. The query should be valid JQ syntax.`, dataStr, payload.Description, payload.ExistingQuery, paramsStr)
+	}
 
 	// Generate the JQ query using the LLM
 	messages := []providers.ChatMessage{
@@ -366,8 +394,13 @@ Please provide only the JQ query without any explanation or markdown formatting.
 
 	query := strings.TrimSpace(generatedQuery.String())
 
-	return c.JSON(fiber.Map{
+	response := fiber.Map{
 		"success": true,
 		"query":   query,
-	})
+	}
+	if payload.ExistingQuery != "" {
+		response["existing_query"] = payload.ExistingQuery
+	}
+
+	return c.JSON(response)
 }

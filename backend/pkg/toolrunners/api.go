@@ -109,7 +109,7 @@ func (r *APIToolRunner) ExecuteWithContext(ctx context.Context, parameters map[s
 
 	// Apply jq filtering if query is provided
 	if jqQuery, ok := r.config["jq_query"].(string); ok && jqQuery != "" {
-		filteredResult, err := r.ApplyJqFilter(result, jqQuery)
+		filteredResult, err := r.ApplyJqFilter(result, jqQuery, nil)
 		if err != nil {
 			return nil, fmt.Errorf("failed to apply jq filter: %w", err)
 		}
@@ -399,9 +399,22 @@ func (r *APIToolRunner) GetConfigSchema() map[string]interface{} {
 }
 
 // ApplyJqFilter applies a jq query to filter/transform JSON data
-func (r *APIToolRunner) ApplyJqFilter(input interface{}, query string) (interface{}, error) {
+func (r *APIToolRunner) ApplyJqFilter(input interface{}, query string, params map[string]interface{}) (interface{}, error) {
+	// Replace parameter placeholders in the query
+	processedQuery := query
+	for key, value := range params {
+		placeholder := "$" + key
+		// Convert value to JSON string for replacement
+		valueStr := fmt.Sprintf("%v", value)
+		if str, ok := value.(string); ok {
+			// If it's a string, wrap in quotes
+			valueStr = fmt.Sprintf(`"%s"`, str)
+		}
+		processedQuery = strings.ReplaceAll(processedQuery, placeholder, valueStr)
+	}
+
 	// Compile the jq query
-	compiledQuery, err := gojq.Parse(query)
+	compiledQuery, err := gojq.Parse(processedQuery)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse jq query: %w", err)
 	}
