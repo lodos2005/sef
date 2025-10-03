@@ -324,7 +324,8 @@ func (s *MessagingService) CreateToolMessage(sessionID uint, content string) (*e
 }
 
 // processToolCalls handles the execution of tool calls and returns updated messages
-func (s *MessagingService) processToolCalls(session *entities.Session, toolCalls []providers.ToolCall, messages []providers.ChatMessage, outputCh chan<- string, assistantContent *strings.Builder) []providers.ChatMessage {
+// Returns: updated messages, shouldStop flag, stop reason
+func (s *MessagingService) processToolCalls(session *entities.Session, toolCalls []providers.ToolCall, messages []providers.ChatMessage, outputCh chan<- string, assistantContent *strings.Builder, toolCallCounter map[string]int) ([]providers.ChatMessage, bool, string) {
 	for _, toolCall := range toolCalls {
 		displayName := toolCall.Function.Name
 		// Extract tool display name from session.Chatbot.Tools
@@ -343,6 +344,18 @@ func (s *MessagingService) processToolCalls(session *entities.Session, toolCalls
 				displayName = "Unknown Tool"
 			}
 		}
+
+		// Check if this tool has been called too many times
+		toolCallCounter[toolCall.Function.Name]++
+		if toolCallCounter[toolCall.Function.Name] > 2 {
+			log.Warn("Tool", toolCall.Function.Name, "has been called more than 2 times, stopping execution")
+			errorMsg := fmt.Sprintf("Özür dilerim, '%s' aracını kullanarak istediğiniz bilgiyi alamadım. Lütfen sorunuzu farklı bir şekilde sorun veya daha spesifik bilgi verin.", displayName)
+			outputCh <- errorMsg
+			assistantContent.WriteString(errorMsg)
+			return messages, true, "tool_call_limit_exceeded"
+		}
+
+		log.Info("Calling tool", toolCall.Function.Name, "- attempt", toolCallCounter[toolCall.Function.Name], "of 2")
 
 		// Send tool executing indicator
 		executingStr := fmt.Sprintf("<tool_executing>%s</tool_executing>", displayName)
@@ -382,7 +395,7 @@ func (s *MessagingService) processToolCalls(session *entities.Session, toolCalls
 		}
 		messages = append(messages, toolMessage)
 	}
-	return messages
+	return messages, false, ""
 }
 
 // GenerateChatResponse generates the chat response stream with infinite tool call chain support
@@ -463,8 +476,27 @@ func (s *MessagingService) GenerateChatResponse(session *entities.Session, messa
 		keepAliveTicker := time.NewTicker(30 * time.Second)
 		defer keepAliveTicker.Stop()
 
+		// Maximum iterations to prevent infinite loops
+		const maxIterations = 10
+		iteration := 0
+
+		// Track tool call counts - each tool can be called at most 2 times
+		toolCallCounter := make(map[string]int)
+
 		// Continuous loop to handle infinite tool call chains
 		for {
+			iteration++
+			if iteration > maxIterations {
+				log.Warn("Maximum tool call iterations reached for session:", session.ID)
+				errorMsg := "Özür dilerim, çok fazla araç çağrısı yapıldı. Lütfen sorunuzu daha basit bir şekilde sorun."
+				outputCh <- errorMsg
+				assistantContent.WriteString(errorMsg)
+				s.UpdateAssistantMessage(firstAssistant, assistantContent.String())
+				return
+			}
+
+			log.Info("Tool call iteration", iteration, "of", maxIterations, "for session:", session.ID)
+
 			// Generate chat response
 			log.Info("Calling GenerateChatWithTools for session:", session.ID, "with", len(currentMessages), "messages")
 			chatStream, err := provider.GenerateChatWithTools(context.Background(), currentMessages, toolDefinitions, options)
@@ -499,7 +531,6 @@ func (s *MessagingService) GenerateChatResponse(session *entities.Session, messa
 			responseCount := 0
 			for response := range chatStream {
 				responseCount++
-				log.Info("Received response", responseCount, "- Content:", len(response.Content), "chars, Thinking:", len(response.Thinking), "chars, ToolCalls:", len(response.ToolCalls), "Done:", response.Done)
 
 				// Handle thinking tokens
 				if response.Thinking != "" {
@@ -517,13 +548,13 @@ func (s *MessagingService) GenerateChatResponse(session *entities.Session, messa
 
 				// Handle content
 				if response.Content != "" {
-					log.Info("Sending content chunk:", response.Content)
 					outputCh <- response.Content
 					assistantContent.WriteString(response.Content)
 				}
 
 				// Collect tool calls
 				if len(response.ToolCalls) > 0 {
+					log.Info("Agent tool calls: ", response.ToolCalls)
 					hasToolCalls = true
 					pendingToolCalls = append(pendingToolCalls, response.ToolCalls...)
 				}
@@ -556,8 +587,25 @@ func (s *MessagingService) GenerateChatResponse(session *entities.Session, messa
 				assistantContent.WriteString("</think>")
 			}
 
+			// IMPORTANT: Add the assistant's response to the message history
+			// This helps the LLM understand what it has already said and prevents re-calling tools
+			assistantMessage := providers.ChatMessage{
+				Role:    "assistant",
+				Content: cleanAssistantContent(assistantContent.String()),
+			}
+			currentMessages = append(currentMessages, assistantMessage)
+
 			// Process tool calls and update messages for next iteration
-			currentMessages = s.processToolCalls(session, pendingToolCalls, currentMessages, outputCh, &assistantContent)
+			var shouldStop bool
+			var stopReason string
+			currentMessages, shouldStop, stopReason = s.processToolCalls(session, pendingToolCalls, currentMessages, outputCh, &assistantContent, toolCallCounter)
+
+			// If we should stop (e.g., tool call limit exceeded), save message and exit
+			if shouldStop {
+				log.Info("Stopping tool execution loop. Reason:", stopReason)
+				s.UpdateAssistantMessage(firstAssistant, assistantContent.String())
+				return
+			}
 		}
 	}()
 

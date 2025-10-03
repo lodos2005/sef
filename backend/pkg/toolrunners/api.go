@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gofiber/fiber/v3/log"
 	"github.com/itchyny/gojq"
 )
 
@@ -109,7 +110,7 @@ func (r *APIToolRunner) ExecuteWithContext(ctx context.Context, parameters map[s
 
 	// Apply jq filtering if query is provided
 	if jqQuery, ok := r.config["jq_query"].(string); ok && jqQuery != "" {
-		filteredResult, err := r.ApplyJqFilter(result, jqQuery, nil)
+		filteredResult, err := r.ApplyJqFilter(result, jqQuery, parameters)
 		if err != nil {
 			return nil, fmt.Errorf("failed to apply jq filter: %w", err)
 		}
@@ -400,6 +401,8 @@ func (r *APIToolRunner) GetConfigSchema() map[string]interface{} {
 
 // ApplyJqFilter applies a jq query to filter/transform JSON data
 func (r *APIToolRunner) ApplyJqFilter(input interface{}, query string, params map[string]interface{}) (interface{}, error) {
+	log.Info("Applying jq filter with query:", query, "and params:", params)
+
 	// Replace parameter placeholders in the query
 	processedQuery := query
 	for key, value := range params {

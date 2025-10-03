@@ -218,7 +218,6 @@ func (h *Controller) streamResponseWithCallback(c fiber.Ctx, stream <-chan strin
 		chunkCount := 0
 		for chunk := range stream {
 			chunkCount++
-			log.Info("Received chunk", chunkCount, "for session", sessionID, "length:", len(chunk))
 
 			if chunk == "" {
 				continue
@@ -270,8 +269,6 @@ func (h *Controller) sendChunk(w *bufio.Writer, chunk string) error {
 		msgType = "chunk"
 		content = chunk
 	}
-
-	log.Info("Sending message type:", msgType, "length:", len(content))
 
 	data := map[string]interface{}{
 		"type": msgType,

@@ -146,8 +146,6 @@ func (o *OllamaProvider) GenerateChatWithTools(ctx context.Context, messages []C
 		responseCount := 0
 		for resp := range stream {
 			responseCount++
-			fmt.Printf("Ollama Response %d - Content: %d chars, Thinking: %d chars, Done: %v\n",
-				responseCount, len(resp.Message.Content), len(resp.Message.Thinking), resp.Done)
 
 			chatResp := ChatResponse{
 				Content:  resp.Message.Content,
