@@ -216,6 +216,12 @@ func (oc *OllamaClient) generateChatStream(ctx context.Context, req GenerateRequ
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
 
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return nil, fmt.Errorf("ollama API error: %s", string(body))
+	}
+
 	ch := make(chan OllamaChatResponse)
 
 	go func() {

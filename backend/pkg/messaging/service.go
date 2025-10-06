@@ -508,8 +508,8 @@ func (s *MessagingService) GenerateChatResponse(session *entities.Session, messa
 					errorMsg += "AI servisi ile bağlantı sorunu yaşanıyor gibi görünüyor. Lütfen bir süre sonra tekrar deneyin."
 				} else if strings.Contains(err.Error(), "authentication") || strings.Contains(err.Error(), "auth") {
 					errorMsg += "AI servisi ile kimlik doğrulama sorunu yaşanıyor. Lütfen bir yönetici ile iletişime geçin."
-				} else if strings.Contains(err.Error(), "model") {
-					errorMsg += "Seçilen AI modeli kullanılamıyor. Lütfen farklı bir chatbot deneyin veya bir yönetici ile iletişime geçin."
+				} else if strings.Contains(err.Error(), "model") || strings.Contains(err.Error(), "does not support") {
+					errorMsg += "Seçilen AI modeli kullanılamıyor veya araçları desteklemiyor. Lütfen farklı bir chatbot deneyin veya bir yönetici ile iletişime geçin."
 				} else {
 					errorMsg += fmt.Sprintf("Hata detayları: %v", err)
 				}
