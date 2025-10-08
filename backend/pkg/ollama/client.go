@@ -333,3 +333,66 @@ func (oc *OllamaClient) PullModel(ctx context.Context, modelName string) error {
 
 	return nil
 }
+
+// EmbeddingRequest represents an embedding generation request
+type EmbeddingRequest struct {
+	Model  string `json:"model"`
+	Prompt string `json:"prompt"`
+}
+
+// EmbeddingResponse represents the response from embedding API
+type EmbeddingResponse struct {
+	Embedding []float32 `json:"embedding"`
+}
+
+// GenerateEmbedding generates an embedding vector for the given text
+func (oc *OllamaClient) GenerateEmbedding(ctx context.Context, model string, text string) ([]float32, error) {
+	req := EmbeddingRequest{
+		Model:  model,
+		Prompt: text,
+	}
+
+	reqBody, err := json.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", oc.baseURL+"/api/embeddings", bytes.NewBuffer(reqBody))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	resp, err := oc.client.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("ollama API error: %s", string(body))
+	}
+
+	var embeddingResp EmbeddingResponse
+	if err := json.NewDecoder(resp.Body).Decode(&embeddingResp); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return embeddingResp.Embedding, nil
+}
+
+// GenerateEmbeddings generates embeddings for multiple texts in batch
+func (oc *OllamaClient) GenerateEmbeddings(ctx context.Context, model string, texts []string) ([][]float32, error) {
+	embeddings := make([][]float32, len(texts))
+
+	for i, text := range texts {
+		embedding, err := oc.GenerateEmbedding(ctx, model, text)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate embedding for text %d: %w", i, err)
+		}
+		embeddings[i] = embedding
+	}
+
+	return embeddings, nil
+}

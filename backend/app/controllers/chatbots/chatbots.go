@@ -47,6 +47,7 @@ func (h *Controller) Create(c fiber.Ctx) error {
 		SystemPrompt string `json:"system_prompt"`
 		ModelName    string `json:"model_name"`
 		ToolIDs      []uint `json:"tool_ids"`
+		DocumentIDs  []uint `json:"document_ids"`
 	}
 	if err := c.Bind().JSON(&payload); err != nil {
 		return err
@@ -76,8 +77,19 @@ func (h *Controller) Create(c fiber.Ctx) error {
 		}
 	}
 
+	// Associate documents if provided
+	if len(payload.DocumentIDs) > 0 {
+		var documents []entities.Document
+		for _, id := range payload.DocumentIDs {
+			documents = append(documents, entities.Document{Base: entities.Base{ID: id}})
+		}
+		if err := h.DB.Model(chatbot).Association("Documents").Replace(documents); err != nil {
+			return err
+		}
+	}
+
 	// Return the created chatbot with associations
-	if err := h.DB.Preload("Tools").Preload("Provider").First(chatbot, chatbot.ID).Error; err != nil {
+	if err := h.DB.Preload("Tools").Preload("Provider").Preload("Documents").First(chatbot, chatbot.ID).Error; err != nil {
 		return err
 	}
 
@@ -107,8 +119,21 @@ func (h *Controller) Update(c fiber.Ctx) error {
 		}
 	}
 
-	// Remove tool_ids from payload before updating
+	// Extract document IDs if provided
+	var documentIDs []uint
+	if docIDsInterface, ok := payload["document_ids"]; ok && docIDsInterface != nil {
+		if ids, ok := docIDsInterface.([]interface{}); ok {
+			for _, id := range ids {
+				if idFloat, ok := id.(float64); ok {
+					documentIDs = append(documentIDs, uint(idFloat))
+				}
+			}
+		}
+	}
+
+	// Remove tool_ids and document_ids from payload before updating
 	delete(payload, "tool_ids")
+	delete(payload, "document_ids")
 
 	if err := h.DB.
 		Model(&entities.Chatbot{}).
@@ -128,8 +153,19 @@ func (h *Controller) Update(c fiber.Ctx) error {
 		}
 	}
 
+	// Associate documents if provided
+	if len(documentIDs) > 0 {
+		var documents []entities.Document
+		for _, id := range documentIDs {
+			documents = append(documents, entities.Document{Base: entities.Base{ID: id}})
+		}
+		if err := h.DB.Model(chatbot).Association("Documents").Replace(documents); err != nil {
+			return err
+		}
+	}
+
 	// Return the updated chatbot with associations
-	if err := h.DB.Preload("Tools").Preload("Provider").First(chatbot, c.Params("id")).Error; err != nil {
+	if err := h.DB.Preload("Tools").Preload("Provider").Preload("Documents").First(chatbot, c.Params("id")).Error; err != nil {
 		return err
 	}
 

@@ -27,8 +27,10 @@ type DatabaseConfig struct {
 
 // Config represents the complete application configuration
 type Config struct {
-	App      AppConfig      `json:"app"`
-	Database DatabaseConfig `json:"database"`
+	App       AppConfig      `json:"app"`
+	Database  DatabaseConfig `json:"database"`
+	QdrantURL string         `json:"qdrant_url"`
+	OllamaURL string         `json:"ollama_url"`
 }
 
 // Load loads configuration from .env file
@@ -56,6 +58,15 @@ func Load() (*Config, error) {
 		Port:     getEnvAsInt("DATABASE_PORT", 5432),
 		User:     getEnv("DATABASE_USER", "postgres"),
 	}
+
+	// Load Qdrant and Ollama URLs
+	qdrantHost := getEnv("QDRANT_HOST", "localhost")
+	qdrantPort := getEnv("QDRANT_PORT", "6333")
+	config.QdrantURL = "http://" + qdrantHost + ":" + qdrantPort
+
+	ollamaHost := getEnv("OLLAMA_HOST", "localhost")
+	ollamaPort := getEnv("OLLAMA_PORT", "11434")
+	config.OllamaURL = "http://" + ollamaHost + ":" + ollamaPort
 
 	return config, nil
 }

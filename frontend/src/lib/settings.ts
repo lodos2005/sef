@@ -1,7 +1,9 @@
 import {
   CloudCog,
+  FileText,
   MessageCircleMoreIcon,
   ScrollText,
+  Settings as SettingsIcon,
   Users2,
   Wrench
 } from "lucide-react"
@@ -18,7 +20,7 @@ export const Settings = {
     {
       id: "chatbots",
       title: "Chatbotlar",
-      description: "Sistemdeki chatbot türlerini yönetebilir, sistem promptlarını düzenleyebilir ve yenilerini ekleyebilirsiniz.",
+      description: "Sistemdeki chatbot türlerini yönetin, sistem promptlarını düzenleyebilir ve yenilerini ekleyebilirsiniz.",
       icon: MessageCircleMoreIcon,
       href: "/settings/chatbots",
     },
@@ -28,6 +30,20 @@ export const Settings = {
       description: "AI araçlarınızı ve yapılandırmalarınızı yönetin.",
       icon: Wrench,
       href: "/settings/tools",
+    },
+    {
+      id: "documents",
+      title: "Belgeler",
+      description: "RAG için döküman ve bilgi tabanlarını yönetin.",
+      icon: FileText,
+      href: "/settings/documents",
+    },
+    {
+      id: "embedding",
+      title: "Gömme Ayarları",
+      description: "RAG için gömme modeli ve vektör yapılandırmasını yönetin.",
+      icon: SettingsIcon,
+      href: "/settings/embedding",
     },
     {
       id: "users",

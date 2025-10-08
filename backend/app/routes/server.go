@@ -3,12 +3,16 @@ package routes
 import (
 	"sef/app/controllers/auth"
 	"sef/app/controllers/chatbots"
+	"sef/app/controllers/documents"
 	"sef/app/controllers/providers"
 	"sef/app/controllers/sessions"
+	"sef/app/controllers/settings"
 	"sef/app/controllers/tools"
 	"sef/app/controllers/users"
 	"sef/app/middleware"
 	"sef/internal/database"
+	"sef/pkg/config"
+	"sef/pkg/documentservice"
 	"sef/pkg/messaging"
 	"sef/pkg/summary"
 
@@ -125,5 +129,39 @@ func Server(app *fiber.App) {
 		// SendMessage
 		sessionsGroup.Post("/:id/messages", controller.SendMessage)
 
+	}
+
+	documentsGroup := apiV1.Group("/documents")
+	{
+		cfg, _ := config.Load()
+		docService := documentservice.NewDocumentService(
+			database.Connection(),
+			cfg.QdrantURL,
+		)
+
+		controller := &documents.Controller{
+			DB:              database.Connection(),
+			DocumentService: docService,
+		}
+
+		// All document endpoints require admin
+		documentsGroup.Use(middleware.IsSuperAdmin())
+		documentsGroup.Get("/", controller.Index)
+		documentsGroup.Get("/:id", controller.Show)
+		documentsGroup.Post("/upload", controller.Upload)
+		documentsGroup.Delete("/:id", controller.Delete)
+		documentsGroup.Post("/search", controller.Search)
+	}
+
+	settingsGroup := apiV1.Group("/settings")
+	{
+		controller := &settings.Controller{
+			DB: database.Connection(),
+		}
+
+		settingsGroup.Use(middleware.IsSuperAdmin())
+		settingsGroup.Get("/embedding", controller.GetEmbeddingConfig)
+		settingsGroup.Put("/embedding", controller.UpdateEmbeddingConfig)
+		settingsGroup.Get("/embedding/models/:provider_id", controller.ListEmbeddingModels)
 	}
 }
