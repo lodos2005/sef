@@ -24,5 +24,16 @@
         "cancel": "Cancel",
         "delete": "Delete",
         "chat_with": "Chat with {{name}}"
+    },
+    "chat": {
+        "loading_session": "Loading session...",
+        "something_went_wrong": "Something went wrong",
+        "try_again": "Try Again",
+        "ask_placeholder": "Ask me anything...",
+        "copy_message": "Response copied to clipboard.",
+        "prompt_suggestions_label": "Try these prompts ✨",
+        "default_suggestion_1": "What can you help me with?",
+        "default_suggestion_2": "Explain this concept to me",
+        "default_suggestion_3": "How do I get started?"
     }
 }

@@ -63,7 +63,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     // Prefer summary if available
     if (session.summary && session.summary.trim()) {
 
-      return session.summary.length > 25 ? session.summary.substring(0, 25) + "..." : session.summary;
+      return session.summary.length > 30 ? session.summary.substring(0, 30) + "..." : session.summary;
     }
     
     // Fallback to first user message
@@ -72,8 +72,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         (msg: any) => msg.role === "user"
       );
       if (firstUserMessage) {
-        return firstUserMessage.content.length > 25
-          ? firstUserMessage.content.substring(0, 25) + "..."
+        return firstUserMessage.content.length > 30
+          ? firstUserMessage.content.substring(0, 30) + "..."
           : firstUserMessage.content;
       }
     }
@@ -82,24 +82,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     return t("sidebar.chat_with", { name: session.chatbot?.name || "Assistant" });
   };
 
-  const handleNewChat = () => {
-    router.push("/");
-  };
-
   const isActive = (path: string) => {
     return router.asPath === path;
   };
   return (
     <Sidebar {...props} className="dark !border-none">
       <SidebarHeader>
-        <Link href="/">
-          <Icons.logo className="size-18 ml-1 -mt-2 -mb-3" />
+        <Link href="/" className="flex items-center gap-2 leading-tight">
+          <Icons.logo className="size-18 ml-[0.7rem] -mt-2 -mb-3" />
         </Link>
       </SidebarHeader>
       <SidebarContent>
         {/* Main Navigation */}
         <SidebarGroup>
-          <SidebarGroupLabel className="uppercase text-sidebar-foreground/50">
+          <SidebarGroupLabel className="uppercase text-sidebar-foreground/50 ml-[0.4rem]">
             {t("sidebar.general")}
           </SidebarGroupLabel>
           <SidebarGroupContent className="px-2">
@@ -142,7 +138,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
         {/* Chat Sessions */}
         <SidebarGroup>
-          <SidebarGroupLabel className="uppercase text-sidebar-foreground/50 flex items-center gap-2">
+          <SidebarGroupLabel className="uppercase text-sidebar-foreground/50 flex items-center gap-2 ml-[0.4rem]">
             {t("sidebar.chats")}
             {isRefreshing && (
               <div className="w-3 h-3 border border-sidebar-foreground/30 border-t-transparent rounded-full animate-spin" />

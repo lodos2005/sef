@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react"
 import { useRouter } from "next/router"
+import { useTranslation } from "react-i18next"
 import { Chat } from "@/components/ui/chat"
 import { useChatSession } from "@/hooks/useChatSession"
 import { useMessages } from "@/hooks/useMessages"
@@ -11,9 +12,17 @@ import { ChatHeader, ErrorBanner, LoadingSpinner, ErrorPage } from "@/components
 export default function ChatPage() {
   const router = useRouter()
   const { id: sessionId } = router.query
+  const { t } = useTranslation("common")
 
   const [input, setInput] = useState("")
   const [isPollingForSummary, setIsPollingForSummary] = useState(false)
+
+  // Default prompt suggestions if none are provided by the chatbot
+  const defaultSuggestions = [
+    t("chat.default_suggestion_1"),
+    t("chat.default_suggestion_2"),
+    t("chat.default_suggestion_3"),
+  ]
 
   const { 
     session, 
@@ -67,6 +76,18 @@ export default function ChatPage() {
     window.location.reload()
   }, [])
 
+  // Handle prompt suggestion click
+  const handleAppend = useCallback((message: { role: "user"; content: string }) => {
+    setInput(message.content)
+    // Trigger submit with the new content
+    sendMessage(message.content)
+  }, [sendMessage])
+
+  // Get prompt suggestions from chatbot or use defaults
+  const promptSuggestions = session?.chatbot?.prompt_suggestions && session.chatbot.prompt_suggestions.length > 0
+    ? session.chatbot.prompt_suggestions
+    : defaultSuggestions
+
   if (isLoading) {
     return <LoadingSpinner isLoading={true} />
   }
@@ -88,6 +109,8 @@ export default function ChatPage() {
           handleInputChange={handleInputChange}
           isGenerating={isGenerating}
           setMessages={setMessages}
+          append={handleAppend}
+          suggestions={promptSuggestions}
           className="h-full"
         />
       </div>

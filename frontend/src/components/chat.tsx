@@ -4,6 +4,7 @@ import { AlertCircle, Loader2 } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { SessionSummary } from "@/components/chat/session-summary"
 import { ChatSession } from "@/types/chat"
+import { useTranslation } from "react-i18next"
 
 interface ChatHeaderProps {
   session?: ChatSession
@@ -45,13 +46,15 @@ interface LoadingSpinnerProps {
 }
 
 export function LoadingSpinner({ isLoading }: LoadingSpinnerProps) {
+  const { t } = useTranslation("common")
+  
   if (!isLoading) return null
 
   return (
     <div className="flex items-center justify-center min-h-screen">
       <div className="flex flex-col items-center gap-2">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-sm text-muted-foreground">Oturum yükleniyor...</p>
+        <p className="text-sm text-muted-foreground">{t("chat.loading_session")}</p>
       </div>
     </div>
   )
@@ -63,6 +66,8 @@ interface ErrorPageProps {
 }
 
 export function ErrorPage({ error, onRetry }: ErrorPageProps) {
+  const { t } = useTranslation("common")
+  
   if (!error) return null
 
   return (
@@ -71,7 +76,7 @@ export function ErrorPage({ error, onRetry }: ErrorPageProps) {
         <CardHeader className="text-center">
           <CardTitle className="flex items-center justify-center gap-2 text-red-700">
             <AlertCircle className="h-5 w-5" />
-            Something went wrong
+            {t("chat.something_went_wrong")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -81,7 +86,7 @@ export function ErrorPage({ error, onRetry }: ErrorPageProps) {
             className="w-full"
             variant="default"
           >
-            Try Again
+            {t("chat.try_again")}
           </Button>
         </CardContent>
       </Card>

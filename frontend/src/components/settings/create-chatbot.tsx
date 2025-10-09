@@ -43,6 +43,8 @@ export default function CreateChatbot() {
   const [selectedProviderId, setSelectedProviderId] = useState<number | null>(null)
   const [selectedTools, setSelectedTools] = useState<number[]>([])
   const [selectedDocuments, setSelectedDocuments] = useState<number[]>([])
+  const [promptSuggestions, setPromptSuggestions] = useState<string[]>([])
+  const [newSuggestion, setNewSuggestion] = useState("")
 
   const formSchema = z
     .object({
@@ -118,6 +120,7 @@ export default function CreateChatbot() {
       ...values,
       tool_ids: selectedTools,
       document_ids: selectedDocuments,
+      prompt_suggestions: promptSuggestions,
     }
 
     http
@@ -133,6 +136,8 @@ export default function CreateChatbot() {
           form.reset()
           setSelectedTools([])
           setSelectedDocuments([])
+          setPromptSuggestions([])
+          setNewSuggestion("")
         } else {
           toast({
             title: t("error"),
@@ -272,6 +277,69 @@ export default function CreateChatbot() {
                 </div>
               )}
             />
+
+            <div className="flex flex-col gap-2">
+              <Label>{t("chatbots.create.prompt_suggestions", "Prompt Suggestions")}</Label>
+              <p className="text-sm text-muted-foreground">
+                {t("chatbots.create.prompt_suggestions_description", "Add suggestions that will appear when users start a new conversation")}
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  value={newSuggestion}
+                  onChange={(e) => setNewSuggestion(e.target.value)}
+                  placeholder={t("chatbots.create.add_suggestion_placeholder", "Enter a prompt suggestion...")}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault()
+                      if (newSuggestion.trim() && promptSuggestions.length < 6) {
+                        setPromptSuggestions([...promptSuggestions, newSuggestion.trim()])
+                        setNewSuggestion("")
+                      }
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (newSuggestion.trim() && promptSuggestions.length < 6) {
+                      setPromptSuggestions([...promptSuggestions, newSuggestion.trim()])
+                      setNewSuggestion("")
+                    }
+                  }}
+                  disabled={!newSuggestion.trim() || promptSuggestions.length >= 6}
+                >
+                  {t("chatbots.create.add", "Add")}
+                </Button>
+              </div>
+              {promptSuggestions.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {promptSuggestions.map((suggestion, index) => (
+                    <div
+                      key={index}
+                      className="inline-flex items-center gap-2 rounded-md border bg-muted px-3 py-1.5 text-sm"
+                    >
+                      <span>{suggestion}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPromptSuggestions(promptSuggestions.filter((_, i) => i !== index))
+                        }}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {promptSuggestions.length >= 6 && (
+                <p className="text-xs text-muted-foreground">
+                  {t("chatbots.create.max_suggestions", "Maximum 6 suggestions allowed")}
+                </p>
+              )}
+            </div>
 
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between">

@@ -190,17 +190,6 @@ export default function IndexPage() {
                 {t("continue_previous")}
               </CardDescription>
             </div>
-            {sessions.length > 5 && (
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={() => router.push('/sessions')}
-                className="gap-1"
-              >
-                {t("view_all", "Tümünü Gör")}
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            )}
           </div>
         </CardHeader>
         <CardContent>

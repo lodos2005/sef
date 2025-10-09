@@ -9,6 +9,7 @@ import {
   useEffect,
   type ReactElement
 } from "react"
+import { useTranslation } from "react-i18next"
 
 import { Button } from "@/components/ui/button"
 import { type Message } from "@/components/ui/chat-message"
@@ -65,6 +66,7 @@ export function Chat({
   setMessages,
   transcribeAudio,
 }: ChatProps) {
+  const { t } = useTranslation("common")
   const lastMessage = messages.at(-1)
   const isEmpty = messages.length === 0
   const isTyping = lastMessage?.role === "user"
@@ -161,7 +163,7 @@ export function Chat({
       actions: 
         <CopyButton
           content={message.content}
-          copyMessage="Yanıt panoya kopyalandı."
+          copyMessage="chat.copy_message"
         />,
     }),
     [onRateResponse]
@@ -175,7 +177,6 @@ export function Chat({
           <div className="h-full flex items-center justify-center">
             <div className="max-w-3xl mx-auto">
               <PromptSuggestions
-                label="Try these prompts ✨"
                 append={append}
                 suggestions={suggestions}
               />
@@ -209,7 +210,7 @@ export function Chat({
                 stop={handleStop}
                 isGenerating={isGenerating}
                 transcribeAudio={transcribeAudio}
-                placeholder="Şef'e sorun..."
+                placeholder={t("chat.ask_placeholder")}
               />
             )}
           </ChatForm>

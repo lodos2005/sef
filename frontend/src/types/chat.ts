@@ -21,5 +21,6 @@ export interface ChatSession {
     id: number
     name: string
     description: string
+    prompt_suggestions?: string[]
   }
 }

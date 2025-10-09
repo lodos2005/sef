@@ -1,5 +1,7 @@
+import { useTranslation } from "react-i18next"
+
 interface PromptSuggestionsProps {
-  label: string
+  label?: string
   append: (message: { role: "user"; content: string }) => void
   suggestions: string[]
 }
@@ -9,6 +11,9 @@ export function PromptSuggestions({
   append,
   suggestions,
 }: PromptSuggestionsProps) {
+  const { t } = useTranslation("common")
+  const displayLabel = label || t("chat.prompt_suggestions_label")
+  
   return (
     <div className="space-y-8 text-center my-8">
       <div className="inline-flex items-center bg-white rounded-full border border-black/[0.08] shadow-xs text-xs font-medium py-1 px-3 text-foreground/80">
@@ -41,7 +46,7 @@ export function PromptSuggestions({
             </clipPath>
           </defs>
         </svg>
-        {label}
+        {displayLabel}
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 text-sm">
         {suggestions.map((suggestion) => (

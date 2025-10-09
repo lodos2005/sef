@@ -41,13 +41,14 @@ func (h *Controller) Show(c fiber.Ctx) error {
 
 func (h *Controller) Create(c fiber.Ctx) error {
 	var payload struct {
-		Name         string `json:"name"`
-		Description  string `json:"description"`
-		ProviderID   uint   `json:"provider_id"`
-		SystemPrompt string `json:"system_prompt"`
-		ModelName    string `json:"model_name"`
-		ToolIDs      []uint `json:"tool_ids"`
-		DocumentIDs  []uint `json:"document_ids"`
+		Name              string   `json:"name"`
+		Description       string   `json:"description"`
+		ProviderID        uint     `json:"provider_id"`
+		SystemPrompt      string   `json:"system_prompt"`
+		ModelName         string   `json:"model_name"`
+		PromptSuggestions []string `json:"prompt_suggestions"`
+		ToolIDs           []uint   `json:"tool_ids"`
+		DocumentIDs       []uint   `json:"document_ids"`
 	}
 	if err := c.Bind().JSON(&payload); err != nil {
 		return err
@@ -55,11 +56,12 @@ func (h *Controller) Create(c fiber.Ctx) error {
 
 	// Create chatbot entity
 	chatbot := &entities.Chatbot{
-		Name:         payload.Name,
-		Description:  payload.Description,
-		ProviderID:   payload.ProviderID,
-		SystemPrompt: payload.SystemPrompt,
-		ModelName:    payload.ModelName,
+		Name:              payload.Name,
+		Description:       payload.Description,
+		ProviderID:        payload.ProviderID,
+		SystemPrompt:      payload.SystemPrompt,
+		ModelName:         payload.ModelName,
+		PromptSuggestions: payload.PromptSuggestions,
 	}
 
 	if err := h.DB.Create(chatbot).Error; err != nil {

@@ -1,6 +1,7 @@
 import { ChatSession } from "@/types/chat"
 import { useEffect, useState } from "react"
 import { Loader2 } from "lucide-react"
+import { useTranslation } from "react-i18next"
 
 interface SessionSummaryProps {
   session: ChatSession
@@ -8,13 +9,14 @@ interface SessionSummaryProps {
 }
 
 export function SessionSummary({ session, isPolling = false }: SessionSummaryProps) {
+  const { t } = useTranslation("common")
   const [displayText, setDisplayText] = useState("")
 
   useEffect(() => {
     // Update display text when session changes
-    const text = session.summary || `${session.chatbot?.name} ile Sohbet` || "Chat"
+    const text = session.summary || t("sidebar.chat_with", { name: session.chatbot?.name || "Chat" })
     setDisplayText(text)
-  }, [session.summary, session.chatbot?.name])
+  }, [session.summary, session.chatbot?.name, t])
 
   return (
     <div className="flex items-center gap-2">

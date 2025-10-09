@@ -24,5 +24,16 @@
         "cancel": "İptal",
         "delete": "Sil",
         "chat_with": "{{name}} ile Sohbet"
+    },
+    "chat": {
+        "loading_session": "Oturum yükleniyor...",
+        "something_went_wrong": "Bir şeyler yanlış gitti",
+        "try_again": "Tekrar Dene",
+        "ask_placeholder": "Şef'e sorun...",
+        "copy_message": "Yanıt panoya kopyalandı.",
+        "prompt_suggestions_label": "Bu önerileri deneyin ✨",
+        "default_suggestion_1": "Bana nasıl yardımcı olabilirsin?",
+        "default_suggestion_2": "Bu konsepti bana açıkla",
+        "default_suggestion_3": "Nasıl başlarım?"
     }
 }
