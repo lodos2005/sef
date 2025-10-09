@@ -13,17 +13,18 @@ interface ISettingCardProps {
 export default function SettingCard(props: ISettingCardProps) {
   return (
     <Link href={props.href}>
-      <Card className="h-full duration-100 ease-in hover:scale-[102%] active:scale-100">
-        <CardContent className="pt-6">
+      <Card className="group h-full relative overflow-hidden duration-300 ease-in hover:scale-[102%] hover:shadow-xl active:scale-100 hover:border-primary/50">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <CardContent className="pt-6 relative">
           <div className="flex gap-6">
-            <div className="icon self-start rounded-md bg-secondary p-3 dark:bg-secondary/10">
-              <props.icon className="size-6 text-secondary-foreground/70 dark:text-white/70" />
+            <div className="icon self-start rounded-md bg-primary/10 p-3 group-hover:bg-primary/20 transition-colors duration-300">
+              <props.icon className="size-6 text-primary group-hover:scale-110 transition-transform duration-300" />
             </div>
             <div className="content w-full">
-              <h3 className="text-lg font-semibold tracking-tight">
+              <h3 className="text-lg font-semibold tracking-tight group-hover:text-primary transition-colors duration-300">
                 {props.title}
               </h3>
-              <p className="text-gray-500">{props.description}</p>
+              <p className="text-muted-foreground">{props.description}</p>
             </div>
           </div>
         </CardContent>

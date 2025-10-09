@@ -5,4 +5,5 @@ export interface IUser {
   super_admin: boolean
   created_at?: string
   updated_at?: string
+  locale: "tr" | "en"
 }

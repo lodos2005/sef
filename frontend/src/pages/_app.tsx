@@ -19,11 +19,23 @@ import { Toaster } from "@/components/ui/sonner"
 import { cn } from "@/lib/utils"
 
 import Layout from "../components/_layout/app_layout"
+import { useCurrentUser } from "@/hooks/auth/useCurrentUser"
+
+const isBrowser = () => {
+  return typeof window !== "undefined"
+}
 
 const RootLayout: AppType = ({ Component, pageProps }: AppPropsWithLayout) => {
   const router = useRouter()
 
-  useSyncLanguage("tr")
+  const locale = isBrowser() && window.localStorage.getItem("LANGUAGE")
+  const user = useCurrentUser()
+
+  if (isBrowser()) {
+    window.localStorage.setItem("LANGUAGE", locale || user.locale || "tr")
+  }
+
+  useSyncLanguage(locale || user.locale || "tr")
 
   const { t, ready } = useTranslation("common")
   const { t: tfull } = useTranslation()

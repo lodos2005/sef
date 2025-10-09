@@ -9,6 +9,7 @@ import (
 	"sef/app/controllers/settings"
 	"sef/app/controllers/tools"
 	"sef/app/controllers/users"
+	"sef/app/entities"
 	"sef/app/middleware"
 	"sef/internal/database"
 	"sef/pkg/config"
@@ -36,6 +37,22 @@ func Server(app *fiber.App) {
 	{
 		authGroup.Get("/me", auth.CurrentUser)
 	}
+
+	apiV1.Post("/locale", func(c fiber.Ctx) error {
+		var body struct {
+			Locale string `json:"locale"`
+		}
+		if err := c.Bind().JSON(&body); err != nil {
+			return err
+		}
+
+		user := c.Locals("user").(*entities.User)
+		user.Locale = entities.Locale(body.Locale)
+		if err := database.Connection().Model(user).Where("id = ?", user.ID).Update("locale", user.Locale).Error; err != nil {
+			return fiber.ErrInternalServerError
+		}
+		return c.SendStatus(fiber.StatusOK)
+	})
 
 	userGroup := apiV1.Group("/users")
 	{

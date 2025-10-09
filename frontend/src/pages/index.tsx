@@ -57,7 +57,7 @@ export default function IndexPage() {
   return (
     <div className="flex flex-col gap-8 p-4 md:p-8 pb-20">
       {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/10 via-primary/5 to-background border">
+      <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-primary/10 via-primary/5 to-background border">
         <div className="absolute inset-0 bg-grid-white/5 [mask-image:linear-gradient(0deg,transparent,black)]" />
         <div className="relative flex flex-col md:flex-row items-center justify-between p-8 md:p-12 gap-6">
           <div className="space-y-2 text-center md:text-left">
