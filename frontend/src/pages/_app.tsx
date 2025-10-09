@@ -4,22 +4,22 @@ import "@/styles/globals.css"
 import "@/styles/nprogress.css"
 import "@/styles/radial-progress.css"
 
-import { ReactElement, ReactNode } from "react"
 import { NextPage } from "next"
 import { AppProps, AppType } from "next/app"
 import Head from "next/head"
 import { useRouter } from "next/router"
 import { appWithI18Next, useSyncLanguage } from "ni18n"
 import { ni18nConfig } from "ni18n.config"
+import { ReactElement, ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 import { z } from "zod"
 import { makeZodI18nMap } from "zod-i18n-map"
 
-import { cn } from "@/lib/utils"
-import { useCurrentUser } from "@/hooks/auth/useCurrentUser"
 import { Toaster } from "@/components/ui/sonner"
+import { cn } from "@/lib/utils"
 
 import Layout from "../components/_layout/app_layout"
+import { useCurrentUser } from "@/hooks/auth/useCurrentUser"
 
 const isBrowser = () => {
   return typeof window !== "undefined"
@@ -48,14 +48,22 @@ const RootLayout: AppType = ({ Component, pageProps }: AppPropsWithLayout) => {
         <link rel="icon" type="image/png" href="/favicon.png"></link>
       </Head>
 
-      <div className={cn("font-inter h-screen bg-foreground antialiased")}>
-        {!router.asPath.includes("/auth") ? (
-          <>{ready && <Layout Component={Component} pageProps={pageProps} />}</>
-        ) : (
-          <Component {...pageProps} key={router.route} />
-        )}
-      </div>
-      <Toaster />
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="light"
+        enableSystem={false}
+      >
+        <div className={cn("font-inter h-screen bg-foreground antialiased")}>
+          {!router.asPath.includes("/auth") ? (
+            <>
+              {ready && <Layout Component={Component} pageProps={pageProps} />}
+            </>
+          ) : (
+            <Component {...pageProps} key={router.route} />
+          )}
+        </div>
+        <Toaster />
+      </ThemeProvider>
     </>
   )
 }
