@@ -76,11 +76,18 @@ func (rs *RAGService) AugmentPrompt(ctx context.Context, userPrompt string, chat
 	}
 
 	// Build document indicators and context
+	// Filter out chunks with score below 0.62 (minimum relevance threshold)
+	const minRelevanceScore = 0.62
 	var documentsUsed []DocumentInfo
 	var contextParts []string
 	seenTitles := make(map[string]bool)
 
 	for _, result := range results {
+		// Skip chunks with low relevance scores
+		if result.Score < minRelevanceScore {
+			continue
+		}
+
 		title := ""
 		if t, ok := result.Payload["title"].(string); ok {
 			title = t
@@ -103,23 +110,25 @@ func (rs *RAGService) AugmentPrompt(ctx context.Context, userPrompt string, chat
 		contextParts = append(contextParts, text)
 	}
 
-	// Build document usage indicators for response
-	var indicators string
-	for _, doc := range documentsUsed {
-		indicators += fmt.Sprintf("<document_used>%s (Score: %.2f)</document_used>\n", doc.Title, doc.Score)
+	// If no chunks passed the relevance threshold, return original prompt
+	if len(contextParts) == 0 {
+		return &AugmentPromptResult{AugmentedPrompt: userPrompt}, nil
 	}
 
-	// Augment the prompt with retrieved context
-	augmentedPrompt := fmt.Sprintf(`%s
-Based on the following relevant documentation, please provide an accurate answer:
+	// Build context from chunks
+	contextStr := joinStrings(contextParts, "\n\n---\n\n")
 
+	// Augment the prompt with retrieved context
+	augmentedPrompt := fmt.Sprintf(`You are provided with relevant documentation to help answer the user's question accurately.
+
+=== RELEVANT DOCUMENTATION ===
 %s
+=== END OF DOCUMENTATION ===
 
 User Question: %s
 
-Please provide a comprehensive answer based on the documentation above.`,
-		indicators,
-		joinStrings(contextParts, "\n\n"),
+Please provide a comprehensive and accurate answer based on the documentation provided above. If the documentation doesn't contain relevant information, you can say so.`,
+		contextStr,
 		userPrompt)
 
 	return &AugmentPromptResult{

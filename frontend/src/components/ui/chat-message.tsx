@@ -1,7 +1,7 @@
 import React, { useMemo, useState, memo, useCallback } from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { motion } from "framer-motion"
-import { Ban, Brain, ChevronRight, Code2, Loader2, Loader2Icon, Terminal } from "lucide-react"
+import { Ban, Brain, ChevronRight, Code2, FileText, Loader2, Loader2Icon, Terminal } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import {
@@ -27,7 +27,7 @@ function parseTextForTools(content: string): MessagePart[] {
 
   try {
     const parts: MessagePart[] = []
-    const toolRegex = /<(tool_executing|tool_executed)>(.*?)<\/\1>/gi
+    const combinedRegex = /<(tool_executing|tool_executed|document_used)>(.*?)<\/\1>/gi
     let lastIndex = 0
     let match: RegExpExecArray | null
     let iterationCount = 0
@@ -36,9 +36,9 @@ function parseTextForTools(content: string): MessagePart[] {
     // Track executing tools to replace them when they complete
     const executingToolIndices = new Map<string, number>()
 
-    while ((match = toolRegex.exec(content)) !== null && iterationCount < MAX_ITERATIONS) {
+    while ((match = combinedRegex.exec(content)) !== null && iterationCount < MAX_ITERATIONS) {
       iterationCount++
-      const [fullMatch, tag, toolName] = match
+      const [fullMatch, tag, tagContent] = match
       const startIndex = match.index
 
       // Add text before the tag
@@ -49,44 +49,52 @@ function parseTextForTools(content: string): MessagePart[] {
         }
       }
 
-      const validToolName = toolName?.trim() || "Unknown Tool"
-
-      if (tag === "tool_executing") {
-        const partIndex = parts.length
+      if (tag === "document_used") {
+        const documentName = tagContent?.trim() || "Unknown Document"
         parts.push({
-          type: "tool-invocation",
-          toolInvocation: {
-            state: "call",
-            toolName: validToolName
-          },
+          type: "document-used",
+          documentName
         })
-        // Remember where this executing tool is in the parts array
-        executingToolIndices.set(validToolName, partIndex)
-      } else if (tag === "tool_executed") {
-        // Check if we have a matching executing tool to replace
-        const executingIndex = executingToolIndices.get(validToolName)
-        if (executingIndex !== undefined && executingIndex < parts.length) {
-          // Replace the executing indicator with completed indicator
-          parts[executingIndex] = {
-            type: "tool-invocation",
-            toolInvocation: {
-              state: "result",
-              toolName: validToolName,
-              result: {}
-            },
-          }
-          // Remove from tracking map
-          executingToolIndices.delete(validToolName)
-        } else {
-          // If no matching executing tool found, just add the result
+      } else {
+        const validToolName = tagContent?.trim() || "Unknown Tool"
+
+        if (tag === "tool_executing") {
+          const partIndex = parts.length
           parts.push({
             type: "tool-invocation",
             toolInvocation: {
-              state: "result",
-              toolName: validToolName,
-              result: {}
+              state: "call",
+              toolName: validToolName
             },
           })
+          // Remember where this executing tool is in the parts array
+          executingToolIndices.set(validToolName, partIndex)
+        } else if (tag === "tool_executed") {
+          // Check if we have a matching executing tool to replace
+          const executingIndex = executingToolIndices.get(validToolName)
+          if (executingIndex !== undefined && executingIndex < parts.length) {
+            // Replace the executing indicator with completed indicator
+            parts[executingIndex] = {
+              type: "tool-invocation",
+              toolInvocation: {
+                state: "result",
+                toolName: validToolName,
+                result: {}
+              },
+            }
+            // Remove from tracking map
+            executingToolIndices.delete(validToolName)
+          } else {
+            // If no matching executing tool found, just add the result
+            parts.push({
+              type: "tool-invocation",
+              toolInvocation: {
+                state: "result",
+                toolName: validToolName,
+                result: {}
+              },
+            })
+          }
         }
       }
 
@@ -237,6 +245,11 @@ interface ToolInvocationPart {
   toolInvocation: ToolInvocation
 }
 
+interface DocumentUsedPart {
+  type: "document-used"
+  documentName: string
+}
+
 interface TextPart {
   type: "text"
   text: string
@@ -262,6 +275,7 @@ type MessagePart =
   | TextPart
   | ReasoningPart
   | ToolInvocationPart
+  | DocumentUsedPart
   | SourcePart
   | FilePart
   | StepStartPart
@@ -280,6 +294,7 @@ export interface ChatMessageProps extends Message {
   showTimeStamp?: boolean
   animation?: Animation
   actions?: React.ReactNode
+  isStreaming?: boolean
 }
 
 function dataUrlToUint8Array(data: string) {
@@ -320,13 +335,15 @@ const MessageContent = memo(({
   files,
   parsedParts,
   toolInvocations,
-  content
+  content,
+  isStreaming
 }: {
   isUser: boolean
   files?: File[]
   parsedParts: MessagePart[]
   toolInvocations?: ToolInvocation[]
   content: string
+  isStreaming?: boolean
 }) => {
   if (isUser) {
     return (
@@ -359,27 +376,48 @@ const MessageContent = memo(({
         )}
 
         {parsedParts.length > 0 ? (
-          parsedParts.map((part, index) => {
-            if (part.type === "text") {
-              return (
-                <MarkdownRenderer key={`text-${index}`}>
-                  {part.text}
-                </MarkdownRenderer>
-              )
-            } else if (part.type === "reasoning") {
-              return <ReasoningBlock key={`reasoning-${index}`} part={part} />
-            } else if (part.type === "tool-invocation") {
-              return (
-                <ToolCallComponent
-                  key={`tool-${index}`}
-                  toolInvocations={[part.toolInvocation]}
-                />
-              )
-            }
-            return null
-          })
+          <>
+            {parsedParts.map((part, index) => {
+              if (part.type === "text") {
+                return (
+                  <MarkdownRenderer key={`text-${index}`}>
+                    {part.text}
+                  </MarkdownRenderer>
+                )
+              } else if (part.type === "reasoning") {
+                return <ReasoningBlock key={`reasoning-${index}`} part={part} />
+              } else if (part.type === "tool-invocation") {
+                return (
+                  <ToolCallComponent
+                    key={`tool-${index}`}
+                    toolInvocations={[part.toolInvocation]}
+                  />
+                )
+              } else if (part.type === "document-used") {
+                return (
+                  <DocumentUsedComponent
+                    key={`document-${index}`}
+                    documentName={part.documentName}
+                  />
+                )
+              }
+              return null
+            })}
+            {isStreaming && (
+              <span className="inline-flex items-center gap-1 text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin" />
+              </span>
+            )}
+          </>
         ) : (
-          <MarkdownRenderer>{content}</MarkdownRenderer>
+          <>
+            <MarkdownRenderer>{content}</MarkdownRenderer>
+            {isStreaming && (
+              <span className="inline-flex items-center gap-1 text-muted-foreground ml-1">
+                <Loader2 className="h-3 w-3 animate-spin" />
+              </span>
+            )}
+          </>
         )}
       </div>
     </>
@@ -397,6 +435,7 @@ export const ChatMessage = memo<ChatMessageProps>(({
   experimental_attachments,
   toolInvocations,
   parts,
+  isStreaming = false,
 }) => {
   const files = useMemo(() => {
     if (!experimental_attachments?.length) return undefined
@@ -437,6 +476,7 @@ export const ChatMessage = memo<ChatMessageProps>(({
             parsedParts={parsedParts}
             toolInvocations={toolInvocations}
             content={content}
+            isStreaming={!isUser && isStreaming}
           />
         </div>
 
@@ -518,6 +558,8 @@ const ReasoningBlock = memo(({ part }: { part: ReasoningPart }) => {
                   return <span key={i} className="whitespace-pre-wrap">{subPart.text}</span>
                 } else if (subPart.type === "tool-invocation") {
                   return <ToolCallComponent key={i} toolInvocations={[subPart.toolInvocation]} />
+                } else if (subPart.type === "document-used") {
+                  return <DocumentUsedComponent key={i} documentName={subPart.documentName} />
                 }
                 return null
               })}
@@ -529,6 +571,18 @@ const ReasoningBlock = memo(({ part }: { part: ReasoningPart }) => {
   )
 })
 ReasoningBlock.displayName = "ReasoningBlock"
+
+const DocumentUsedComponent = memo(({ documentName }: { documentName: string }) => {
+  return (
+    <span className="flex items-center gap-1 text-muted-foreground text-sm mb-2">
+      <FileText className="size-3" />
+      <span>
+        <span className="font-semibold">{documentName}</span> dökümanı kullanıldı
+      </span>
+    </span>
+  )
+})
+DocumentUsedComponent.displayName = "DocumentUsedComponent"
 
 const ToolCallComponent = memo(({
   toolInvocations,

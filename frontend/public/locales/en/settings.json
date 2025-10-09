@@ -79,6 +79,8 @@
         "provider": "Provider",
         "user": "User",
         "model_name": "Model Name",
+        "tools": "Tools",
+        "documents": "Documents",
         "toasts": {
             "success_msg": "The chatbot has been created successfully.",
             "edit_success_msg": "The chatbot has been edited successfully.",
@@ -101,11 +103,19 @@
             "provider": "Provider",
             "model_name": "Model Name",
             "model_name_placeholder": "gpt-3.5-turbo",
+            "system_prompt": "System Prompt",
+            "system_prompt_placeholder": "You are a helpful assistant...",
+            "tools": "Tools",
+            "documents": "Documents",
             "create": "Create"
         },
         "edit": {
             "title": "Edit Chatbot",
             "description": "You can edit the chatbot's information using this window.",
+            "system_prompt": "System Prompt",
+            "system_prompt_placeholder": "You are a helpful assistant...",
+            "tools": "Tools",
+            "documents": "Documents",
             "submit": "Edit"
         },
         "delete": {

@@ -70,10 +70,14 @@ func ChunkText(text string, strategy ChunkingStrategy) []Chunk {
 		}
 
 		// Move start position with overlap
-		start = end - strategy.ChunkOverlap
-		if start <= 0 || start >= textLen {
-			start = end
+		newStart := end - strategy.ChunkOverlap
+
+		// Ensure we always move forward to avoid infinite loops
+		if newStart <= start {
+			newStart = end
 		}
+
+		start = newStart
 	}
 
 	return chunks

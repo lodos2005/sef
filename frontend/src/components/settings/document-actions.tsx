@@ -44,6 +44,15 @@ export function DocumentRowActions({ row }: { row: Row<IDocument> }) {
   const emitter = useEmitter()
   const { t } = useTranslation("settings")
 
+  const handleProcess = async () => {
+    try {
+      await http.get(`/documents/${document.id}/process`)
+      emitter.emit("REFETCH_DOCUMENTS")
+    } catch (error) {
+      // Handle error if needed
+    }
+  }
+
   return (
     <>
       <DropdownMenu>
@@ -60,6 +69,10 @@ export function DocumentRowActions({ row }: { row: Row<IDocument> }) {
           <DropdownMenuItem onClick={() => emitter.emit("EDIT_DOCUMENT", document)}>
             <Edit className="mr-2 size-3.5" />
             {t("documents.edit_menu")}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => handleProcess()}>
+            <FileText className="mr-2 size-3.5" />
+            {t("documents.reprocess_menu")}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => setDeleteDialog(true)}>

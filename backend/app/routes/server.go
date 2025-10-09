@@ -14,6 +14,7 @@ import (
 	"sef/pkg/config"
 	"sef/pkg/documentservice"
 	"sef/pkg/messaging"
+	"sef/pkg/rag"
 	"sef/pkg/summary"
 
 	"github.com/gofiber/fiber/v3"
@@ -103,10 +104,20 @@ func Server(app *fiber.App) {
 
 	sessionsGroup := apiV1.Group("/sessions")
 	{
+		cfg, _ := config.Load()
+		docService := documentservice.NewDocumentService(
+			database.Connection(),
+			cfg.QdrantURL,
+		)
+		ragService := rag.NewRAGService(database.Connection(), docService)
+
 		controller := &sessions.Controller{
-			DB:               database.Connection(),
-			MessagingService: &messaging.MessagingService{DB: database.Connection()},
-			SummaryService:   summary.NewSummaryService(database.Connection()),
+			DB: database.Connection(),
+			MessagingService: &messaging.MessagingService{
+				DB:         database.Connection(),
+				RAGService: ragService,
+			},
+			SummaryService: summary.NewSummaryService(database.Connection()),
 		}
 
 		sessionsAdminGroup := sessionsGroup.Group("/admin")
@@ -151,6 +162,7 @@ func Server(app *fiber.App) {
 		documentsGroup.Post("/upload", controller.Upload)
 		documentsGroup.Delete("/:id", controller.Delete)
 		documentsGroup.Post("/search", controller.Search)
+		documentsGroup.Get("/:id/process", controller.ProcessManually)
 	}
 
 	settingsGroup := apiV1.Group("/settings")

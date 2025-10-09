@@ -128,6 +128,26 @@ func (h *Controller) Upload(c fiber.Ctx) error {
 	return c.JSON(document)
 }
 
+func (h *Controller) ProcessManually(c fiber.Ctx) error {
+	var document *entities.Document
+	if err := h.DB.First(&document, c.Params("id")).Error; err != nil {
+		return err
+	}
+
+	// Process document asynchronously
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+		defer cancel()
+
+		if err := h.DocumentService.ProcessDocument(ctx, document); err != nil {
+			// Log error (in production, use proper logging)
+			fmt.Printf("Error processing document %d: %v\n", document.ID, err)
+		}
+	}()
+
+	return c.JSON(fiber.Map{"message": "Document processing started"})
+}
+
 // Delete removes a document and its embeddings (admin only)
 func (h *Controller) Delete(c fiber.Ctx) error {
 	var document *entities.Document

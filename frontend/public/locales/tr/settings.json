@@ -84,6 +84,8 @@
         "provider": "Sağlayıcı",
         "user": "Kullanıcı",
         "model_name": "Model Adı",
+        "tools": "Araçlar",
+        "documents": "Dokümanlar",
         "toasts": {
             "success_msg": "Chatbot başarıyla oluşturuldu.",
             "edit_success_msg": "Chatbot başarıyla düzenlendi.",
@@ -108,6 +110,8 @@
             "model_name_placeholder": "gpt-3.5-turbo",
             "system_prompt": "Sistem Promptu",
             "system_prompt_placeholder": "Chatbot için sistem promptu girin",
+            "tools": "Araçlar",
+            "documents": "Dokümanlar",
             "create": "Oluştur"
         },
         "edit": {
@@ -115,6 +119,8 @@
             "description": "Bu pencereyi kullanarak chatbot bilgilerini düzenleyebilirsiniz.",
             "system_prompt": "Sistem Promptu",
             "system_prompt_placeholder": "Chatbot için sistem promptu girin",
+            "tools": "Araçlar",
+            "documents": "Dokümanlar",
             "submit": "Düzenle"
         },
         "delete": {

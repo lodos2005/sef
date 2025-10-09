@@ -81,7 +81,7 @@ export default function EditDocument() {
       if (doc.file_type?.includes("text") || doc.file_type?.includes("markdown")) {
         setLoadingContent(true)
         try {
-          const response = await http.get(`/api/v1/documents/${doc.id}`)
+          const response = await http.get(`/documents/${doc.id}`)
           form.setValue("title", response.data.title || "")
           form.setValue("description", response.data.description || "")
           form.setValue("content", response.data.content || "")
@@ -127,7 +127,7 @@ export default function EditDocument() {
         formData.append("description", values.description)
       }
 
-      await http.patch(`/api/v1/documents/${document.id}`, formData, {
+      await http.patch(`/documents/${document.id}`, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },

@@ -8,6 +8,7 @@ import (
 	"sef/pkg/ollama"
 	"sef/pkg/qdrant"
 
+	"github.com/gofiber/fiber/v3/log"
 	"gorm.io/gorm"
 )
 
@@ -68,6 +69,8 @@ func (ds *DocumentService) ProcessDocument(ctx context.Context, document *entiti
 		return fmt.Errorf("failed to update document status: %w", err)
 	}
 
+	log.Infof("Processing document ID %d", document.ID)
+
 	// Get embedding provider and model
 	provider, embedModel, err := ds.GetEmbeddingProvider(ctx)
 	if err != nil {
@@ -93,19 +96,25 @@ func (ds *DocumentService) ProcessDocument(ctx context.Context, document *entiti
 		return fmt.Errorf("failed to check collection: %w", err)
 	}
 
+	log.Infof("Ensuring Qdrant collection '%s' exists", GlobalCollectionName)
+
 	if !exists {
 		if err := ds.QdrantClient.CreateCollection(GlobalCollectionName, vectorSize, "Cosine"); err != nil {
 			return fmt.Errorf("failed to create collection: %w", err)
 		}
 	}
 
+	log.Infof("Chunking document ID %d", document.ID)
 	// Chunk the document
 	chunks := chunking.ChunkText(document.Content, chunking.DefaultStrategy())
 	document.ChunkCount = len(chunks)
 
+	log.Infof("Document ID %d chunked into %d chunks", document.ID, len(chunks))
+
 	// Generate embeddings for chunks
 	var points []qdrant.Point
 	for _, chunk := range chunks {
+		log.Infof("Generating embedding for document ID %d, chunk %d", document.ID, chunk.Index)
 		embedding, err := ollamaClient.GenerateEmbedding(ctx, embedModel, chunk.Text)
 		if err != nil {
 			document.Status = "failed"
@@ -127,12 +136,16 @@ func (ds *DocumentService) ProcessDocument(ctx context.Context, document *entiti
 		points = append(points, point)
 	}
 
+	log.Infof("Generated %d embeddings for document ID %d", len(points), document.ID)
+
 	// Upsert points to Qdrant
 	if err := ds.QdrantClient.UpsertPoints(GlobalCollectionName, points); err != nil {
 		document.Status = "failed"
 		ds.DB.Save(document)
 		return fmt.Errorf("failed to upsert points: %w", err)
 	}
+
+	log.Infof("Upserted %d points to Qdrant for document ID %d", len(points), document.ID)
 
 	// Update document status
 	document.Status = "ready"

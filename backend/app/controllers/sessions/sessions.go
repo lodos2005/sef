@@ -9,6 +9,7 @@ import (
 	"sef/internal/search"
 	"sef/pkg/messaging"
 	"sef/pkg/providers"
+	"sef/pkg/rag"
 	"sef/pkg/summary"
 	"strings"
 
@@ -176,16 +177,16 @@ func (h *Controller) SendMessage(c fiber.Ctx) error {
 	}
 
 	// Prepare chat messages
-	messages := h.MessagingService.PrepareChatMessages(session, req.Content)
+	messages, ragResult := h.MessagingService.PrepareChatMessages(session, req.Content)
 
 	// Generate and stream response
-	return h.streamChatResponse(c, session, messages, sessionID, user.ID)
+	return h.streamChatResponse(c, session, messages, ragResult, sessionID, user.ID)
 }
 
 // streamChatResponse handles the streaming chat response
-func (h *Controller) streamChatResponse(c fiber.Ctx, session *entities.Session, messages []providers.ChatMessage, sessionID uint, userID uint) error {
+func (h *Controller) streamChatResponse(c fiber.Ctx, session *entities.Session, messages []providers.ChatMessage, ragResult *rag.AugmentPromptResult, sessionID uint, userID uint) error {
 	// Generate response stream
-	stream, finalMessage, err := h.MessagingService.GenerateChatResponse(session, messages)
+	stream, finalMessage, err := h.MessagingService.GenerateChatResponse(session, messages, ragResult)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),

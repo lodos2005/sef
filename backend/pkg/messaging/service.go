@@ -8,6 +8,7 @@ import (
 	"sef/app/entities"
 	"sef/internal/validation"
 	"sef/pkg/providers"
+	"sef/pkg/rag"
 	"sef/pkg/toolrunners"
 	"strconv"
 	"strings"
@@ -22,7 +23,8 @@ type SendMessageRequest struct {
 }
 
 type MessagingService struct {
-	DB *gorm.DB
+	DB         *gorm.DB
+	RAGService *rag.RAGService
 }
 
 type MessagingServiceInterface interface {
@@ -32,10 +34,10 @@ type MessagingServiceInterface interface {
 	LoadSessionWithChatbotAndMessages(sessionID, userID uint) (*entities.Session, error)
 	LoadSessionWithChatbotToolsAndMessages(sessionID, userID uint) (*entities.Session, error)
 	SaveUserMessage(sessionID uint, content string) error
-	PrepareChatMessages(session *entities.Session, userContent string) []providers.ChatMessage
+	PrepareChatMessages(session *entities.Session, userContent string) ([]providers.ChatMessage, *rag.AugmentPromptResult)
 	CreateAssistantMessage(sessionID uint) (*entities.Message, error)
 	CreateToolMessage(sessionID uint, content string) (*entities.Message, error)
-	GenerateChatResponse(session *entities.Session, messages []providers.ChatMessage) (<-chan string, *entities.Message, error)
+	GenerateChatResponse(session *entities.Session, messages []providers.ChatMessage, ragResult *rag.AugmentPromptResult) (<-chan string, *entities.Message, error)
 	UpdateAssistantMessage(assistantMessage *entities.Message, content string)
 	UpdateAssistantMessageWithCallback(assistantMessage *entities.Message, content string, callback func())
 	ConvertToolsToDefinitions(tools []entities.Tool) []providers.ToolDefinition
@@ -259,12 +261,17 @@ func cleanAssistantContent(content string) string {
 	re = regexp.MustCompile(`<tool_executed>.*?</tool_executed>`)
 	content = re.ReplaceAllString(content, "")
 
-	return content
+	// Remove <document_used> tags and content
+	re = regexp.MustCompile(`<document_used>.*?</document_used>`)
+	content = re.ReplaceAllString(content, "")
+
+	return strings.TrimSpace(content)
 }
 
 // PrepareChatMessages prepares the messages array for the chat API
-func (s *MessagingService) PrepareChatMessages(session *entities.Session, userContent string) []providers.ChatMessage {
+func (s *MessagingService) PrepareChatMessages(session *entities.Session, userContent string) ([]providers.ChatMessage, *rag.AugmentPromptResult) {
 	var messages []providers.ChatMessage
+	var ragResult *rag.AugmentPromptResult
 
 	// Add system message if system prompt exists
 	if session.Chatbot.SystemPrompt != "" {
@@ -282,13 +289,35 @@ func (s *MessagingService) PrepareChatMessages(session *entities.Session, userCo
 		})
 	}
 
-	// Add current user message
+	// Check if RAG is available and augment the user message if needed
+	augmentedContent := userContent
+	if s.RAGService != nil {
+		// Check if chatbot has documents
+		isAvailable, err := s.RAGService.IsRAGAvailable(session.Chatbot.ID)
+		if err != nil {
+			log.Warn("Failed to check RAG availability:", err)
+		} else if isAvailable {
+			// Augment the prompt with RAG context
+			// Using 5 chunks provides good context while staying within token limits
+			chunkLimit := 5
+			result, err := s.RAGService.AugmentPrompt(context.Background(), userContent, session.Chatbot.ID, chunkLimit)
+			if err != nil {
+				log.Warn("Failed to augment prompt with RAG:", err)
+			} else if result != nil {
+				augmentedContent = result.AugmentedPrompt
+				ragResult = result
+				log.Info("RAG augmented prompt with", len(result.DocumentsUsed), "documents and", chunkLimit, "chunks")
+			}
+		}
+	}
+
+	// Add current user message (possibly augmented with RAG context)
 	messages = append(messages, providers.ChatMessage{
 		Role:    "user",
-		Content: userContent,
+		Content: augmentedContent,
 	})
 
-	return messages
+	return messages, ragResult
 }
 
 // CreateAssistantMessage creates an empty assistant message record
@@ -399,7 +428,7 @@ func (s *MessagingService) processToolCalls(session *entities.Session, toolCalls
 }
 
 // GenerateChatResponse generates the chat response stream with infinite tool call chain support
-func (s *MessagingService) GenerateChatResponse(session *entities.Session, messages []providers.ChatMessage) (<-chan string, *entities.Message, error) {
+func (s *MessagingService) GenerateChatResponse(session *entities.Session, messages []providers.ChatMessage, ragResult *rag.AugmentPromptResult) (<-chan string, *entities.Message, error) {
 	// Create provider instance
 	factory := &providers.ProviderFactory{}
 	providerConfig := map[string]interface{}{
@@ -471,6 +500,16 @@ func (s *MessagingService) GenerateChatResponse(session *entities.Session, messa
 		var assistantContent strings.Builder
 		thinkingStarted := false
 		currentMessages := messages
+
+		// Stream document used indicators if RAG was used
+		if ragResult != nil && len(ragResult.DocumentsUsed) > 0 {
+			for _, doc := range ragResult.DocumentsUsed {
+				docTag := fmt.Sprintf("<document_used>%s (Skor: %.2f)</document_used>", doc.Title, doc.Score)
+				outputCh <- docTag
+				// Note: We stream this to frontend but DON'T add to assistantContent
+				// so it won't be saved to DB (cleanAssistantContent will remove it anyway)
+			}
+		}
 
 		// Keep-alive ticker to prevent timeouts
 		keepAliveTicker := time.NewTicker(30 * time.Second)

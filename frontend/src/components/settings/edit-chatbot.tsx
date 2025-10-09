@@ -28,6 +28,7 @@ import { useToast } from "../ui/use-toast"
 import { IChatbot } from "@/types/chatbot"
 import { IProvider } from "@/types/provider"
 import { ITool } from "@/types/tool"
+import { IDocument } from "@/types/document"
 
 export default function EditChatbot() {
   const { toast } = useToast()
@@ -37,8 +38,10 @@ export default function EditChatbot() {
   const [providers, setProviders] = useState<IProvider[]>([])
   const [models, setModels] = useState<string[]>([])
   const [tools, setTools] = useState<ITool[]>([])
+  const [documents, setDocuments] = useState<IDocument[]>([])
   const [selectedProviderId, setSelectedProviderId] = useState<number | null>(null)
   const [selectedTools, setSelectedTools] = useState<number[]>([])
+  const [selectedDocuments, setSelectedDocuments] = useState<number[]>([])
 
   const formSchema = z
     .object({
@@ -88,6 +91,13 @@ export default function EditChatbot() {
     }).catch((e) => {
       console.error('Error fetching tools:', e)
     })
+
+    // Fetch documents
+    http.get('/documents?per_page=99999&status=ready').then((res) => {
+      setDocuments(res.data.records || [])
+    }).catch((e) => {
+      console.error('Error fetching documents:', e)
+    })
   }, [])
 
   const fetchModels = (providerId: number) => {
@@ -108,6 +118,7 @@ export default function EditChatbot() {
     const payload = {
       ...values,
       tool_ids: selectedTools,
+      document_ids: selectedDocuments,
     }
 
     http
@@ -122,6 +133,7 @@ export default function EditChatbot() {
           setOpen(false)
           form.reset()
           setSelectedTools([])
+          setSelectedDocuments([])
         } else {
           toast({
             title: t("error"),
@@ -151,6 +163,7 @@ export default function EditChatbot() {
       setSelectedProviderId(d.provider_id)
       fetchModels(d.provider_id)
       setSelectedTools(d.tools?.map(tool => tool.id) || [])
+      setSelectedDocuments(d.documents?.map(doc => doc.id) || [])
       form.reset({
         id: d.id,
         name: d.name,
@@ -323,6 +336,57 @@ export default function EditChatbot() {
                 ))}
                 {tools.length === 0 && (
                   <p className="text-sm text-muted-foreground">Henüz araç tanımlanmamış.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <Label>{t("chatbots.edit.documents")}</Label>
+                {documents.length > 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (selectedDocuments.length === documents.length) {
+                        setSelectedDocuments([])
+                      } else {
+                        setSelectedDocuments(documents.map(doc => doc.id))
+                      }
+                    }}
+                  >
+                    {selectedDocuments.length === documents.length ? "Deselect All" : "Select All"}
+                  </Button>
+                )}
+              </div>
+              <div className="space-y-2 max-h-40 overflow-y-auto border rounded-md p-3">
+                {documents.map((doc) => (
+                  <div key={doc.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`document-${doc.id}`}
+                      checked={selectedDocuments.includes(doc.id)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedDocuments([...selectedDocuments, doc.id])
+                        } else {
+                          setSelectedDocuments(selectedDocuments.filter(id => id !== doc.id))
+                        }
+                      }}
+                    />
+                    <label
+                      htmlFor={`document-${doc.id}`}
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      {doc.title}
+                    </label>
+                    <span className="text-xs text-muted-foreground">
+                      ({doc.file_name})
+                    </span>
+                  </div>
+                ))}
+                {documents.length === 0 && (
+                  <p className="text-sm text-muted-foreground">Henüz doküman tanımlanmamış.</p>
                 )}
               </div>
             </div>

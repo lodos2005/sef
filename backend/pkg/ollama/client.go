@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/gofiber/fiber/v3/log"
 )
 
 // OllamaClient handles Ollama API interactions
@@ -351,6 +353,8 @@ func (oc *OllamaClient) GenerateEmbedding(ctx context.Context, model string, tex
 		Model:  model,
 		Prompt: text,
 	}
+
+	log.Info("Embedding request to Ollama model: ", req)
 
 	reqBody, err := json.Marshal(req)
 	if err != nil {

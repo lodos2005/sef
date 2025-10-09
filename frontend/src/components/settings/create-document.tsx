@@ -117,7 +117,7 @@ export default function CreateDocument() {
         }
       }
 
-      await http.post("/api/v1/documents/upload", formData, {
+      await http.post("/documents/upload", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
