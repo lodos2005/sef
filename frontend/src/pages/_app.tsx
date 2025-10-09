@@ -53,7 +53,7 @@ const RootLayout: AppType = ({ Component, pageProps }: AppPropsWithLayout) => {
         defaultTheme="light"
         enableSystem={false}
       >
-        <div className={cn("font-inter h-screen bg-foreground antialiased")}>
+        <div className={cn("font-inter h-screen bg-background antialiased")}>
           {!router.asPath.includes("/auth") ? (
             <>
               {ready && <Layout Component={Component} pageProps={pageProps} />}
