@@ -6,6 +6,7 @@ import (
 	"sef/app/entities"
 	"sef/pkg/documentservice"
 
+	"github.com/gofiber/fiber/v3/log"
 	"gorm.io/gorm"
 )
 
@@ -38,7 +39,7 @@ type AugmentPromptResult struct {
 // AugmentPrompt retrieves relevant context and augments the user's prompt
 func (rs *RAGService) AugmentPrompt(ctx context.Context, userPrompt string, chatbotID uint, limit int) (*AugmentPromptResult, error) {
 	if limit == 0 {
-		limit = 3 // Default to 3 most relevant chunks
+		limit = 7 // Default to 7 most relevant chunks
 	}
 
 	// Get chatbot with documents
@@ -70,24 +71,40 @@ func (rs *RAGService) AugmentPrompt(ctx context.Context, userPrompt string, chat
 		return &AugmentPromptResult{AugmentedPrompt: userPrompt}, err
 	}
 
+	for _, r := range results {
+		log.Info("RAG chunk score: ", r.Score, " title: ", r.Payload["title"])
+	}
+
 	// If no relevant context found, return original prompt
 	if len(results) == 0 {
 		return &AugmentPromptResult{AugmentedPrompt: userPrompt}, nil
 	}
 
 	// Build document indicators and context
-	// Filter out chunks with score below 0.62 (minimum relevance threshold)
-	const minRelevanceScore = 0.62
+	// First pass: identify which documents have at least one chunk above the threshold
+	const minRelevanceScore = 0.65
+	qualifyingTitles := make(map[string]float32) // map of title to highest score
+
+	for _, result := range results {
+		title := ""
+		if t, ok := result.Payload["title"].(string); ok {
+			title = t
+		}
+
+		// Track if this document has a chunk that surpasses the threshold
+		if result.Score >= minRelevanceScore {
+			if existingScore, exists := qualifyingTitles[title]; !exists || result.Score > existingScore {
+				qualifyingTitles[title] = result.Score
+			}
+		}
+	}
+
+	// Second pass: include all chunks from qualifying documents
 	var documentsUsed []DocumentInfo
 	var contextParts []string
 	seenTitles := make(map[string]bool)
 
 	for _, result := range results {
-		// Skip chunks with low relevance scores
-		if result.Score < minRelevanceScore {
-			continue
-		}
-
 		title := ""
 		if t, ok := result.Payload["title"].(string); ok {
 			title = t
@@ -98,11 +115,16 @@ func (rs *RAGService) AugmentPrompt(ctx context.Context, userPrompt string, chat
 			text = txt
 		}
 
-		// Track unique documents used
+		// Only include chunks from documents that have at least one chunk above threshold
+		if _, isQualifying := qualifyingTitles[title]; !isQualifying {
+			continue
+		}
+
+		// Track unique documents used (use the highest score for the document)
 		if !seenTitles[title] {
 			documentsUsed = append(documentsUsed, DocumentInfo{
 				Title: title,
-				Score: result.Score,
+				Score: qualifyingTitles[title],
 			})
 			seenTitles[title] = true
 		}
@@ -127,7 +149,7 @@ func (rs *RAGService) AugmentPrompt(ctx context.Context, userPrompt string, chat
 
 User Question: %s
 
-Please provide a comprehensive and accurate answer based on the documentation provided above. If the documentation doesn't contain relevant information, you can say so.`,
+Please provide a comprehensive and accurate answer based on the documentation provided above. If documentation has missing parts and you are unsure, please indicate that in your response.`,
 		contextStr,
 		userPrompt)
 

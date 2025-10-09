@@ -298,8 +298,8 @@ func (s *MessagingService) PrepareChatMessages(session *entities.Session, userCo
 			log.Warn("Failed to check RAG availability:", err)
 		} else if isAvailable {
 			// Augment the prompt with RAG context
-			// Using 5 chunks provides good context while staying within token limits
-			chunkLimit := 5
+			// Using 7 chunks provides good context while staying within token limits
+			chunkLimit := 7
 			result, err := s.RAGService.AugmentPrompt(context.Background(), userContent, session.Chatbot.ID, chunkLimit)
 			if err != nil {
 				log.Warn("Failed to augment prompt with RAG:", err)

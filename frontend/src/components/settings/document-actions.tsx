@@ -103,7 +103,7 @@ function DeleteDialog({
   const handleDelete = async () => {
     setLoading(true)
     try {
-      await http.delete(`/api/v1/documents/${document.id}`)
+      await http.delete(`/documents/${document.id}`)
 
       toast({
         description: t("documents.delete.success"),
