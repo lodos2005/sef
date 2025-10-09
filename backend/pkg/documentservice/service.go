@@ -7,6 +7,7 @@ import (
 	"sef/pkg/chunking"
 	"sef/pkg/ollama"
 	"sef/pkg/qdrant"
+	"strings"
 
 	"github.com/gofiber/fiber/v3/log"
 	"gorm.io/gorm"
@@ -105,14 +106,25 @@ func (ds *DocumentService) ProcessDocument(ctx context.Context, document *entiti
 	}
 
 	log.Infof("Chunking document ID %d", document.ID)
-	// Chunk the document
-	chunks := chunking.ChunkText(document.Content, chunking.DefaultStrategy())
+
+	// Auto-detect best chunking strategy based on document characteristics
+	strategy := ds.detectChunkingStrategy(document)
+	log.Infof("Using %s chunking strategy for document ID %d", strategy, document.ID)
+
+	// Chunk the document with detected strategy
+	var chunks []chunking.Chunk
+	if strategy == "smart" {
+		chunks = chunking.ChunkWithHeaders(document.Content, chunking.SmartStrategy())
+	} else {
+		chunks = chunking.ChunkText(document.Content, chunking.DefaultStrategy())
+	}
 	document.ChunkCount = len(chunks)
 
 	log.Infof("Document ID %d chunked into %d chunks", document.ID, len(chunks))
 
 	// Generate embeddings for chunks
 	var points []qdrant.Point
+	totalChunks := len(chunks)
 	for _, chunk := range chunks {
 		log.Infof("Generating embedding for document ID %d, chunk %d", document.ID, chunk.Index)
 		embedding, err := ollamaClient.GenerateEmbedding(ctx, embedModel, chunk.Text)
@@ -122,14 +134,20 @@ func (ds *DocumentService) ProcessDocument(ctx context.Context, document *entiti
 			return fmt.Errorf("failed to generate embedding for chunk %d: %w", chunk.Index, err)
 		}
 
+		// Calculate relative position for better context awareness
+		relativePosition := float64(chunk.Index) / float64(totalChunks)
+
 		point := qdrant.Point{
 			ID:     fmt.Sprintf("%d_%d", document.ID, chunk.Index),
 			Vector: embedding,
 			Payload: map[string]interface{}{
-				"document_id": document.ID,
-				"chunk_index": chunk.Index,
-				"text":        chunk.Text,
-				"title":       document.Title,
+				"document_id":       document.ID,
+				"chunk_index":       chunk.Index,
+				"text":              chunk.Text,
+				"title":             document.Title,
+				"char_count":        len(chunk.Text),
+				"relative_position": relativePosition, // Where in document (0.0-1.0)
+				"total_chunks":      totalChunks,
 			},
 		}
 
@@ -208,11 +226,28 @@ func (ds *DocumentService) DeleteDocument(ctx context.Context, document *entitie
 	return nil
 }
 
+// preprocessQuery normalizes and enhances the query for better semantic matching
+func preprocessQuery(query string) string {
+	// Trim whitespace
+	query = strings.TrimSpace(query)
+
+	// Convert to lowercase for more consistent matching
+	// Note: This should match how documents are processed if they're also lowercased
+
+	// Remove redundant whitespace
+	query = strings.Join(strings.Fields(query), " ")
+
+	return query
+}
+
 // GetRelevantContext retrieves relevant document chunks for a query with document metadata
 func (ds *DocumentService) GetRelevantContext(ctx context.Context, query string, documentIDs []uint, limit int) ([]qdrant.SearchResult, error) {
 	if len(documentIDs) == 0 {
 		return []qdrant.SearchResult{}, nil
 	}
+
+	// Preprocess the query for better matching
+	processedQuery := preprocessQuery(query)
 
 	// Build filter for specific documents
 	shouldFilters := []map[string]interface{}{}
@@ -229,11 +264,141 @@ func (ds *DocumentService) GetRelevantContext(ctx context.Context, query string,
 		"should": shouldFilters,
 	}
 
-	// Search for relevant chunks
-	results, err := ds.SearchDocuments(ctx, query, limit, filter)
+	// Search for relevant chunks using processed query
+	results, err := ds.SearchDocuments(ctx, processedQuery, limit, filter)
 	if err != nil {
 		return nil, err
 	}
 
 	return results, nil
+}
+
+// detectChunkingStrategy analyzes document content to choose optimal chunking strategy
+func (ds *DocumentService) detectChunkingStrategy(document *entities.Document) string {
+	content := document.Content
+	title := strings.ToLower(document.Title)
+
+	// Count indicators for structured content
+	headerCount := 0
+	listCount := 0
+	codeBlockCount := 0
+	lines := strings.Split(content, "\n")
+
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+
+		// Check for headers (short lines followed by content)
+		if len(trimmed) > 0 && len(trimmed) < 100 {
+			if i < len(lines)-1 && len(strings.TrimSpace(lines[i+1])) > 0 {
+				// Patterns that suggest headers
+				if strings.HasSuffix(trimmed, ":") ||
+					strings.HasPrefix(trimmed, "#") ||
+					strings.HasPrefix(trimmed, "##") ||
+					isAllUpperCase(trimmed) {
+					headerCount++
+				}
+			}
+		}
+
+		// Check for lists
+		if strings.HasPrefix(trimmed, "-") ||
+			strings.HasPrefix(trimmed, "*") ||
+			strings.HasPrefix(trimmed, "•") ||
+			(len(trimmed) > 2 && trimmed[0] >= '0' && trimmed[0] <= '9' && (trimmed[1] == '.' || trimmed[1] == ')')) {
+			listCount++
+		}
+
+		// Check for code blocks
+		if strings.HasPrefix(trimmed, "```") ||
+			strings.HasPrefix(trimmed, "    ") && len(trimmed) > 4 { // Indented code
+			codeBlockCount++
+		}
+	}
+
+	// Calculate document metrics
+	lineCount := len(lines)
+	avgLineLength := 0
+	if lineCount > 0 {
+		avgLineLength = len(content) / lineCount
+	}
+
+	// Decision logic
+	structureScore := 0
+
+	// Technical documentation indicators
+	if strings.Contains(title, "doc") ||
+		strings.Contains(title, "guide") ||
+		strings.Contains(title, "manual") ||
+		strings.Contains(title, "api") ||
+		strings.Contains(title, "reference") {
+		structureScore += 2
+	}
+
+	// Code/technical content indicators
+	if strings.Contains(title, "code") ||
+		strings.Contains(title, "tutorial") ||
+		strings.Contains(title, "example") ||
+		codeBlockCount > 5 {
+		structureScore += 2
+	}
+
+	// High header density suggests structured content
+	headerDensity := float64(headerCount) / float64(lineCount)
+	if headerDensity > 0.05 { // More than 5% of lines are headers
+		structureScore += 3
+	} else if headerDensity > 0.02 { // More than 2% are headers
+		structureScore += 1
+	}
+
+	// List density
+	listDensity := float64(listCount) / float64(lineCount)
+	if listDensity > 0.15 { // More than 15% are list items
+		structureScore += 2
+	}
+
+	// Short average line length suggests structured content
+	if avgLineLength < 60 {
+		structureScore += 1
+	}
+
+	// Multiple sections/headers indicate structured document
+	if headerCount > 5 {
+		structureScore += 2
+	}
+
+	// Decision: Use smart strategy if structure score is high enough
+	if structureScore >= 5 {
+		log.Infof("Document ID %d: Detected structured content (score: %d, headers: %d, lists: %d)",
+			document.ID, structureScore, headerCount, listCount)
+		return "smart"
+	}
+
+	log.Infof("Document ID %d: Using standard chunking (score: %d, headers: %d, lists: %d)",
+		document.ID, structureScore, headerCount, listCount)
+	return "standard"
+}
+
+// isAllUpperCase checks if a string is mostly uppercase
+func isAllUpperCase(s string) bool {
+	if len(s) < 3 {
+		return false
+	}
+
+	upperCount := 0
+	letterCount := 0
+
+	for _, r := range s {
+		if (r >= 'A' && r <= 'Z') || (r >= 'a' && r <= 'z') {
+			letterCount++
+			if r >= 'A' && r <= 'Z' {
+				upperCount++
+			}
+		}
+	}
+
+	if letterCount == 0 {
+		return false
+	}
+
+	return float64(upperCount)/float64(letterCount) > 0.8
 }

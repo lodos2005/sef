@@ -299,14 +299,13 @@ func (s *MessagingService) PrepareChatMessages(session *entities.Session, userCo
 		} else if isAvailable {
 			// Augment the prompt with RAG context
 			// Using 7 chunks provides good context while staying within token limits
-			chunkLimit := 7
-			result, err := s.RAGService.AugmentPrompt(context.Background(), userContent, session.Chatbot.ID, chunkLimit)
+			result, err := s.RAGService.AugmentPrompt(context.Background(), userContent, session.Chatbot.ID, 0)
 			if err != nil {
 				log.Warn("Failed to augment prompt with RAG:", err)
 			} else if result != nil {
 				augmentedContent = result.AugmentedPrompt
 				ragResult = result
-				log.Info("RAG augmented prompt with", len(result.DocumentsUsed), "documents and", chunkLimit, "chunks")
+				log.Info("RAG augmented prompt with", len(result.DocumentsUsed), "documents")
 			}
 		}
 	}

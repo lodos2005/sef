@@ -22,10 +22,11 @@ type ChunkingStrategy struct {
 }
 
 // DefaultStrategy returns a sensible default chunking strategy
+// Optimized for better semantic search results
 func DefaultStrategy() ChunkingStrategy {
 	return ChunkingStrategy{
-		ChunkSize:       1000,
-		ChunkOverlap:    200,
+		ChunkSize:       512, // Smaller chunks for more focused semantic meaning
+		ChunkOverlap:    128, // 25% overlap to maintain context across boundaries
 		SplitOnSentence: true,
 	}
 }
@@ -60,11 +61,18 @@ func ChunkText(text string, strategy ChunkingStrategy) []Chunk {
 
 		chunkText := strings.TrimSpace(text[start:end])
 		if chunkText != "" {
+			// Add context metadata to help with semantic search
+			metadata := map[string]interface{}{
+				"char_count": len(chunkText),
+				"word_count": len(strings.Fields(chunkText)),
+			}
+
 			chunks = append(chunks, Chunk{
-				Text:  chunkText,
-				Index: index,
-				Start: start,
-				End:   end,
+				Text:     chunkText,
+				Index:    index,
+				Start:    start,
+				End:      end,
+				Metadata: metadata,
 			})
 			index++
 		}

@@ -102,13 +102,14 @@ func Server(app *fiber.App) {
 		toolsGroup.Post("/:id/generate-jq", controller.GenerateJq)
 	}
 
+	cfg, _ := config.Load()
+	docService := documentservice.NewDocumentService(
+		database.Connection(),
+		cfg.QdrantURL,
+	)
+
 	sessionsGroup := apiV1.Group("/sessions")
 	{
-		cfg, _ := config.Load()
-		docService := documentservice.NewDocumentService(
-			database.Connection(),
-			cfg.QdrantURL,
-		)
 		ragService := rag.NewRAGService(database.Connection(), docService)
 
 		controller := &sessions.Controller{
@@ -144,12 +145,6 @@ func Server(app *fiber.App) {
 
 	documentsGroup := apiV1.Group("/documents")
 	{
-		cfg, _ := config.Load()
-		docService := documentservice.NewDocumentService(
-			database.Connection(),
-			cfg.QdrantURL,
-		)
-
 		controller := &documents.Controller{
 			DB:              database.Connection(),
 			DocumentService: docService,
