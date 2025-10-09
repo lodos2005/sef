@@ -95,7 +95,7 @@ export function DataTableToolbar<TData, TValue>({
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Tabloyu dışa aktar</p>
+                <p>{t('export')}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

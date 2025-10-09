@@ -151,7 +151,7 @@ export default function CreateDocument() {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button>
+        <Button variant="outline" size="sm" className="ml-auto h-8 lg:flex">
           <PlusCircle className="mr-2 size-4" />
           {t("documents.create.button")}
         </Button>

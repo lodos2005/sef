@@ -18,8 +18,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { cn } from "@/lib/utils"
+import { MessageList } from "@/components/ui/message-list"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Message } from "@/components/ui/chat-message"
 
 export default function SessionSettingsPage() {
   const [refetchTrigger, setRefetchTrigger] = useState<number>(0)
@@ -64,9 +65,9 @@ export default function SessionSettingsPage() {
     {
       accessorKey: "created_at",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Oluşturulma Tarihi" />
+        <DataTableColumnHeader column={column} title={t("sessions.created_at")} />
       ),
-      title: "Oluşturulma Tarihi",
+      title: t("sessions.created_at"),
       cell: ({ row }) => (
         <span>{new Date(row.original.created_at || "").toLocaleString("tr-TR")}</span>
       ),
@@ -74,7 +75,7 @@ export default function SessionSettingsPage() {
     {
       id: "actions",
       cell: ({ row }) => (
-        <div className="flex justify-center">
+        <div className="flex justify-end">
           <ChatHistoryDialog session={row.original} />
         </div>
       ),
@@ -108,58 +109,52 @@ function ChatHistoryDialog({ session }: { session: ISession }) {
   const [open, setOpen] = useState(false)
   const { t } = useTranslation("settings")
 
+  // Convert session messages to Message format
+  const messages: Message[] = (session.messages || [])
+    .sort((a, b) => new Date(a.created_at || "").getTime() - new Date(b.created_at || "").getTime())
+    .map((msg) => ({
+      id: msg.id?.toString() || "",
+      role: msg.role as "user" | "assistant",
+      content: msg.content,
+      createdAt: msg.created_at ? new Date(msg.created_at) : undefined,
+    }))
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
           <MessageSquare className="mr-2 size-4" />
-          Görüşmeyi İncele
+          {t("sessions.view_conversation")}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-[72rem!important] h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
-            Görüşme Geçmişi - {session.user?.username} & {session.chatbot?.name}
+            {t("sessions.conversation_history")} - {session.user?.username} & {session.chatbot?.name}
           </DialogTitle>
           <DialogDescription>
-            {session.user?.username} ile {session.chatbot?.name} arasındaki görüşme
+            {t("sessions.conversation_between", { 
+              user: session.user?.username, 
+              chatbot: session.chatbot?.name 
+            })}
           </DialogDescription>
         </DialogHeader>
-                <div className="space-y-4 mt-4">
-          {session.messages && session.messages.length > 0 ? (
-            session.messages
-              .sort((a, b) => new Date(a.created_at || "").getTime() - new Date(b.created_at || "").getTime())
-              .map((message) => (
-                <div
-                  key={message.id}
-                  className={cn(
-                    "flex gap-3 rounded-lg p-3",
-                    message.role === "user"
-                      ? "bg-primary/10 ml-12"
-                      : "bg-muted mr-12"
-                  )}
-                >
-                  <Avatar className="size-8">
-                    <AvatarFallback>
-                      {message.role === "user" ? "U" : "A"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">
-                        {message.role === "user" ? "You" : "Assistant"}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(message.created_at || "").toLocaleString("tr-TR")}
-                      </span>
-                    </div>
-                    <div className="text-sm">{message.content}</div>
-                  </div>
-                </div>
-              ))
+        
+        <div className="flex-1 min-h-0 -mx-6">
+          {messages.length > 0 ? (
+            <ScrollArea className="h-full px-6">
+              <div className="space-y-4 py-4">
+                <MessageList
+                  messages={messages}
+                  showTimeStamps={true}
+                  isTyping={false}
+                  isGenerating={false}
+                />
+              </div>
+            </ScrollArea>
           ) : (
-            <div className="text-center text-muted-foreground">
-              No messages in this session
+            <div className="flex items-center justify-center h-full text-center text-muted-foreground">
+              {t("sessions.no_messages")}
             </div>
           )}
         </div>

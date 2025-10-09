@@ -33,5 +33,6 @@
     "selected": "({{selected}}/{{total}} selected)",
     "no_records": "No data",
     "save": "Save"
-  }
+  },
+  "export": "Export data"
 }

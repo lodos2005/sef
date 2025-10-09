@@ -98,51 +98,6 @@ export default function DocumentSettingsPage() {
         <DataTableColumnHeader column={column} title={t("documents.chunks")} />
       ),
       title: t("documents.chunks"),
-      cell: ({ row }) => (
-        <div className="text-center">{row.original.chunk_count}</div>
-      ),
-    },
-    {
-      accessorKey: "chatbots",
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t("documents.chatbots")} />
-      ),
-      title: t("documents.chatbots"),
-      cell: ({ row }) => {
-        const chatbots = row.original.chatbots || []
-        if (chatbots.length === 0) {
-          return <span className="text-muted-foreground text-sm">-</span>
-        }
-        return (
-          <div className="flex flex-wrap gap-1">
-            {chatbots.slice(0, 2).map((chatbot) => (
-              <Badge key={chatbot.id} variant="outline" className="text-xs">
-                {chatbot.name}
-              </Badge>
-            ))}
-            {chatbots.length > 2 && (
-              <Badge variant="outline" className="text-xs">
-                +{chatbots.length - 2}
-              </Badge>
-            )}
-          </div>
-        )
-      },
-    },
-    {
-      accessorKey: "created_at",
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t("documents.created_at")} />
-      ),
-      title: t("documents.created_at"),
-      cell: ({ row }) => {
-        const date = new Date(row.original.created_at)
-        return (
-          <div className="text-sm text-muted-foreground">
-            {date.toLocaleDateString()} {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </div>
-        )
-      },
     },
     {
       id: "actions",

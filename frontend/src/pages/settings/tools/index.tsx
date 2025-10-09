@@ -89,18 +89,18 @@ export default function ToolSettingsPage() {
         refetchTrigger={refetchTrigger}
       >
         <div className="flex gap-2">
-          <ToolImportDialog>
-            <Button variant="outline" size="sm" className="h-8 lg:flex">
-              <Upload className="mr-2 size-4" />
-              {t("tools.import.button", "Import")}
-            </Button>
-          </ToolImportDialog>
           <Link href="/settings/tools/create">
             <Button variant="outline" size="sm" className="h-8 lg:flex">
               <PlusCircleIcon className="mr-2 size-4" />
               {t("providers.create.button")}
             </Button>
           </Link>
+          <ToolImportDialog>
+            <Button variant="outline" size="sm" className="h-8 lg:flex">
+              <Upload className="mr-2 size-4" />
+              {t("tools.import.button", "Import")}
+            </Button>
+          </ToolImportDialog>
         </div>
       </AsyncDataTable>
     </>

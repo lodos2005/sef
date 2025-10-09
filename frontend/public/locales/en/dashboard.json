@@ -1,3 +1,24 @@
 {
-    "title": "Dashboard"
+    "title": "Dashboard",
+    "welcome": "Welcome, {{name}}!",
+    "hero_subtitle": "Start chatting with your AI assistants",
+    "total_sessions": "Total Sessions",
+    "sessions_desc": "Started conversations",
+    "total_messages": "Total Messages",
+    "messages_desc": "Sent messages",
+    "active_assistants": "Active Assistants",
+    "active_desc": "Used assistants",
+    "available": "Available",
+    "available_desc": "Ready assistants",
+    "available_assistants": "Available Assistants",
+    "select_assistant": "Select an assistant to start a new chat",
+    "no_chatbots": "No chatbots available yet.",
+    "start_chat": "Start Chat",
+    "recent_sessions": "Recent Sessions",
+    "continue_previous": "Continue your previous conversations",
+    "no_sessions": "You haven't started any sessions yet.",
+    "start_first_session": "Select one of the assistants above to start your chat.",
+    "continue": "Continue",
+    "messages": "messages",
+    "view_all": "View All"
 }

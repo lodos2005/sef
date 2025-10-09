@@ -7,7 +7,7 @@
     "warning": "Warning",
     "delete": "Delete",
     "description": "You can make your personal settings and system settings of Şef through this page.",
-    "system_settings": "System settings",
+    "system_settings": "System Settings",
     "users": {
         "title": "Users",
         "description": "Through this page you can add roles to users, edit user profiles and add new ones.",
@@ -46,6 +46,7 @@
             "user_type": "User Type",
             "user": "User",
             "admin": "Administrator",
+            "name": "Name",
             "name_surname": "Name Surname",
             "name_surname_placeholder": "Şef User",
             "username": "User Name",
@@ -54,7 +55,8 @@
             "password_confirmation": "Password Confirmation",
             "session_time": "Session Time (Minutes)",
             "session_time_placeholder": "Session time in minutes",
-            "create": "Create"
+            "create": "Create",
+            "super_admin": "Is Super Admin"
         },
         "edit": {
             "title": "Edit User",
@@ -69,6 +71,9 @@
             "subtext": "The selected user <b>({{username}})</b> will be completely deleted from the Şef system. As a result of this process, you may lose your case data and extension permissions. Do you want to continue?",
             "no": "Cancel",
             "yes": "Confirm"
+        },
+        "actions": {
+            "edit": "Edit"
         }
     },
     "chatbots": {
@@ -189,7 +194,14 @@
         "description": "View and manage chat sessions in the system.",
         "user": "User",
         "chatbot": "Chatbot",
-        "messages_count": "Messages Count"
+        "messages_count": "Messages Count",
+        "created_at": "Created At",
+        "view_conversation": "View Conversation",
+        "conversation_history": "Conversation History",
+        "conversation_between": "Conversation between {{user}} & {{chatbot}}",
+        "no_messages": "No messages in this session",
+        "assistant": "Assistant",
+        "you": "You"
     },
     "tools": {
         "title": "Tools",
@@ -343,6 +355,7 @@
         "created_at": "Created At",
         "view": "View Details",
         "edit_menu": "Edit",
+        "reprocess_menu": "Re-process",
         "search_placeholder": "Search documents...",
         "validation": {
             "title_min": "Title must be at least 2 characters",

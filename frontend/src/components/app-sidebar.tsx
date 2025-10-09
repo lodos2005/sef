@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import * as React from "react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -50,8 +51,8 @@ import {
 import { Icons } from "./ui/icons";
 
 
-
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { t } = useTranslation("common");
   const { sessions, isLoading, isRefreshing, error, deleteSession } = useUserSessions();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [sessionToDelete, setSessionToDelete] = useState<number | null>(null);
@@ -62,7 +63,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     // Prefer summary if available
     if (session.summary && session.summary.trim()) {
 
-      return session.summary.length > 20 ? session.summary.substring(0, 20) + "..." : session.summary;
+      return session.summary.length > 25 ? session.summary.substring(0, 25) + "..." : session.summary;
     }
     
     // Fallback to first user message
@@ -71,14 +72,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         (msg: any) => msg.role === "user"
       );
       if (firstUserMessage) {
-        return firstUserMessage.content.length > 20
-          ? firstUserMessage.content.substring(0, 20) + "..."
+        return firstUserMessage.content.length > 25
+          ? firstUserMessage.content.substring(0, 25) + "..."
           : firstUserMessage.content;
       }
     }
     
     // Final fallback
-    return `${session.chatbot?.name || "Assistant"} ile Sohbet`;
+    return t("sidebar.chat_with", { name: session.chatbot?.name || "Assistant" });
   };
 
   const handleNewChat = () => {
@@ -99,7 +100,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         {/* Main Navigation */}
         <SidebarGroup>
           <SidebarGroupLabel className="uppercase text-sidebar-foreground/50">
-            Genel
+            {t("sidebar.general")}
           </SidebarGroupLabel>
           <SidebarGroupContent className="px-2">
             <SidebarMenu>
@@ -115,7 +116,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       size={22}
                       aria-hidden="true"
                     />
-                    <span>Yeni Sohbet</span>
+                    <span>{t("sidebar.new_chat")}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -131,7 +132,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       size={22}
                       aria-hidden="true"
                     />
-                    <span>Ayarlar</span>
+                    <span>{t("sidebar.settings")}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -142,7 +143,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         {/* Chat Sessions */}
         <SidebarGroup>
           <SidebarGroupLabel className="uppercase text-sidebar-foreground/50 flex items-center gap-2">
-            Sohbetler
+            {t("sidebar.chats")}
             {isRefreshing && (
               <div className="w-3 h-3 border border-sidebar-foreground/30 border-t-transparent rounded-full animate-spin" />
             )}
@@ -161,7 +162,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription className="text-xs">
-                      Konuşmalar yüklenirken hata oluştu: {error}
+                      {t("sidebar.loading_error", { error })}
                     </AlertDescription>
                   </Alert>
                 </div>
@@ -169,9 +170,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               {!isLoading && !error && sessions.length === 0 && (
                 <div className="p-4 text-center text-sm text-muted-foreground">
                   <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>Henüz konuşma yok</p>
+                  <p>{t("sidebar.no_chats")}</p>
                   <p className="text-xs text-muted-foreground">
-                    Başlamak için yeni bir sohbet başlatın
+                    {t("sidebar.start_new_chat")}
                   </p>
                 </div>
               )}
@@ -202,7 +203,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         >
                           <DropdownMenuTrigger asChild>
                             <Button
-                              variant="ghost"
+                              variant="secondary"
                               size="sm"
                               className={cn(
                                 "absolute right-2 top-1/2 -translate-y-1/2 transition-opacity h-8 w-8 p-0",
@@ -222,7 +223,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                               }}
                             >
                               <Trash2 className="h-4 w-4 mr-2" />
-                              Sil
+                              {t("sidebar.delete")}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -242,13 +243,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Sohbeti Sil</AlertDialogTitle>
+            <AlertDialogTitle>{t("sidebar.delete_chat")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Bu sohbeti silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
+              {t("sidebar.delete_confirmation")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>İptal</AlertDialogCancel>
+            <AlertDialogCancel>{t("sidebar.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={async () => {
                 if (sessionToDelete) {
@@ -258,7 +259,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 }
               }}
             >
-              Sil
+              {t("sidebar.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

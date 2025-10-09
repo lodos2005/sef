@@ -33,5 +33,6 @@
     "selected": "({{selected}}/{{total}} seçili)",
     "no_records": "Veri yok",
     "save": "Kaydet"
-  }
+  },
+  "export": "Veriyi dışa aktar"
 }

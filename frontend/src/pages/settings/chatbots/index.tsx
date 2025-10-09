@@ -70,15 +70,7 @@ export default function ChatbotSettingsPage() {
       title: t("chatbots.tools"),
       cell: ({ row }) => (
         <div className="flex flex-wrap gap-1">
-          {row.original.tools && row.original.tools.length > 0 ? (
-            row.original.tools.map((tool) => (
-              <Badge key={tool.id} variant="outline" className="text-xs">
-                {tool.display_name}
-              </Badge>
-            ))
-          ) : (
-            <span className="text-xs text-muted-foreground">-</span>
-          )}
+          {row.original.tools ? row.original.tools.length : 0}
         </div>
       ),
     },
@@ -90,15 +82,7 @@ export default function ChatbotSettingsPage() {
       title: t("chatbots.documents"),
       cell: ({ row }) => (
         <div className="flex flex-wrap gap-1">
-          {row.original.documents && row.original.documents.length > 0 ? (
-            row.original.documents.map((doc) => (
-              <Badge key={doc.id} variant="outline" className="text-xs">
-                {doc.title}
-              </Badge>
-            ))
-          ) : (
-            <span className="text-xs text-muted-foreground">-</span>
-          )}
+          {row.original.documents ? row.original.documents.length : 0}
         </div>
       ),
     },

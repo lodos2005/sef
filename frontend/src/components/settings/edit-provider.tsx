@@ -191,7 +191,7 @@ export default function EditProvider() {
               name="description"
               render={({ field }) => (
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="description">{t("providers.create.description")}</Label>
+                  <Label htmlFor="description">{t("providers.create.description_field")}</Label>
                   <Textarea
                     id="description"
                     placeholder={t("providers.create.description_placeholder")}

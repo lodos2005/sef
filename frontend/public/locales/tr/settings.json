@@ -194,7 +194,14 @@
         "description": "Sistemdeki sohbet oturumlarını görüntüleyin ve yönetin.",
         "user": "Kullanıcı",
         "chatbot": "Chatbot",
-        "messages_count": "Mesaj Sayısı"
+        "messages_count": "Mesaj Sayısı",
+        "created_at": "Oluşturulma Tarihi",
+        "view_conversation": "Görüşmeyi İncele",
+        "conversation_history": "Görüşme Geçmişi",
+        "conversation_between": "{{user}} ile {{chatbot}} arasındaki görüşme",
+        "no_messages": "Bu oturumda mesaj yok",
+        "assistant": "Asistan",
+        "you": "Siz"
     },
     "tools": {
         "title": "Araçlar",
@@ -348,6 +355,7 @@
         "view": "Detayları Görüntüle",
         "edit_menu": "Düzenle",
         "search_placeholder": "Belgelerde ara...",
+        "reprocess_menu": "Yeniden İşle",
         "validation": {
             "title_min": "Başlık en az 2 karakter olmalıdır",
             "title_max": "Başlık en fazla 255 karakter olmalıdır",

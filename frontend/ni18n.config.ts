@@ -15,6 +15,11 @@ export const ni18nConfig: Ni18nOptions = {
   },
   ns: ["common", "zod", "components", "dashboard", "settings"],
   use: isBrowser ? [ChainedBackend] : undefined,
+  missingKeyHandler(lngs, ns, key, fallbackValue, updateMissing, options) {
+    const message = `Missing translation key [${key}] for [${lngs.join(", ")}/${ns}], fallbackValue: ${fallbackValue}`;
+    console.warn(message);
+    return { message };
+  },
   backend: isBrowser
     ? {
       backends: [

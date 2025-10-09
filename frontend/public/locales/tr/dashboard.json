@@ -1,3 +1,24 @@
 {
-    "title": "Pano"
+    "title": "Pano",
+    "welcome": "Hoş geldiniz, {{name}}!",
+    "hero_subtitle": "AI asistanlarınızla sohbete başlayın",
+    "total_sessions": "Toplam Sohbet",
+    "sessions_desc": "Başlatılan oturumlar",
+    "total_messages": "Toplam Mesaj",
+    "messages_desc": "Gönderilen mesajlar",
+    "active_assistants": "Aktif Asistan",
+    "active_desc": "Kullanılan asistanlar",
+    "available": "Kullanılabilir",
+    "available_desc": "Hazır asistanlar",
+    "available_assistants": "Kullanılabilir Asistanlar",
+    "select_assistant": "Yeni bir sohbet başlatmak için bir asistan seçin",
+    "no_chatbots": "Henüz hiç chatbot bulunmuyor.",
+    "start_chat": "Sohbet Başlat",
+    "recent_sessions": "Son Oturumlar",
+    "continue_previous": "Önceki sohbetlerinize devam edin",
+    "no_sessions": "Henüz hiç oturum başlatmadınız.",
+    "start_first_session": "Yukarıdaki asistanlardan birini seçerek sohbetinizi başlatın.",
+    "continue": "Devam Et",
+    "messages": "mesaj",
+    "view_all": "Tümünü Gör"
 }

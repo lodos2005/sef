@@ -10,5 +10,19 @@
     },
     "profile_dropdown": {
         "logout": "Çıkış Yap"
+    },
+    "sidebar": {
+        "general": "Genel",
+        "new_chat": "Yeni Sohbet",
+        "settings": "Ayarlar",
+        "chats": "Sohbetler",
+        "loading_error": "Konuşmalar yüklenirken hata oluştu: {{error}}",
+        "no_chats": "Henüz konuşma yok",
+        "start_new_chat": "Başlamak için yeni bir sohbet başlatın",
+        "delete_chat": "Sohbeti Sil",
+        "delete_confirmation": "Bu sohbeti silmek istediğinize emin misiniz? Bu işlem geri alınamaz.",
+        "cancel": "İptal",
+        "delete": "Sil",
+        "chat_with": "{{name}} ile Sohbet"
     }
 }
