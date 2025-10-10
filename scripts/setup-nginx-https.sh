@@ -83,9 +83,17 @@ server {
 
     # Security Headers
     add_header Strict-Transport-Security "max-age=63072000" always;
-    add_header X-Frame-Options "SAMEORIGIN" always;
+    # X-Frame-Options DENY removed to allow iframe embedding
+    # add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-XSS-Protection "1; mode=block" always;
+    
+    # CORS Headers for iframe support
+    add_header Access-Control-Allow-Origin "$http_origin" always;
+    add_header Access-Control-Allow-Credentials "true" always;
+    add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS, PATCH" always;
+    add_header Access-Control-Allow-Headers "Authorization, Content-Type, X-Requested-With, Accept, Origin" always;
+    add_header Access-Control-Max-Age "3600" always;
 
     # Logging
     access_log /var/log/nginx/sef-access.log;
@@ -96,6 +104,18 @@ server {
 
     # Proxy settings
     location / {
+        # Handle preflight requests
+        if ($request_method = 'OPTIONS') {
+            add_header Access-Control-Allow-Origin "$http_origin" always;
+            add_header Access-Control-Allow-Credentials "true" always;
+            add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS, PATCH" always;
+            add_header Access-Control-Allow-Headers "Authorization, Content-Type, X-Requested-With, Accept, Origin" always;
+            add_header Access-Control-Max-Age "3600" always;
+            add_header Content-Length 0;
+            add_header Content-Type text/plain;
+            return 204;
+        }
+        
         proxy_pass http://localhost:3000;
         proxy_http_version 1.1;
         
@@ -111,6 +131,9 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Port $server_port;
+        
+        # Cookie settings for iframe support
+        proxy_cookie_path / "/; SameSite=None; Secure";
         
         # Timeouts
         proxy_connect_timeout 60s;
