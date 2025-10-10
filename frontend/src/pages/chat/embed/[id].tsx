@@ -34,10 +34,7 @@ export default function EmbedChatPage() {
   const { id: routeSessionId } = router.query
   const { t } = useTranslation(["common", "dashboard"])
 
-  if (typeof window === 'undefined') {
-    return
-  }
-
+  // All hooks must be called before any early returns
   const [viewMode, setViewMode] = useState<ViewMode>("chatbot-selection")
   const [currentSessionId, setCurrentSessionId] = useState<string | number | null>(null)
   const [chatbots, setChatbots] = useState<IChatbot[]>([])
@@ -54,6 +51,8 @@ export default function EmbedChatPage() {
 
   // Load stored sessions from localStorage
   useEffect(() => {
+    if (typeof window === 'undefined') return
+    
     try {
       const stored = localStorage.getItem(STORAGE_KEY)
       if (stored) {
@@ -97,6 +96,8 @@ export default function EmbedChatPage() {
 
   // Save session to localStorage
   const saveSession = useCallback((session: ISession) => {
+    if (typeof window === 'undefined') return
+    
     const newSession: StoredSession = {
       id: session.id,
       chatbotId: session.chatbot_id,
@@ -330,6 +331,11 @@ export default function EmbedChatPage() {
       ? session.chatbot.prompt_suggestions
       : defaultSuggestions
   }, [session?.chatbot?.prompt_suggestions, defaultSuggestions])
+
+  // Early return after all hooks are called
+  if (typeof window === 'undefined') {
+    return null
+  }
 
   // Render chat view
   const renderChatView = () => {
