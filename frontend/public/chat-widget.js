@@ -87,14 +87,19 @@
                 }
 
                 .sef-chat-fab svg {
-                    width: 28px;
-                    height: 28px;
+                    width: 32px;
+                    height: 20px;
                     fill: white;
-                    transition: transform 0.3s ease;
+                    transition: all 0.3s ease;
                 }
 
+                .sef-chat-fab.active {
+                    transform: scale(0.95);
+                    box-shadow: 0 2px 8px rgba(0, 112, 243, 0.3);
+                }
+                
                 .sef-chat-fab.active svg {
-                    transform: rotate(45deg);
+                    opacity: 0.9;
                 }
 
                 .sef-chat-popover {
@@ -165,8 +170,17 @@
             fab.className = 'sef-chat-fab';
             fab.id = 'sef-chat-fab';
             fab.innerHTML = `
-                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/>
+                <svg viewBox="0 0 80 40" xmlns="http://www.w3.org/2000/svg">
+                    <g stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+                        <path d="M6 36h56M12 36a22 22 0 0144 0" />
+                        <circle cx="34" cy="10" r="3" fill="currentColor" />
+                        <path d="M8 36c0 6 52 6 52 0" opacity="0.12" />
+                        <path d="M0-5V5m-5-5H5m-8.5-3.5l7 7m-7 0l7-7" opacity="0.9" transform="rotate(12 -1.543 259.888)" />
+                        <circle cx="20" cy="28" r="1.8" />
+                        <circle cx="34" cy="24" r="1.8" />
+                        <circle cx="48" cy="28" r="1.8" />
+                        <path d="M21.8 27.2l10.4-2.4m3.6 0l10.4 2.4" opacity="0.6" />
+                    </g>
                 </svg>
             `;
             fab.setAttribute('aria-label', 'Open chat');
