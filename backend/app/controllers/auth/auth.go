@@ -44,6 +44,8 @@ func Login(c fiber.Ctx) error {
 		Value:    t,
 		HTTPOnly: true,
 		Expires:  time.Now().Add(4 * time.Hour), // 4 hours
+		SameSite: "None",
+		Secure:   true,
 	})
 
 	return c.JSON(fiber.Map{"token": t})
