@@ -34,6 +34,16 @@
         "prompt_suggestions_label": "Try these prompts ✨",
         "default_suggestion_1": "What can you help me with?",
         "default_suggestion_2": "Explain this concept to me",
-        "default_suggestion_3": "How do I get started?"
+        "default_suggestion_3": "How do I get started?",
+        "creating_session": "Creating session...",
+        "view_history": "View History",
+        "history": "History",
+        "session_history": "Session History",
+        "new_session": "New Session",
+        "no_history": "No session history"
+    },
+    "common": {
+        "back": "Back",
+        "new": "New"
     }
 }

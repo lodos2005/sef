@@ -41,6 +41,10 @@ const RootLayout: AppType = ({ Component, pageProps }: AppPropsWithLayout) => {
   const { t: tfull } = useTranslation()
   z.setErrorMap(makeZodI18nMap({ t: tfull, ns: "zod" }))
 
+  if (ready && router.asPath.includes("/chat/embed")) {
+    return <Component {...pageProps} key={router.route} />
+  }
+
   return (
     <>
       <Head>

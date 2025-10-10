@@ -111,7 +111,7 @@ func (rs *RAGService) AnalyzeDocumentQuality(ctx context.Context, documentID uin
 
 	qualityPoints := 0
 
-	if avgScore > 0.75 {
+	if avgScore > 0.72 {
 		qualityPoints += 3
 	} else if avgScore > 0.65 {
 		qualityPoints += 2

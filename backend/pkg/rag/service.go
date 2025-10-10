@@ -106,7 +106,7 @@ func (rs *RAGService) AugmentPrompt(ctx context.Context, userPrompt string, chat
 
 	// CRITICAL: If even the top score is too low, this query is likely irrelevant
 	// Reject all results if max score is below strict threshold
-	const strictMinThreshold float32 = 0.75 // Require at least 0.75 for top result
+	const strictMinThreshold float32 = 0.72 // Require at least 0.72 for top result
 	if maxScore < strictMinThreshold {
 		log.Infof("Max score %.2f below strict threshold %.2f - no relevant documents found", maxScore, strictMinThreshold)
 		return &AugmentPromptResult{AugmentedPrompt: userPrompt}, nil

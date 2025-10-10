@@ -34,6 +34,16 @@
         "prompt_suggestions_label": "Bu önerileri deneyin ✨",
         "default_suggestion_1": "Bana nasıl yardımcı olabilirsin?",
         "default_suggestion_2": "Bu konsepti bana açıkla",
-        "default_suggestion_3": "Nasıl başlarım?"
+        "default_suggestion_3": "Nasıl başlarım?",
+        "creating_session": "Oturum oluşturuluyor...",
+        "view_history": "Geçmişi Görüntüle",
+        "history": "Geçmiş",
+        "session_history": "Oturum Geçmişi",
+        "new_session": "Yeni Oturum",
+        "no_history": "Oturum geçmişi yok"
+    },
+    "common": {
+        "back": "Geri",
+        "new": "Yeni"
     }
 }

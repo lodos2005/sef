@@ -1,5 +1,6 @@
 import {
   CloudCog,
+  Code2,
   FileText,
   MessageCircleMoreIcon,
   ScrollText,
@@ -39,13 +40,6 @@ export const Settings = {
       href: "/settings/documents",
     },
     {
-      id: "embedding",
-      title: "Gömme Ayarları",
-      description: "RAG için gömme modeli ve vektör yapılandırmasını yönetin.",
-      icon: SettingsIcon,
-      href: "/settings/embedding",
-    },
-    {
       id: "users",
       title: "Kullanıcılar",
       description:
@@ -59,6 +53,20 @@ export const Settings = {
       description: "Sistemdeki sohbet oturumlarını görüntüleyin ve yönetin.",
       icon: ScrollText,
       href: "/settings/sessions",
+    },
+    {
+      id: "embedding",
+      title: "Gömme Ayarları",
+      description: "RAG için gömme modeli ve vektör yapılandırmasını yönetin.",
+      icon: SettingsIcon,
+      href: "/settings/embedding",
+    },
+    {
+      id: "widget",
+      title: "Widget Entegrasyonu",
+      description: "Şef chat widget'ını web sitenize entegre edin ve yapılandırın.",
+      icon: Code2,
+      href: "/settings/widget",
     },
   ],
 }
