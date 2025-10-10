@@ -77,6 +77,7 @@
                     align-items: center;
                     justify-content: center;
                     transition: all 0.3s ease;
+                    color: white !important;
                     z-index: ${this.config.zIndex};
                     ${this.getPositionStyles('button')}
                 }
