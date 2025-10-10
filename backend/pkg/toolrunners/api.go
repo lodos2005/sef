@@ -2,6 +2,7 @@ package toolrunners
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -62,9 +63,14 @@ func (r *APIToolRunner) ExecuteWithContext(ctx context.Context, parameters map[s
 		timeout = time.Duration(timeoutVal) * time.Second
 	}
 
+	transport := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+
 	// Create HTTP client with timeout
 	client := &http.Client{
-		Timeout: timeout,
+		Timeout:   timeout,
+		Transport: transport,
 	}
 
 	var reqBody io.Reader
