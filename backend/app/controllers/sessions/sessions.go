@@ -180,13 +180,13 @@ func (h *Controller) SendMessage(c fiber.Ctx) error {
 	messages, ragResult := h.MessagingService.PrepareChatMessages(session, req.Content)
 
 	// Generate and stream response
-	return h.streamChatResponse(c, session, messages, ragResult, sessionID, user.ID)
+	return h.streamChatResponse(c, session, messages, ragResult, req.WebSearchEnabled, sessionID, user.ID)
 }
 
 // streamChatResponse handles the streaming chat response
-func (h *Controller) streamChatResponse(c fiber.Ctx, session *entities.Session, messages []providers.ChatMessage, ragResult *rag.AugmentPromptResult, sessionID uint, userID uint) error {
+func (h *Controller) streamChatResponse(c fiber.Ctx, session *entities.Session, messages []providers.ChatMessage, ragResult *rag.AugmentPromptResult, webSearchEnabled bool, sessionID uint, userID uint) error {
 	// Generate response stream
-	stream, finalMessage, err := h.MessagingService.GenerateChatResponse(session, messages, ragResult)
+	stream, finalMessage, err := h.MessagingService.GenerateChatResponse(session, messages, ragResult, webSearchEnabled)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),

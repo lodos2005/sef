@@ -16,6 +16,7 @@ export default function ChatPage() {
 
   const [input, setInput] = useState("")
   const [isPollingForSummary, setIsPollingForSummary] = useState(false)
+  const [webSearchEnabled, setWebSearchEnabled] = useState(false)
 
   // Default prompt suggestions if none are provided by the chatbot
   const defaultSuggestions = [
@@ -47,12 +48,16 @@ export default function ChatPage() {
   
   const { sendMessage, isGenerating, error: sendError } = useSendMessage(sessionId, setMessages, handleMessageComplete)
 
-  // Stop polling indicator when summary appears
+    // Stop polling indicator when summary appears
   useEffect(() => {
     if (session?.summary) {
       setIsPollingForSummary(false)
     }
   }, [session?.summary])
+
+  const handleWebSearchToggle = useCallback((enabled: boolean) => {
+    setWebSearchEnabled(enabled)
+  }, [])
 
   const isLoading = sessionLoading || messagesLoading
   const error = sessionError || messagesError || sendError
@@ -64,9 +69,10 @@ export default function ChatPage() {
 
     if (!input.trim()) return
 
-    await sendMessage(input.trim())
+    await sendMessage(input.trim(), webSearchEnabled)
     setInput("")
-  }, [input, sendMessage])
+    setWebSearchEnabled(false) // Reset web search toggle after sending
+  }, [input, sendMessage, webSearchEnabled])
 
   const handleInputChange = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(event.target.value)
@@ -111,6 +117,9 @@ export default function ChatPage() {
           setMessages={setMessages}
           append={handleAppend}
           suggestions={promptSuggestions}
+          webSearchEnabled={webSearchEnabled}
+          onWebSearchToggle={handleWebSearchToggle}
+          chatbotSupportsWebSearch={session?.chatbot?.web_search_enabled}
           className="h-full"
         />
       </div>

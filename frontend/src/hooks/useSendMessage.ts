@@ -9,7 +9,7 @@ export function useSendMessage(
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const sendMessage = useCallback(async (content: string) => {
+  const sendMessage = useCallback(async (content: string, webSearchEnabled: boolean = false) => {
     if (!content.trim()) return
 
     const userMessage: Message = {
@@ -40,6 +40,7 @@ export function useSendMessage(
           },
           body: JSON.stringify({
             content: content.trim(),
+            web_search_enabled: webSearchEnabled,
           }),
           signal: controller.signal,
         })

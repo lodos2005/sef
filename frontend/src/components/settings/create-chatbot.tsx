@@ -25,6 +25,7 @@ import { Label } from "../ui/label"
 import { Textarea } from "../ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
 import { Checkbox } from "../ui/checkbox"
+import { Switch } from "../ui/switch"
 import { useToast } from "../ui/use-toast"
 import { IProvider } from "@/types/provider"
 import { ITool } from "@/types/tool"
@@ -45,6 +46,7 @@ export default function CreateChatbot() {
   const [selectedDocuments, setSelectedDocuments] = useState<number[]>([])
   const [promptSuggestions, setPromptSuggestions] = useState<string[]>([])
   const [newSuggestion, setNewSuggestion] = useState("")
+  const [webSearchEnabled, setWebSearchEnabled] = useState(false)
 
   const formSchema = z
     .object({
@@ -118,6 +120,7 @@ export default function CreateChatbot() {
   const handleCreate = (values: z.infer<typeof formSchema>) => {
     const payload = {
       ...values,
+      web_search_enabled: webSearchEnabled,
       tool_ids: selectedTools,
       document_ids: selectedDocuments,
       prompt_suggestions: promptSuggestions,
@@ -138,6 +141,7 @@ export default function CreateChatbot() {
           setSelectedDocuments([])
           setPromptSuggestions([])
           setNewSuggestion("")
+          setWebSearchEnabled(false)
         } else {
           toast({
             title: t("error"),
@@ -277,6 +281,24 @@ export default function CreateChatbot() {
                 </div>
               )}
             />
+
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="web_search">
+                    {t("chatbots.create.web_search", "Web Search")}
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    {t("chatbots.create.web_search_description", "Enable web search capability for this chatbot")}
+                  </p>
+                </div>
+                <Switch
+                  id="web_search"
+                  checked={webSearchEnabled}
+                  onCheckedChange={setWebSearchEnabled}
+                />
+              </div>
+            </div>
 
             <div className="flex flex-col gap-2">
               <Label>{t("chatbots.create.prompt_suggestions", "Prompt Suggestions")}</Label>

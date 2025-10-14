@@ -19,7 +19,8 @@ import (
 )
 
 type SendMessageRequest struct {
-	Content string `json:"content" validate:"required,min=1"`
+	Content          string `json:"content" validate:"required,min=1"`
+	WebSearchEnabled bool   `json:"web_search_enabled"`
 }
 
 type MessagingService struct {
@@ -37,7 +38,7 @@ type MessagingServiceInterface interface {
 	PrepareChatMessages(session *entities.Session, userContent string) ([]providers.ChatMessage, *rag.AugmentPromptResult)
 	CreateAssistantMessage(sessionID uint) (*entities.Message, error)
 	CreateToolMessage(sessionID uint, content string) (*entities.Message, error)
-	GenerateChatResponse(session *entities.Session, messages []providers.ChatMessage, ragResult *rag.AugmentPromptResult) (<-chan string, *entities.Message, error)
+	GenerateChatResponse(session *entities.Session, messages []providers.ChatMessage, ragResult *rag.AugmentPromptResult, webSearchEnabled bool) (<-chan string, *entities.Message, error)
 	UpdateAssistantMessage(assistantMessage *entities.Message, content string)
 	UpdateAssistantMessageWithCallback(assistantMessage *entities.Message, content string, callback func())
 	ConvertToolsToDefinitions(tools []entities.Tool) []providers.ToolDefinition
@@ -177,8 +178,39 @@ func (s *MessagingService) ConvertToolsToDefinitions(tools []entities.Tool) []pr
 	return definitions
 }
 
+// GetWebSearchToolDefinition returns the tool definition for web search
+func (s *MessagingService) GetWebSearchToolDefinition() providers.ToolDefinition {
+	return providers.ToolDefinition{
+		Type: "function",
+		Function: providers.ToolFunction{
+			Name:        "web_search",
+			Description: "Search the web for current information, news, facts, or any topic. Use this when you need up-to-date information or when the user asks about current events, recent developments, or information you don't have in your training data.",
+			Parameters: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"query": map[string]interface{}{
+						"type":        "string",
+						"description": "The search query to execute. Be specific and clear about what you're searching for.",
+					},
+					"num_results": map[string]interface{}{
+						"type":        "number",
+						"description": "Number of search results to return (default: 5, max: 10)",
+						"default":     5,
+					},
+				},
+				"required": []string{"query"},
+			},
+		},
+	}
+}
+
 // ExecuteToolCall executes a tool call and returns the result
 func (s *MessagingService) ExecuteToolCall(ctx context.Context, toolCall providers.ToolCall) (string, error) {
+	// Check if this is a web search tool call
+	if toolCall.Function.Name == "web_search" {
+		return s.executeWebSearchTool(ctx, toolCall)
+	}
+
 	// Find the tool by name (this would need to be optimized in production)
 	var tool entities.Tool
 	if err := s.DB.Where("name = ?", toolCall.Function.Name).First(&tool).Error; err != nil {
@@ -226,6 +258,49 @@ func (s *MessagingService) ExecuteToolCall(ctx context.Context, toolCall provide
 	resultJSON, err := json.Marshal(result)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal tool result: %w", err)
+	}
+
+	return string(resultJSON), nil
+}
+
+// executeWebSearchTool executes a web search tool call
+func (s *MessagingService) executeWebSearchTool(ctx context.Context, toolCall providers.ToolCall) (string, error) {
+	// Handle arguments - they might be raw JSON string or parsed map
+	var args map[string]interface{}
+	if rawArgs, ok := toolCall.Function.Arguments["raw"].(string); ok {
+		// Parse the raw JSON string
+		if err := json.Unmarshal([]byte(rawArgs), &args); err != nil {
+			return "", fmt.Errorf("failed to parse tool arguments: %w", err)
+		}
+	} else {
+		// Already parsed
+		args = toolCall.Function.Arguments
+	}
+
+	// Create web search tool runner
+	runner := toolrunners.NewWebSearchToolRunner()
+
+	// Create tool call context
+	toolContext := &toolrunners.ToolCallContext{
+		ToolCallID:   toolCall.ID,
+		FunctionName: toolCall.Function.Name,
+		ToolName:     "Web Search",
+		Metadata: map[string]interface{}{
+			"tool_type":        "web_search",
+			"tool_description": "Search the web for current information",
+		},
+	}
+
+	// Execute tool with context
+	result, err := runner.ExecuteWithContext(ctx, args, toolContext)
+	if err != nil {
+		return "", fmt.Errorf("web search execution failed: %w", err)
+	}
+
+	// Convert result to string
+	resultJSON, err := json.Marshal(result)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal web search result: %w", err)
 	}
 
 	return string(resultJSON), nil
@@ -427,7 +502,7 @@ func (s *MessagingService) processToolCalls(session *entities.Session, toolCalls
 }
 
 // GenerateChatResponse generates the chat response stream with infinite tool call chain support
-func (s *MessagingService) GenerateChatResponse(session *entities.Session, messages []providers.ChatMessage, ragResult *rag.AugmentPromptResult) (<-chan string, *entities.Message, error) {
+func (s *MessagingService) GenerateChatResponse(session *entities.Session, messages []providers.ChatMessage, ragResult *rag.AugmentPromptResult, webSearchEnabled bool) (<-chan string, *entities.Message, error) {
 	// Create provider instance
 	factory := &providers.ProviderFactory{}
 	providerConfig := map[string]interface{}{
@@ -483,7 +558,12 @@ func (s *MessagingService) GenerateChatResponse(session *entities.Session, messa
 	// Convert tools to definitions
 	toolDefinitions := s.ConvertToolsToDefinitions(session.Chatbot.Tools)
 
-	// Create output channel
+	// Add web search tool if enabled for this message and chatbot supports it
+	if webSearchEnabled && session.Chatbot.WebSearchEnabled {
+		webSearchTool := s.GetWebSearchToolDefinition()
+		toolDefinitions = append(toolDefinitions, webSearchTool)
+		log.Info("Web search tool enabled for this message in session:", session.ID)
+	} // Create output channel
 	outputCh := make(chan string)
 
 	// Create first assistant message synchronously

@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowDown, ArrowUp, Mic, Paperclip, Square, ThumbsDown, ThumbsUp } from "lucide-react"
+import { ArrowDown, ArrowUp, Mic, Paperclip, Square, ThumbsDown, ThumbsUp, Search } from "lucide-react"
 import {
   forwardRef,
   useCallback,
@@ -20,6 +20,7 @@ import { useAutoScroll } from "@/hooks/use-auto-scroll"
 import { useAutosizeTextArea } from "@/hooks/use-autosize-textarea"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "./scroll-area"
+import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip"
 
 interface ChatPropsBase {
   handleSubmit: (
@@ -38,6 +39,9 @@ interface ChatPropsBase {
   ) => void
   setMessages?: (messages: any[]) => void
   transcribeAudio?: (blob: Blob) => Promise<string>
+  webSearchEnabled?: boolean
+  onWebSearchToggle?: (enabled: boolean) => void
+  chatbotSupportsWebSearch?: boolean
 }
 
 interface ChatPropsWithoutSuggestions extends ChatPropsBase {
@@ -65,6 +69,9 @@ export function Chat({
   onRateResponse,
   setMessages,
   transcribeAudio,
+  webSearchEnabled,
+  onWebSearchToggle,
+  chatbotSupportsWebSearch,
 }: ChatProps) {
   const { t } = useTranslation("common")
   const lastMessage = messages.at(-1)
@@ -210,6 +217,9 @@ export function Chat({
                 stop={handleStop}
                 isGenerating={isGenerating}
                 transcribeAudio={transcribeAudio}
+                webSearchEnabled={webSearchEnabled}
+                onWebSearchToggle={onWebSearchToggle}
+                chatbotSupportsWebSearch={chatbotSupportsWebSearch}
                 placeholder={t("chat.ask_placeholder")}
               />
             )}
@@ -346,6 +356,9 @@ interface ChatInputProps {
   stop?: () => void
   isGenerating: boolean
   transcribeAudio?: (blob: Blob) => Promise<string>
+  webSearchEnabled?: boolean
+  onWebSearchToggle?: (enabled: boolean) => void
+  chatbotSupportsWebSearch?: boolean
 }
 
 function ChatInput({
@@ -355,7 +368,11 @@ function ChatInput({
   stop,
   isGenerating,
   transcribeAudio,
+  webSearchEnabled = false,
+  onWebSearchToggle,
+  chatbotSupportsWebSearch = false,
 }: ChatInputProps) {
+  const { t } = useTranslation("common")
   const textAreaRef = useRef<HTMLTextAreaElement>(null)
 
   useAutosizeTextArea({
@@ -380,7 +397,7 @@ function ChatInput({
         onChange={onChange}
         onKeyDown={onKeyDown}
         disabled={isGenerating}
-        className="flex w-full bg-transparent px-4 py-3 pr-[60px] text-[15px] leading-relaxed text-foreground placeholder:text-muted-foreground/70 focus-visible:outline-none [resize:none] border-none rounded-[20px]"
+        className="flex w-full bg-transparent px-4 py-3 pr-[100px] text-[15px] leading-relaxed text-foreground placeholder:text-muted-foreground/70 focus-visible:outline-none [resize:none] border-none rounded-[20px]"
         placeholder={placeholder}
         aria-label="Enter your prompt"
       />
@@ -388,6 +405,44 @@ function ChatInput({
       <div className="flex items-center justify-between gap-2 p-3 absolute bottom-0 right-0">
         {/* Left buttons */}
         <div className="flex items-center gap-2">
+          {chatbotSupportsWebSearch && onWebSearchToggle && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className={cn(
+                    "rounded-full size-8 border-none hover:bg-background hover:shadow-md transition-[box-shadow]",
+                    webSearchEnabled && "bg-primary/10 text-primary hover:bg-primary/20"
+                  )}
+                  onClick={() => onWebSearchToggle(!webSearchEnabled)}
+                >
+                  <Search
+                    className={cn(
+                      "size-5",
+                      webSearchEnabled ? "text-primary" : "text-muted-foreground/70"
+                    )}
+                    size={20}
+                    aria-hidden="true"
+                  />
+                  <span className="sr-only">Web Search</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent className="w-64 p-3" side="top" align="start">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">
+                    {t("chat.web_search", "Web Search")}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {!webSearchEnabled
+                      ? t("chat.web_search_enabled_desc", "AI can search the web for current information with this message")
+                      : t("chat.web_search_disabled_desc", "Click to enable web search for this message")}
+                  </p>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          )}
           {transcribeAudio && (
             <Button
               type="button"

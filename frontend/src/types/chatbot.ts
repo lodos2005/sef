@@ -13,6 +13,7 @@ export interface IChatbot {
   user?: IUser
   model_name: string
   system_prompt?: string
+  web_search_enabled?: boolean
   tools?: ITool[]
   documents?: IDocument[]
   created_at?: string

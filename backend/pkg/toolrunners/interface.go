@@ -35,11 +35,13 @@ func (f *ToolRunnerFactory) NewToolRunner(toolType string, config map[string]int
 	switch toolType {
 	case "api":
 		return NewAPIToolRunner(config, parameters), nil
+	case "web_search":
+		return NewWebSearchToolRunner(), nil
 	default:
 		return nil, fmt.Errorf("unsupported tool type: %s", toolType)
 	}
 }
 
 func (f *ToolRunnerFactory) SupportedTypes() []string {
-	return []string{"api"}
+	return []string{"api", "web_search"}
 }

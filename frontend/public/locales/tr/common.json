@@ -40,7 +40,10 @@
         "history": "Geçmiş",
         "session_history": "Oturum Geçmişi",
         "new_session": "Yeni Oturum",
-        "no_history": "Oturum geçmişi yok"
+        "no_history": "Oturum geçmişi yok",
+        "web_search": "Web Araması",
+        "web_search_enabled_desc": "Bu mesaj için web aramasını etkinleştir",
+        "web_search_disabled_desc": "Bu mesaj için web aramasını devre dışı bırak"
     },
     "common": {
         "back": "Geri",

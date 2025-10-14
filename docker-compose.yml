@@ -48,6 +48,21 @@ services:
       - sef_network
     restart: unless-stopped
 
+  searxng:
+    image: searxng/searxng:latest
+    container_name: sef_searxng
+    ports:
+      - "8888:8080"
+    volumes:
+      - searxng_data:/etc/searxng
+      - ./searxng-settings.yml:/etc/searxng/settings.yml:ro
+    environment:
+      - SEARXNG_BASE_URL=http://localhost:8888/
+      - SEARXNG_SECRET=your-searxng-secret-key-change-this
+    networks:
+      - sef_network
+    restart: unless-stopped
+
   backend:
     build:
       context: ./backend
@@ -63,6 +78,7 @@ services:
       - REDIS_PORT=6379
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333
+      - SEARXNG_URL=http://searxng:8080
       - APP_ENV=production
       - APP_KEY=your-secret-key-here-change-this-in-production
       - JWT_SECRET=your-jwt-secret-here-change-this-in-production
@@ -97,6 +113,7 @@ volumes:
   postgresql_data:
   redis_data:
   qdrant_data:
+  searxng_data:
 
 networks:
   sef_network:

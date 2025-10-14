@@ -7,7 +7,10 @@ A flexible LLM-powered chat system that allows users to create custom chat inter
 - 🔐 **Authentication System**: JWT-based user authentication with role management
 - 💬 **Chat Sessions**: Persistent chat conversations with streaming support
 - 🤖 **LLM Provider Abstraction**: Support for Ollama and extensible to other providers
-- 👑 **Admin Panel**: Super admin functionality for system management
+- � **Web Search Integration**: Built-in web search capability using SearXNG
+- 🛠️ **Tool Support**: API tool integration and custom tool runners
+- 📚 **RAG Support**: Vector-based document retrieval with Qdrant
+- �👑 **Admin Panel**: Super admin functionality for system management
 - 🐳 **Docker Support**: Full containerization with Docker Compose
 - ⚡ **Real-time Streaming**: HTTP-based streaming chat responses
 
@@ -24,7 +27,6 @@ A flexible LLM-powered chat system that allows users to create custom chat inter
 - **Next.js 15** with React 19
 - **Tailwind CSS v4** for styling
 - **Shadcn UI** component library
-- **Vercel AI SDK** for AI integration
 
 ## Quick Start
 
@@ -63,7 +65,8 @@ docker-compose up -d
 ### 4. Access the Application
 - **Frontend**: http://localhost:3000
 - **Backend API**: http://localhost:8110
-- **Ollama**: http://localhost:11434
+- **SearXNG**: http://localhost:8888
+- **Qdrant Dashboard**: http://localhost:6333/dashboard
 
 ### 5. Database Setup
 The database will be automatically created and migrated when the backend starts.
@@ -130,24 +133,29 @@ sef/
 
 ## Docker Services
 
-- **postgres**: PostgreSQL database
+- **postgresql**: PostgreSQL database
 - **redis**: Redis cache
+- **qdrant**: Vector database for RAG
+- **searxng**: Privacy-respecting metasearch engine for web search
 - **backend**: Go API server
 - **frontend**: Next.js application
-- **ollama**: Ollama LLM server
 
 ## Environment Variables
 
 ### Backend
 - `APP_ENV`: Application environment
 - `APP_KEY`: Application secret key
-- `DB_HOST`: Database host
-- `DB_PORT`: Database port
-- `DB_NAME`: Database name
-- `DB_USER`: Database user
-- `DB_PASSWORD`: Database password
+- `JWT_SECRET`: JWT secret key
+- `DATABASE_HOST`: Database host
+- `DATABASE_PORT`: Database port
+- `DATABASE_NAME`: Database name
+- `DATABASE_USER`: Database user
+- `DATABASE_PASSWORD`: Database password
 - `REDIS_HOST`: Redis host
 - `REDIS_PORT`: Redis port
+- `QDRANT_HOST`: Qdrant host
+- `QDRANT_PORT`: Qdrant port
+- `SEARXNG_URL`: SearXNG service URL (default: http://searxng:8080)
 
 ### Frontend
 - `NEXT_PUBLIC_API_URL`: Backend API URL
