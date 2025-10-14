@@ -448,6 +448,10 @@ func (s *MessagingService) processToolCalls(session *entities.Session, toolCalls
 			}
 		}
 
+		if displayName == "web_search" {
+			displayName = "Web Search"
+		}
+
 		// Check if this tool has been called too many times
 		toolCallCounter[toolCall.Function.Name]++
 		if toolCallCounter[toolCall.Function.Name] > 2 {
