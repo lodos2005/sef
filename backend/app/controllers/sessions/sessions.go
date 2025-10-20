@@ -69,7 +69,7 @@ func (h *Controller) Show(c fiber.Ctx) error {
 	}
 
 	currentUser := c.Locals("user").(*entities.User)
-	if item.UserID != currentUser.ID && *currentUser.SuperAdmin == false {
+	if item.UserID != currentUser.ID && !currentUser.IsAdmin {
 		return fiber.ErrForbidden
 	}
 
@@ -100,7 +100,7 @@ func (h *Controller) Delete(c fiber.Ctx) error {
 	}
 
 	currentUser := c.Locals("user").(*entities.User)
-	if item.UserID != currentUser.ID && *currentUser.SuperAdmin == false {
+	if item.UserID != currentUser.ID && !currentUser.IsAdmin {
 		return fiber.ErrForbidden
 	}
 
@@ -118,7 +118,7 @@ func (h *Controller) Messages(c fiber.Ctx) error {
 	}
 
 	currentUser := c.Locals("user").(*entities.User)
-	if session.UserID != currentUser.ID && *currentUser.SuperAdmin == false {
+	if session.UserID != currentUser.ID && !currentUser.IsAdmin {
 		return fiber.ErrForbidden
 	}
 

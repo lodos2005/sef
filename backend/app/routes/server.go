@@ -8,7 +8,6 @@ import (
 	"sef/app/controllers/sessions"
 	"sef/app/controllers/settings"
 	"sef/app/controllers/tools"
-	"sef/app/controllers/users"
 	"sef/app/entities"
 	"sef/app/middleware"
 	"sef/internal/database"
@@ -24,12 +23,16 @@ import (
 func Server(app *fiber.App) {
 	apiV1 := app.Group("/api/v1")
 
+	// Public auth endpoints (no authentication required)
 	authGroup := apiV1.Group("/auth")
 	{
-		authGroup.Post("/login", auth.Login)
+		authGroup.Get("/login", auth.Login)
+		authGroup.Get("/callback", auth.Callback)
 		authGroup.Post("/logout", auth.Logout)
+		authGroup.Post("/refresh", auth.RefreshToken)
 	}
 
+	// Protected routes (authentication required)
 	apiV1.Use(middleware.TokenLookup)
 	apiV1.Use(middleware.Authenticated())
 
@@ -53,20 +56,6 @@ func Server(app *fiber.App) {
 		}
 		return c.SendStatus(fiber.StatusOK)
 	})
-
-	userGroup := apiV1.Group("/users")
-	{
-		controller := &users.Controller{
-			DB: database.Connection(),
-		}
-
-		userGroup.Use(middleware.IsSuperAdmin())
-		userGroup.Get("/", controller.Index)
-		userGroup.Post("/", controller.Create)
-		userGroup.Get("/:id", controller.Show)
-		userGroup.Patch("/:id", controller.Update)
-		userGroup.Delete("/:id", controller.Delete)
-	}
 
 	chatbotsGroup := apiV1.Group("/chatbots")
 	{

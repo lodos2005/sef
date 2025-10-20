@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server"
 
-const authRoutes = ["/auth/login"]
+const authRoutes = ["/auth/login", "/auth/callback"]
 const safeToRedirect = ["/auth", "/settings"]
 
 export function middleware(request: NextRequest) {
@@ -19,12 +19,13 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  const token = request.cookies.get("token")?.value
+  const token = request.cookies.get("access_token")?.value || request.cookies.get("refresh_token")?.value
 
   if (
     !token &&
     (request.nextUrl.pathname.includes("forgot_password") ||
-      request.nextUrl.pathname.includes("reset_password"))
+      request.nextUrl.pathname.includes("reset_password") ||
+      request.nextUrl.pathname === "/auth/callback")
   ) {
     return NextResponse.next()
   }
@@ -35,7 +36,7 @@ export function middleware(request: NextRequest) {
     )
   }
 
-  if (token && authRoutes.includes(request.nextUrl.pathname)) {
+  if (token && authRoutes.includes(request.nextUrl.pathname) && request.nextUrl.pathname !== "/auth/callback") {
     let url = request.nextUrl.searchParams.get("redirect") || "/"
 
     // Check if url is safe

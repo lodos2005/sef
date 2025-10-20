@@ -82,6 +82,11 @@ services:
       - APP_ENV=production
       - APP_KEY=your-secret-key-here-change-this-in-production
       - JWT_SECRET=your-jwt-secret-here-change-this-in-production
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=sef-realm
+      - KEYCLOAK_CLIENT_ID=sef-client
+      - KEYCLOAK_CLIENT_SECRET=your-keycloak-client-secret-change-this
+      - KEYCLOAK_REDIRECT_URI=http://localhost:3000/auth/callback
     ports:
       - "8110:8110"
     depends_on:

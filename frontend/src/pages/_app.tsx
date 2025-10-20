@@ -17,6 +17,7 @@ import { makeZodI18nMap } from "zod-i18n-map"
 
 import { cn } from "@/lib/utils"
 import { useCurrentUser } from "@/hooks/auth/useCurrentUser"
+import { useTokenRefresh } from "@/hooks/auth/useTokenRefresh"
 import { Toaster } from "@/components/ui/sonner"
 
 import Layout from "../components/_layout/app_layout"
@@ -30,6 +31,9 @@ const RootLayout: AppType = ({ Component, pageProps }: AppPropsWithLayout) => {
 
   const locale = isBrowser() && window.localStorage.getItem("LANGUAGE")
   const user = useCurrentUser()
+
+  // Enable automatic token refresh
+  useTokenRefresh()
 
   if (isBrowser()) {
     window.localStorage.setItem("LANGUAGE", locale || user.locale || "tr")

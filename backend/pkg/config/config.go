@@ -25,10 +25,20 @@ type DatabaseConfig struct {
 	User     string `json:"user"`
 }
 
+// KeycloakConfig represents Keycloak configuration
+type KeycloakConfig struct {
+	URL          string `json:"url"`
+	Realm        string `json:"realm"`
+	ClientID     string `json:"client_id"`
+	ClientSecret string `json:"client_secret"`
+	RedirectURL  string `json:"redirect_url"`
+}
+
 // Config represents the complete application configuration
 type Config struct {
 	App       AppConfig      `json:"app"`
 	Database  DatabaseConfig `json:"database"`
+	Keycloak  KeycloakConfig `json:"keycloak"`
 	QdrantURL string         `json:"qdrant_url"`
 	OllamaURL string         `json:"ollama_url"`
 }
@@ -57,6 +67,15 @@ func Load() (*Config, error) {
 		Password: getEnv("DATABASE_PASSWORD", "postgres"),
 		Port:     getEnvAsInt("DATABASE_PORT", 5432),
 		User:     getEnv("DATABASE_USER", "postgres"),
+	}
+
+	// Load Keycloak configuration
+	config.Keycloak = KeycloakConfig{
+		URL:          getEnv("KEYCLOAK_URL", "http://localhost:8080"),
+		Realm:        getEnv("KEYCLOAK_REALM", "master"),
+		ClientID:     getEnv("KEYCLOAK_CLIENT_ID", "sef-app"),
+		ClientSecret: getEnv("KEYCLOAK_CLIENT_SECRET", ""),
+		RedirectURL:  getEnv("KEYCLOAK_REDIRECT_URL", "http://localhost:3000/auth/callback"),
 	}
 
 	// Load Qdrant and Ollama URLs

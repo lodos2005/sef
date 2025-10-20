@@ -8,7 +8,6 @@ import (
 	"sef/internal/database"
 	"sef/internal/error_handler"
 	"sef/internal/migration"
-	"sef/pkg/seeds"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
@@ -39,10 +38,6 @@ func RunServer() {
 
 		if err := migration.Init(); err != nil {
 			log.Fatalf("error when making migrations, err: %s\n", err.Error())
-		}
-
-		if err := seeds.Init(); err != nil {
-			log.Fatalf("error when seeding, err: %s\n", err.Error())
 		}
 	}
 

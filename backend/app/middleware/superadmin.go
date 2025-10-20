@@ -13,7 +13,7 @@ func IsSuperAdmin() fiber.Handler {
 			return fiber.NewError(fiber.StatusUnauthorized, "user not authenticated")
 		}
 
-		if !user.IsSuperAdmin() {
+		if !user.IsAdmin {
 			return fiber.NewError(fiber.StatusForbidden, "insufficient permissions")
 		}
 

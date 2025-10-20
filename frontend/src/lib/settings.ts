@@ -40,14 +40,6 @@ export const Settings = {
       href: "/settings/documents",
     },
     {
-      id: "users",
-      title: "Kullanıcılar",
-      description:
-        "Bu sayfa aracılığıyla kullanıcılara roller ekleyebilir, kullanıcı profillerini düzenleyebilir ve yenilerini ekleyebilirsiniz.",
-      icon: Users2,
-      href: "/settings/users",
-    },
-    {
       id: "sessions",
       title: "Oturumlar",
       description: "Sistemdeki sohbet oturumlarını görüntüleyin ve yönetin.",

@@ -1,24 +1,12 @@
 import { http } from "@/services"
-import { zodResolver } from "@hookform/resolvers/zod"
 import { AlertCircle, LogIn } from "lucide-react"
-import Link from "next/link"
 import { useRouter } from "next/router"
 import * as React from "react"
-import { useForm } from "react-hook-form"
-import * as z from "zod"
 
 import { Button } from "@/components/ui/button"
 import { Icons } from "@/components/ui/icons"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { useLogin } from "@/hooks/auth/useLogin"
 import { cn } from "@/lib/utils"
 
-import {
-  Form,
-  FormField,
-  FormMessage,
-} from "../form/form"
 import { Alert, AlertDescription, AlertTitle } from "./alert"
 
 interface UserAuthFormProps extends React.HTMLAttributes<HTMLDivElement> { }
@@ -27,23 +15,8 @@ const safeToRedirect = ["/auth", "/notifications", "/servers", "/settings"]
 
 export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   const router = useRouter()
-  const [isLoading, setIsLoading] = React.useState<boolean>(false)
-
-  const formSchema = z.object({
-    username: z.string({
-      required_error: "Kullanıcı adı alanı boş olamaz.",
-    }),
-    password: z.string({
-      required_error: "Lütfen parolanızı giriniz.",
-    }),
-  })
-
-  const loginForm = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-  })
-
+  const [isLoading, setIsLoading] = React.useState<boolean>(true)
   const [error, setError] = React.useState("")
-  const { login } = useLogin()
 
   const getRedirectUri = (toHome = false) => {
     let redirectUri = (router.query.redirect || "/") as string
@@ -80,17 +53,18 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     return redirectUri
   }
 
-  const onLogin = async (data: z.infer<typeof formSchema>) => {
-    setIsLoading(true)
-
+  const initiateLogin = async () => {
     try {
-      const axiosReply = await login(data.username, data.password)
-
-      setError("")
-      setTimeout(() => {
-        const user = axiosReply.data.user
-        router.push(getRedirectUri())
-      }, 500)
+      // Get the Keycloak login URL from backend
+      const response = await http.get("/auth/login")
+      
+      if (response.data.login_url) {
+        // Redirect to Keycloak login page
+        window.location.href = response.data.login_url
+      } else {
+        setError("Failed to get login URL")
+        setIsLoading(false)
+      }
     } catch (e: any) {
       if (!e.response) {
         setError(e.message)
@@ -108,63 +82,37 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     }
   }
 
+  // Automatically redirect to Keycloak on component mount
+  React.useEffect(() => {
+    initiateLogin()
+  }, [])
+
   return (
     <div className={cn("grid gap-6", className)} {...props}>
       <div className="grid gap-4">
         {error && (
           <Alert>
             <AlertCircle className="size-4" />
-            <AlertTitle>Bilgi</AlertTitle>
+            <AlertTitle>Hata</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
 
-        <Form {...loginForm}>
-          <form
-            onSubmit={loginForm.handleSubmit(onLogin as any)}
-            className="grid gap-4"
-          >
-            <FormField
-              control={loginForm.control}
-              name="username"
-              render={({ field }) => (
-                <div className="flex flex-col gap-3">
-                  <Label htmlFor="username">Kullanıcı Adı</Label>
-                  <Input
-                    id="username"
-                    {...field}
-                  />
-                  <FormMessage />
-                </div>
-              )}
-            />
-
-            <FormField
-              control={loginForm.control}
-              name="password"
-              render={({ field }) => (
-                <div className="flex flex-col gap-3">
-                  <Label htmlFor="password">Parola</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    {...field}
-                  />
-                  <FormMessage />
-                </div>
-              )}
-            />
-
-            <Button disabled={isLoading} className="mt-4" type="submit">
-              {isLoading ? (
-                <Icons.spinner className="mr-2 size-4 animate-spin" />
-              ) : (
-                <LogIn className="mr-2 size-4" />
-              )}
-              Giriş Yap
+        <div className="flex flex-col items-center gap-4">
+          {isLoading ? (
+            <>
+              <Icons.spinner className="size-8 animate-spin" />
+              <p className="text-sm text-muted-foreground">
+                Keycloak'a yönlendiriliyorsunuz...
+              </p>
+            </>
+          ) : (
+            <Button className="w-full" onClick={initiateLogin}>
+              <LogIn className="mr-2 size-4" />
+              Tekrar Dene
             </Button>
-          </form>
-        </Form>
+          )}
+        </div>
       </div>
     </div>
   )

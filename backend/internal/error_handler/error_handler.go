@@ -13,9 +13,6 @@ var ErrorHandler = func(c fiber.Ctx, err error) error {
 		code = fiber.StatusUnprocessableEntity
 		return c.Status(code).JSON(e)
 	}
-	if _, ok := err.(*utils.AuthError); ok {
-		code = fiber.StatusUnauthorized
-	}
 	if _, ok := err.(*utils.AccessError); ok {
 		code = fiber.StatusForbidden
 	}
