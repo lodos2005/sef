@@ -103,7 +103,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
             <>
               <Icons.spinner className="size-8 animate-spin" />
               <p className="text-sm text-muted-foreground">
-                Keycloak'a yönlendiriliyorsunuz...
+                Keycloak&apos;a yönlendiriliyorsunuz...
               </p>
             </>
           ) : (
