@@ -1,6 +1,7 @@
 package chunking
 
 import (
+	"regexp"
 	"strings"
 	"unicode"
 )
@@ -29,7 +30,7 @@ func ChunkWithHeaders(text string, strategy SemanticChunkingStrategy) []Chunk {
 		return []Chunk{}
 	}
 
-	// First, identify potential headers (lines that are short and followed by content)
+	// IMPROVEMENT: Better header detection with Markdown awareness
 	lines := strings.Split(text, "\n")
 	var sections []textSection
 	currentSection := textSection{header: "", content: strings.Builder{}}
@@ -37,27 +38,53 @@ func ChunkWithHeaders(text string, strategy SemanticChunkingStrategy) []Chunk {
 	for i, line := range lines {
 		line = strings.TrimSpace(line)
 
-		// Check if this might be a header
-		isHeader := false
-		if len(line) > 0 && len(line) < 100 {
+		// IMPROVEMENT: Detect Markdown headers (ATX style: # Header)
+		isMarkdownHeader, headerLevel := isMarkdownHeader(line)
+		
+		// IMPROVEMENT: Detect Setext headers (underlined)
+		isSetextHeader := false
+		if !isMarkdownHeader && i < len(lines)-1 {
+			nextLine := strings.TrimSpace(lines[i+1])
+			if isSetextUnderline(nextLine) {
+				isSetextHeader = true
+				headerLevel = 1
+				if strings.HasPrefix(nextLine, "---") {
+					headerLevel = 2
+				}
+			}
+		}
+
+		// Check if this might be a header (legacy detection for non-Markdown)
+		isLegacyHeader := false
+		if !isMarkdownHeader && !isSetextHeader && len(line) > 0 && len(line) < 100 {
 			// Check if next lines have content (not a standalone short line)
 			if i < len(lines)-1 {
 				nextLine := strings.TrimSpace(lines[i+1])
-				if len(nextLine) > 0 {
+				if len(nextLine) > 0 && !isSetextUnderline(nextLine) {
 					// Patterns that suggest a header
 					if strings.HasSuffix(line, ":") ||
 						(len(line) < 50 && !strings.Contains(line, ".")) ||
 						isAllCaps(line) {
-						isHeader = true
+						isLegacyHeader = true
+						headerLevel = 3 // Assign lower priority to legacy headers
 					}
 				}
 			}
 		}
 
+		isHeader := isMarkdownHeader || isSetextHeader || isLegacyHeader
+
 		if isHeader && currentSection.content.Len() > 0 {
 			// Start a new section
 			sections = append(sections, currentSection)
-			currentSection = textSection{header: line, content: strings.Builder{}}
+			currentSection = textSection{
+				header:      line,
+				headerLevel: headerLevel,
+				content:     strings.Builder{},
+			}
+		} else if isSetextHeader {
+			// This is the underline, skip it
+			continue
 		} else {
 			if line != "" {
 				if currentSection.content.Len() > 0 {
@@ -90,8 +117,9 @@ func ChunkWithHeaders(text string, strategy SemanticChunkingStrategy) []Chunk {
 					Text:  sectionText,
 					Index: index,
 					Metadata: map[string]interface{}{
-						"has_header": section.header != "",
-						"header":     section.header,
+						"has_header":   section.header != "",
+						"header":       section.header,
+						"header_level": section.headerLevel,
 					},
 				})
 				index++
@@ -113,6 +141,7 @@ func ChunkWithHeaders(text string, strategy SemanticChunkingStrategy) []Chunk {
 					}
 					chunk.Metadata["has_header"] = section.header != ""
 					chunk.Metadata["header"] = section.header
+					chunk.Metadata["header_level"] = section.headerLevel
 					chunks = append(chunks, chunk)
 					index++
 				}
@@ -124,8 +153,50 @@ func ChunkWithHeaders(text string, strategy SemanticChunkingStrategy) []Chunk {
 }
 
 type textSection struct {
-	header  string
-	content strings.Builder
+	header      string
+	headerLevel int
+	content     strings.Builder
+}
+
+// IMPROVEMENT: isMarkdownHeader detects ATX-style Markdown headers (# Header)
+func isMarkdownHeader(line string) (bool, int) {
+	trimmed := strings.TrimSpace(line)
+	
+	// Check for ATX headers (# Header)
+	if strings.HasPrefix(trimmed, "#") {
+		level := 0
+		for _ , c := range trimmed {
+			if c == '#' {
+				level++
+			} else if c == ' ' && level > 0 && level <= 6 {
+				// Valid header: 1-6 # symbols followed by space
+				return true, level
+			} else {
+				// Not a valid header (too many # or no space)
+				break
+			}
+		}
+	}
+	
+	return false, 0
+}
+
+// IMPROVEMENT: isSetextUnderline checks if a line is a Setext header underline
+func isSetextUnderline(line string) bool {
+	trimmed := strings.TrimSpace(line)
+	if len(trimmed) < 3 {
+		return false
+	}
+	
+	// Check for === or --- (at least 3 characters)
+	if matched, _ := regexp.MatchString(`^={3,}$`, trimmed); matched {
+		return true
+	}
+	if matched, _ := regexp.MatchString(`^-{3,}$`, trimmed); matched {
+		return true
+	}
+	
+	return false
 }
 
 // isAllCaps checks if a string is mostly uppercase (potential header)
