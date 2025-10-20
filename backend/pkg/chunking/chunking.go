@@ -51,6 +51,15 @@ func ChunkText(text string, strategy ChunkingStrategy) []Chunk {
 			end = textLen
 		}
 
+		// IMPROVEMENT: Avoid breaking inside code blocks
+		if isInsideCodeBlock(text, end) {
+			// Find the end of the code block
+			codeBlockEnd := findCodeBlockEnd(text, end)
+			if codeBlockEnd > end && codeBlockEnd < textLen {
+				end = codeBlockEnd
+			}
+		}
+
 		// Try to find a good break point
 		if strategy.SplitOnSentence && end < textLen {
 			breakPoint := findSentenceBreak(text, start, end)
@@ -61,10 +70,12 @@ func ChunkText(text string, strategy ChunkingStrategy) []Chunk {
 
 		chunkText := strings.TrimSpace(text[start:end])
 		if chunkText != "" {
-			// Add context metadata to help with semantic search
+			// IMPROVEMENT: Enhanced metadata with content type detection
+			contentType := detectContentType(chunkText)
 			metadata := map[string]interface{}{
-				"char_count": len(chunkText),
-				"word_count": len(strings.Fields(chunkText)),
+				"char_count":   len(chunkText),
+				"word_count":   len(strings.Fields(chunkText)),
+				"content_type": contentType,
 			}
 
 			chunks = append(chunks, Chunk{
@@ -174,4 +185,70 @@ func ChunkByParagraphs(text string, maxChunkSize int) []Chunk {
 	}
 
 	return chunks
+}
+
+// IMPROVEMENT: isInsideCodeBlock checks if a position is inside a code block
+func isInsideCodeBlock(text string, position int) bool {
+	// Count code block fences before this position
+	beforeText := text[:position]
+	fenceCount := strings.Count(beforeText, "```")
+	
+	// Odd number means we're inside a code block
+	return fenceCount%2 == 1
+}
+
+// IMPROVEMENT: findCodeBlockEnd finds the end of a code block starting from position
+func findCodeBlockEnd(text string, position int) int {
+	// Find the closing ```
+	afterText := text[position:]
+	closingIndex := strings.Index(afterText, "```")
+	
+	if closingIndex != -1 {
+		// Return position after the closing fence
+		return position + closingIndex + 3
+	}
+	
+	// If no closing fence found, return original position
+	return position
+}
+
+// IMPROVEMENT: detectContentType analyzes text to determine content type
+// This helps RAG understand what kind of information is in each chunk
+func detectContentType(text string) string {
+	// Check for code blocks
+	if strings.Contains(text, "```") {
+		return "code"
+	}
+	
+	// Check for command line syntax (especially relevant for your Liman doc!)
+	if strings.Contains(text, "sudo ") || strings.Contains(text, "apt ") || 
+	   strings.Contains(text, "$ ") || strings.HasPrefix(strings.TrimSpace(text), "#") {
+		return "command"
+	}
+	
+	// Check for lists (markdown or numbered)
+	lines := strings.Split(text, "\n")
+	listCount := 0
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "- ") || 
+		   strings.HasPrefix(trimmed, "* ") ||
+		   strings.HasPrefix(trimmed, "+ ") ||
+		   (len(trimmed) > 2 && trimmed[0] >= '0' && trimmed[0] <= '9' && trimmed[1] == '.') {
+			listCount++
+		}
+	}
+	if listCount > 2 {
+		return "list"
+	}
+	
+	// Check for headers (Markdown style)
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "#") {
+			return "structured"
+		}
+	}
+	
+	return "prose"
 }
