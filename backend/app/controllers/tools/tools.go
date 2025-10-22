@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
+	"gopkg.in/yaml.v3"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -403,4 +404,238 @@ Please provide only the JQ query without any explanation or markdown formatting.
 	}
 
 	return c.JSON(response)
+}
+
+func (h *Controller) Export(c fiber.Ctx) error {
+	var payload struct {
+		ToolIDs []uint `json:"tool_ids"`
+		Format  string `json:"format"`
+	}
+	if err := c.Bind().JSON(&payload); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	if len(payload.ToolIDs) == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "tool_ids is required"})
+	}
+
+	// Default format is JSON
+	if payload.Format == "" {
+		payload.Format = "json"
+	}
+
+	// Validate format
+	if payload.Format != "json" && payload.Format != "yaml" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "format must be 'json' or 'yaml'"})
+	}
+
+	// Get the tools
+	var tools []entities.Tool
+	if err := h.DB.Where("id IN ?", payload.ToolIDs).Find(&tools).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch tools"})
+	}
+
+	if len(tools) == 0 {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "No tools found with the provided IDs"})
+	}
+
+	// Convert tools to OpenAPI 3.0 format
+	openAPISpec := h.convertToolsToOpenAPI(tools)
+
+	var exportBytes []byte
+	var err error
+	var contentType string
+	var filename string
+
+	if payload.Format == "yaml" {
+		exportBytes, err = yaml.Marshal(openAPISpec)
+		contentType = "application/x-yaml"
+		filename = "tools_export.yaml"
+	} else {
+		exportBytes, err = json.MarshalIndent(openAPISpec, "", "  ")
+		contentType = "application/json"
+		filename = "tools_export.json"
+	}
+
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": fmt.Sprintf("Failed to marshal tools: %v", err)})
+	}
+
+	c.Set("Content-Type", contentType)
+	c.Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+	return c.Send(exportBytes)
+}
+
+// convertToolsToOpenAPI converts tools to OpenAPI 3.0 specification format
+func (h *Controller) convertToolsToOpenAPI(tools []entities.Tool) map[string]interface{} {
+	paths := make(map[string]interface{})
+	serversMap := make(map[string]bool) // Track unique server URLs
+
+	for _, tool := range tools {
+		if tool.Type != "api" {
+			continue // Only API tools can be exported as OpenAPI
+		}
+
+		// Extract URL and method from config
+		url, _ := tool.Config["url"].(string)
+		method, _ := tool.Config["method"].(string)
+		if url == "" || method == "" {
+			continue
+		}
+
+		// Parse URL to extract path and base URL
+		parsedURL := strings.Split(url, "?")[0] // Remove query params
+		pathPart := "/"
+		serverURL := ""
+
+		// Try to extract path and server URL
+		if strings.Contains(parsedURL, "://") {
+			parts := strings.SplitN(parsedURL, "://", 2)
+			if len(parts) == 2 {
+				protocol := parts[0]
+				hostAndPath := parts[1]
+				pathStart := strings.Index(hostAndPath, "/")
+				if pathStart >= 0 {
+					pathPart = hostAndPath[pathStart:]
+					serverURL = protocol + "://" + hostAndPath[:pathStart]
+				} else {
+					// No path, just host
+					serverURL = protocol + "://" + hostAndPath
+					pathPart = "/"
+				}
+				// Track this server URL
+				if serverURL != "" {
+					serversMap[serverURL] = true
+				}
+			}
+		}
+
+		// Build operation
+		operation := make(map[string]interface{})
+		operation["summary"] = tool.DisplayName
+		operation["description"] = tool.Description
+		operation["operationId"] = tool.Name
+
+		// Add tags based on display name (if contains "/")
+		if strings.Contains(tool.DisplayName, "/") {
+			parts := strings.Split(tool.DisplayName, "/")
+			operation["tags"] = []string{strings.TrimSpace(parts[0])}
+		}
+
+		// Convert parameters
+		var parameters []map[string]interface{}
+		var bodyParam map[string]interface{}
+
+		if len(tool.Parameters) > 0 {
+			for _, paramInterface := range tool.Parameters {
+				param, ok := paramInterface.(map[string]interface{})
+				if !ok {
+					continue
+				}
+
+				paramName, _ := param["name"].(string)
+				paramType, _ := param["type"].(string)
+				paramDesc, _ := param["description"].(string)
+				paramRequired, _ := param["required"].(bool)
+
+				// Handle body parameter separately
+				if paramName == "body" {
+					bodyParam = map[string]interface{}{
+						"description": paramDesc,
+						"required":    paramRequired,
+						"content": map[string]interface{}{
+							"application/json": map[string]interface{}{
+								"schema": map[string]interface{}{
+									"type": "object",
+								},
+							},
+						},
+					}
+					continue
+				}
+
+				// Determine parameter location
+				paramLocation := "query"
+				if strings.Contains(url, "{"+paramName+"}") {
+					paramLocation = "path"
+				}
+
+				openAPIParam := map[string]interface{}{
+					"name":        paramName,
+					"in":          paramLocation,
+					"description": paramDesc,
+					"required":    paramRequired,
+					"schema": map[string]interface{}{
+						"type": paramType,
+					},
+				}
+				parameters = append(parameters, openAPIParam)
+			}
+		}
+
+		if len(parameters) > 0 {
+			operation["parameters"] = parameters
+		}
+
+		// Add request body if exists
+		if bodyParam != nil {
+			operation["requestBody"] = bodyParam
+		}
+
+		// Add responses
+		operation["responses"] = map[string]interface{}{
+			"200": map[string]interface{}{
+				"description": "Successful response",
+				"content": map[string]interface{}{
+					"application/json": map[string]interface{}{
+						"schema": map[string]interface{}{
+							"type": "object",
+						},
+					},
+				},
+			},
+		}
+
+		// Get or create path item
+		var pathItem map[string]interface{}
+		if existing, ok := paths[pathPart]; ok {
+			pathItem = existing.(map[string]interface{})
+		} else {
+			pathItem = make(map[string]interface{})
+			paths[pathPart] = pathItem
+		}
+
+		// Add operation to path
+		pathItem[strings.ToLower(method)] = operation
+	}
+
+	// Build servers list from collected server URLs
+	servers := make([]map[string]interface{}, 0)
+	for serverURL := range serversMap {
+		servers = append(servers, map[string]interface{}{
+			"url": serverURL,
+		})
+	}
+
+	// If no servers found, add a default placeholder
+	if len(servers) == 0 {
+		servers = append(servers, map[string]interface{}{
+			"url":         "https://api.example.com",
+			"description": "Default server (update with your actual API URL)",
+		})
+	}
+
+	// Build OpenAPI spec
+	spec := map[string]interface{}{
+		"openapi": "3.0.0",
+		"info": map[string]interface{}{
+			"title":       "Exported Tools",
+			"description": fmt.Sprintf("OpenAPI specification generated from %d exported tool(s)", len(tools)),
+			"version":     "1.0.0",
+		},
+		"servers": servers,
+		"paths":   paths,
+	}
+
+	return spec
 }

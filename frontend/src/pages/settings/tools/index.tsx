@@ -9,17 +9,46 @@ import { DivergentColumn } from "@/types/table"
 import { useEmitter } from "@/hooks/useEmitter"
 import { ITool } from "@/types/tool"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { PlusCircleIcon, Upload } from "lucide-react"
 import Link from "next/link"
 import ToolImportDialog from "@/components/settings/tools/ToolImportDialog"
+import ToolExportDialog from "@/components/settings/tools/ToolExportDialog"
 import { ToolRowActions } from "@/components/settings/tool-actions"
 
 export default function ToolSettingsPage() {
   const [refetchTrigger, setRefetchTrigger] = useState<number>(0)
+  const [selectedTools, setSelectedTools] = useState<ITool[]>([])
   const emitter = useEmitter()
   const { t } = useTranslation("settings")
 
   const columns: DivergentColumn<ITool, string>[] = [
+    {
+      id: "select",
+      header: ({ table }: any) => (
+        <div className="flex items-center justify-center">
+          <Checkbox
+            checked={
+              table.getIsAllPageRowsSelected() ||
+              (table.getIsSomePageRowsSelected() && "indeterminate")
+            }
+            onCheckedChange={(value: any) => table.toggleAllPageRowsSelected(!!value)}
+            aria-label="Select all"
+          />
+        </div>
+      ),
+      cell: ({ row }: any) => (
+        <div className="flex items-center justify-center">
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value: any) => row.toggleSelected(!!value)}
+            aria-label="Select row"
+          />
+        </div>
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
     {
       accessorKey: "display_name",
       header: ({ column }) => (
@@ -87,6 +116,8 @@ export default function ToolSettingsPage() {
         columns={columns}
         endpoint="/tools"
         refetchTrigger={refetchTrigger}
+        selectable={true}
+        onSelectedRowsChange={(rows) => setSelectedTools(rows)}
       >
         <div className="flex gap-2">
           <Link href="/settings/tools/create">
@@ -101,6 +132,7 @@ export default function ToolSettingsPage() {
               {t("tools.import.button", "Import")}
             </Button>
           </ToolImportDialog>
+          <ToolExportDialog selectedToolIds={selectedTools.map((tool: ITool) => tool.id)} />
         </div>
       </AsyncDataTable>
     </>
