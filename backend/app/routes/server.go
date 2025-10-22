@@ -101,6 +101,7 @@ func Server(app *fiber.App) {
 		toolsGroup.Get("/:id", controller.Show)
 		toolsGroup.Post("/", controller.Create)
 		toolsGroup.Post("/import", controller.Import)
+		toolsGroup.Post("/export", controller.Export)
 		toolsGroup.Patch("/:id", controller.Update)
 		toolsGroup.Delete("/:id", controller.Delete)
 		toolsGroup.Post("/:id/test", controller.Test)
