@@ -5,6 +5,7 @@ import { Plus, Save, Trash2 } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { ITool } from "@/types/tool"
+import { IToolCategory } from "@/types/tool-category"
 import { useEmitter } from "@/hooks/useEmitter"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -20,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { toolCategoriesService } from "@/services/tool-categories.service"
 
 interface ToolParameter {
   name: string
@@ -42,11 +44,13 @@ export default function ToolForm({ mode, tool, onSuccess }: ToolFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingData, setIsLoadingData] = useState(mode === "edit")
   const [schema, setSchema] = useState<Record<string, any> | null>(null)
+  const [categories, setCategories] = useState<IToolCategory[]>([])
   const [formData, setFormData] = useState<{
     name: string
     display_name: string
     description: string
     type: string
+    category_id: number | null
     config: Record<string, any>
     parameters: ToolParameter[]
   }>({
@@ -54,6 +58,7 @@ export default function ToolForm({ mode, tool, onSuccess }: ToolFormProps) {
     display_name: tool?.display_name || "",
     description: tool?.description || "",
     type: tool?.type || "api",
+    category_id: tool?.category_id || null,
     config: tool?.config || ({} as Record<string, any>),
     parameters:
       (tool?.parameters as ToolParameter[]) || ([] as ToolParameter[]),
@@ -74,6 +79,7 @@ export default function ToolForm({ mode, tool, onSuccess }: ToolFormProps) {
             display_name: toolData.display_name,
             description: toolData.description,
             type: toolData.type,
+            category_id: toolData.category_id || null,
             config: toolData.config || {},
             parameters: toolData.parameters || [],
           })
@@ -147,6 +153,21 @@ export default function ToolForm({ mode, tool, onSuccess }: ToolFormProps) {
       parameters: prev.parameters.filter((_, i) => i !== index),
     }))
   }
+
+  // Fetch categories on mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await toolCategoriesService.getToolCategories({
+          per_page: 1000,
+        })
+        setCategories(response.records || [])
+      } catch (error) {
+        console.error("Failed to fetch categories:", error)
+      }
+    }
+    fetchCategories()
+  }, [])
 
   // Fetch schema when tool type changes
   useEffect(() => {
@@ -569,6 +590,51 @@ export default function ToolForm({ mode, tool, onSuccess }: ToolFormProps) {
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
+
+                <div className="space-y-3">
+                  <Label htmlFor="category_id" className="text-sm font-medium">
+                    {t("tools.category", "Category")}
+                  </Label>
+                  <Select
+                    value={formData.category_id?.toString() || "none"}
+                    onValueChange={(value) =>
+                      handleInputChange(
+                        "category_id",
+                        value === "none" ? null : parseInt(value)
+                      )
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue
+                        placeholder={t(
+                          "tools.select_category",
+                          "Select category"
+                        )}
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">
+                        {t("tools.no_category", "No category")}
+                      </SelectItem>
+                      {categories
+                        .sort((a, b) => (a.order || 0) - (b.order || 0))
+                        .map((category) => (
+                          <SelectItem
+                            key={category.id}
+                            value={category.id.toString()}
+                          >
+                            {category.display_name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    {t(
+                      "tools.category_help",
+                      "Organize tools into categories for better management"
+                    )}
+                  </p>
                 </div>
 
                 <div className="space-y-3">

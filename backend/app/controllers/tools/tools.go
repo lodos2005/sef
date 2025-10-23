@@ -25,10 +25,15 @@ type Controller struct {
 
 func (h *Controller) Index(c fiber.Ctx) error {
 	var items []*entities.Tool
-	db := h.DB.Model(&entities.Tool{}).Preload(clause.Associations)
+	db := h.DB.Model(&entities.Tool{}).Preload("Category").Preload("Chatbots")
 
 	if c.Query("search") != "" {
 		search.Search(c.Query("search"), db)
+	}
+
+	// Filter by category if provided
+	if categoryID := c.Query("category_id"); categoryID != "" {
+		db = db.Where("category_id = ?", categoryID)
 	}
 
 	page, err := paginator.New(db, c).Paginate(&items)

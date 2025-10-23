@@ -7,6 +7,7 @@ import (
 	"sef/app/controllers/providers"
 	"sef/app/controllers/sessions"
 	"sef/app/controllers/settings"
+	"sef/app/controllers/tool_categories"
 	"sef/app/controllers/tools"
 	"sef/app/entities"
 	"sef/app/middleware"
@@ -86,6 +87,20 @@ func Server(app *fiber.App) {
 		providersGroup.Post("/", controller.Create)
 		providersGroup.Patch("/:id", controller.Update)
 		providersGroup.Delete("/:id", controller.Delete)
+	}
+
+	toolCategoriesGroup := apiV1.Group("/tool-categories")
+	{
+		controller := &tool_categories.Controller{
+			DB: database.Connection(),
+		}
+
+		toolCategoriesGroup.Use(middleware.IsSuperAdmin())
+		toolCategoriesGroup.Get("/", controller.Index)
+		toolCategoriesGroup.Get("/:id", controller.Show)
+		toolCategoriesGroup.Post("/", controller.Create)
+		toolCategoriesGroup.Patch("/:id", controller.Update)
+		toolCategoriesGroup.Delete("/:id", controller.Delete)
 	}
 
 	toolsGroup := apiV1.Group("/tools")

@@ -21,6 +21,9 @@ func Init() error {
 	if err := database.Connection().AutoMigrate(&entities.Message{}); err != nil {
 		return err
 	}
+	if err := database.Connection().AutoMigrate(&entities.ToolCategory{}); err != nil {
+		return err
+	}
 	if err := database.Connection().AutoMigrate(&entities.Tool{}); err != nil {
 		return err
 	}
