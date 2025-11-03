@@ -206,6 +206,7 @@
     "tools": {
         "title": "Tools",
         "description": "Manage your AI tools and their configurations",
+        "tab": "Tools",
         "name": "Name",
         "display_name": "Display Name",
         "description_field": "Description",
@@ -213,6 +214,17 @@
         "config": "Configuration (JSON)",
         "actions": "Actions",
         "create": "Create Tool",
+        "uncategorized": "Uncategorized",
+        "selected_count": "{{count}} selected",
+        "move_to_category": "Move to Category",
+        "assign_category": "Assign Category",
+        "assign_category_description": "Move {{count}} selected tool(s) to a category",
+        "select_category": "Select Category",
+        "select_category_placeholder": "Choose a category",
+        "no_category": "No category",
+        "category_assigned": "{{count}} tool(s) moved to category successfully",
+        "category_assign_error": "Failed to assign category",
+        "fetch_error": "Failed to fetch tools",
         "edit": "Edit",
         "delete": "Delete",
         "cancel": "Cancel",
@@ -337,6 +349,33 @@
             "cancel": "Cancel",
             "importing": "Importing...",
             "import": "Import Tools"
+        },
+        "export": {
+            "title": "Export Tools",
+            "description": "Export {{count}} selected tool(s) to a file",
+            "button": "Export",
+            "format": "Export Format",
+            "no_selection": "Please select at least one tool to export",
+            "success": "Successfully exported {{count}} tool(s)",
+            "error": "Failed to export tools",
+            "cancel": "Cancel",
+            "exporting": "Exporting...",
+            "confirm": "Export"
+        },
+        "categories": {
+            "tab": "Categories",
+            "title": "Tool Categories",
+            "description": "Organize your tools into categories",
+            "empty": "No categories created yet"
+        },
+        "category": {
+            "create": "Create Category",
+            "no_description": "No description",
+            "tools_count": "{{count}} tools",
+            "deleted": "Category deleted successfully",
+            "delete_error": "Failed to delete category",
+            "delete_confirm": "Delete Category",
+            "delete_confirm_message": "Are you sure you want to delete this category? This action cannot be undone."
         }
     },
     "documents": {

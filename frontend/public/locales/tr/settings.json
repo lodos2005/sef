@@ -206,6 +206,7 @@
     "tools": {
         "title": "Araçlar",
         "description": "AI araçlarınızı ve yapılandırmalarınızı yönetin",
+        "tab": "Araçlar",
         "name": "İsim",
         "display_name": "Görünen İsim",
         "description_field": "Açıklama",
@@ -213,6 +214,17 @@
         "config": "Yapılandırma (JSON)",
         "actions": "İşlemler",
         "create": "Araç Oluştur",
+        "uncategorized": "Kategorisiz",
+        "selected_count": "{{count}} seçildi",
+        "move_to_category": "Kategoriye Taşı",
+        "assign_category": "Kategori Ata",
+        "assign_category_description": "Seçilen {{count}} aracı bir kategoriye taşı",
+        "select_category": "Kategori Seç",
+        "select_category_placeholder": "Bir kategori seçin",
+        "no_category": "Kategori yok",
+        "category_assigned": "{{count}} araç başarıyla kategoriye taşındı",
+        "category_assign_error": "Kategori atanamadı",
+        "fetch_error": "Araçlar yüklenemedi",
         "edit": "Düzenle",
         "delete": "Sil",
         "cancel": "İptal",
@@ -336,6 +348,33 @@
             "cancel": "İptal",
             "importing": "İçe aktarılıyor...",
             "import": "Araçları İçe Aktar"
+        },
+        "export": {
+            "title": "Araçları Dışa Aktar",
+            "description": "{{count}} seçili aracı dosyaya aktar",
+            "button": "Dışa Aktar",
+            "format": "Dışa Aktarma Formatı",
+            "no_selection": "Lütfen dışa aktarmak için en az bir araç seçin",
+            "success": "{{count}} araç başarıyla dışa aktarıldı",
+            "error": "Araçlar dışa aktarılamadı",
+            "cancel": "İptal",
+            "exporting": "Dışa aktarılıyor...",
+            "confirm": "Dışa Aktar"
+        },
+        "categories": {
+            "tab": "Kategoriler",
+            "title": "Araç Kategorileri",
+            "description": "Araçlarınızı kategorilere göre düzenleyin",
+            "empty": "Henüz kategori oluşturulmadı"
+        },
+        "category": {
+            "create": "Kategori Oluştur",
+            "no_description": "Açıklama yok",
+            "tools_count": "{{count}} araç",
+            "deleted": "Kategori başarıyla silindi",
+            "delete_error": "Kategori silinemedi",
+            "delete_confirm": "Kategoriyi Sil",
+            "delete_confirm_message": "Bu kategoriyi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
         }
     },
     "documents": {

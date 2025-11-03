@@ -25,7 +25,7 @@ type Controller struct {
 
 func (h *Controller) Index(c fiber.Ctx) error {
 	var items []*entities.Tool
-	db := h.DB.Model(&entities.Tool{}).Preload(clause.Associations)
+	db := h.DB.Model(&entities.Tool{}).Preload("Category").Preload("Chatbots")
 
 	if c.Query("search") != "" {
 		search.Search(c.Query("search"), db)
@@ -110,6 +110,33 @@ func (h *Controller) Delete(c fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{"message": "Tool deleted successfully"})
+}
+
+func (h *Controller) BulkUpdateCategory(c fiber.Ctx) error {
+	var payload struct {
+		ToolIds    []int  `json:"tool_ids"`
+		CategoryId *int64 `json:"category_id"` // pointer to allow null
+	}
+
+	if err := c.Bind().JSON(&payload); err != nil {
+		return err
+	}
+
+	if len(payload.ToolIds) == 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "tool_ids is required"})
+	}
+
+	// Update all tools with the new category_id
+	if err := h.DB.Model(&entities.Tool{}).
+		Where("id IN ?", payload.ToolIds).
+		Update("category_id", payload.CategoryId).Error; err != nil {
+		return err
+	}
+
+	return c.JSON(fiber.Map{
+		"message": fmt.Sprintf("Successfully updated %d tool(s)", len(payload.ToolIds)),
+		"count":   len(payload.ToolIds),
+	})
 }
 
 func (h *Controller) Types(c fiber.Ctx) error {

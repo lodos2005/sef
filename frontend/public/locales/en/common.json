@@ -44,6 +44,10 @@
     },
     "common": {
         "back": "Back",
-        "new": "New"
+        "new": "New",
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "moving": "Moving...",
+        "loading": "Loading..."
     }
 }

@@ -78,7 +78,7 @@ export function DataTableToolbar<TData, TValue>({
   ])
 
   return (
-    <div className="flex items-center justify-between px-8">
+    <div className="flex items-center justify-between px-8 mt-4">
       <div></div>
       <div className="flex space-x-2">
         <div className="flex flex-1 items-center space-x-2">
