@@ -111,10 +111,15 @@ func iterate(db *gorm.DB, v reflect.Type, filter Filter) {
 
 					switch filter.Operator {
 					case "", "equal":
-						db = db.Where(
-							"LOWER("+filter.Key+"::text) LIKE LOWER(?)",
-							fmt.Sprintf("%%%s%%", filter.Value),
-						)
+						// Handle "null" value for IS NULL checks
+						if filter.Value == "null" {
+							db = db.Where(filter.Key + " IS NULL")
+						} else {
+							db = db.Where(
+								"LOWER("+filter.Key+"::text) LIKE LOWER(?)",
+								fmt.Sprintf("%%%s%%", filter.Value),
+							)
+						}
 					case "less":
 						db = db.Where(
 							"SUBSTRING(LOWER("+filter.Key+"::text),1, ?) < LOWER(?::text)",
@@ -197,10 +202,15 @@ func (p *Paginator) Paginate(dataSource interface{}) (*Data, error) {
 			default:
 				switch filter.Operator {
 				case "", "equal":
-					db = db.Where(
-						"LOWER("+filter.Key+"::text) LIKE LOWER(?)",
-						fmt.Sprintf("%%%s%%", filter.Value),
-					)
+					// Handle "null" value for IS NULL checks
+					if filter.Value == "null" {
+						db = db.Where(filter.Key + " IS NULL")
+					} else {
+						db = db.Where(
+							"LOWER("+filter.Key+"::text) LIKE LOWER(?)",
+							fmt.Sprintf("%%%s%%", filter.Value),
+						)
+					}
 				case "less":
 					db = db.Where(
 						"SUBSTRING(LOWER("+filter.Key+"::text),1, ?) < LOWER(?::text)",

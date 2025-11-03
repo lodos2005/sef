@@ -89,7 +89,7 @@ func Server(app *fiber.App) {
 		providersGroup.Delete("/:id", controller.Delete)
 	}
 
-	toolCategoriesGroup := apiV1.Group("/tool-categories")
+	toolCategoriesGroup := apiV1.Group("/tool_categories")
 	{
 		controller := &tool_categories.Controller{
 			DB: database.Connection(),
@@ -117,6 +117,7 @@ func Server(app *fiber.App) {
 		toolsGroup.Post("/", controller.Create)
 		toolsGroup.Post("/import", controller.Import)
 		toolsGroup.Post("/export", controller.Export)
+		toolsGroup.Post("/bulk-update-category", controller.BulkUpdateCategory)
 		toolsGroup.Patch("/:id", controller.Update)
 		toolsGroup.Delete("/:id", controller.Delete)
 		toolsGroup.Post("/:id/test", controller.Test)

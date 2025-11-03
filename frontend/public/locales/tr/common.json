@@ -47,6 +47,10 @@
     },
     "common": {
         "back": "Geri",
-        "new": "Yeni"
+        "new": "Yeni",
+        "cancel": "İptal",
+        "delete": "Sil",
+        "moving": "Taşınıyor...",
+        "loading": "Yükleniyor..."
     }
 }

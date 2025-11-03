@@ -1,9 +1,8 @@
 import { useTranslation } from "react-i18next"
 import { useState, useEffect } from "react"
-import { PlusCircleIcon, Upload, FolderKanban, FolderInput, Search } from "lucide-react"
+import { PlusCircleIcon, Upload, FolderKanban, FolderInput } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import PageHeader from "@/components/ui/page-header"
 import { useEmitter } from "@/hooks/useEmitter"
@@ -21,27 +20,42 @@ import { http } from "@/services"
 export default function ToolSettingsPage() {
   const [selectedTools, setSelectedTools] = useState<ITool[]>([])
   const [categories, setCategories] = useState<IToolCategory[]>([])
-  const [allTools, setAllTools] = useState<ITool[]>([])
+  const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
   const [assignCategoryDialogOpen, setAssignCategoryDialogOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState("")
+  const [refetchTrigger, setRefetchTrigger] = useState(0)
   const emitter = useEmitter()
   const { t } = useTranslation("settings")
 
   const fetchData = async () => {
     try {
       setLoading(true)
-      // Fetch categories with tools
+      // Fetch categories
       const categoriesResponse = await toolCategoriesService.getToolCategories({
         per_page: 1000,
       })
       setCategories(categoriesResponse.records || [])
 
-      // Fetch all tools
-      const toolsResponse = await http.get("/tools", {
-        params: { per_page: 1000 },
+      // Fetch tool counts for each category
+      const counts: Record<string, number> = {}
+
+      // Get counts for each category using filter parameter
+      for (const category of categoriesResponse.records || []) {
+        const filter = JSON.stringify([{ id: "category_id", value: category.id.toString() }])
+        const response = await http.get("/tools", {
+          params: { filter, per_page: 1 },
+        })
+        counts[category.id.toString()] = response.data.total_records || 0
+      }
+
+      // Get count for uncategorized tools using filter parameter with "null" value
+      const uncategorizedFilter = JSON.stringify([{ id: "category_id", value: "null" }])
+      const uncategorizedResponse = await http.get("/tools", {
+        params: { filter: uncategorizedFilter, per_page: 1 },
       })
-      setAllTools(toolsResponse.data.records || [])
+      counts["null"] = uncategorizedResponse.data.total_records || 0
+
+      setCategoryCounts(counts)
     } catch (error: any) {
       toast.error(
         error.response?.data?.error ||
@@ -59,6 +73,7 @@ export default function ToolSettingsPage() {
   useEffect(() => {
     emitter.on("REFETCH_TOOLS", () => {
       fetchData()
+      setRefetchTrigger((prev) => prev + 1)
     })
     return () => emitter.off("REFETCH_TOOLS")
   }, [])
@@ -66,52 +81,11 @@ export default function ToolSettingsPage() {
   const handleAssignCategorySuccess = () => {
     setSelectedTools([])
     fetchData()
+    setRefetchTrigger((prev) => prev + 1)
   }
 
-  // Filter tools based on search query
-  const filteredTools = allTools.filter((tool) => {
-    if (!searchQuery) return true
-    const query = searchQuery.toLowerCase()
-    return (
-      tool.name.toLowerCase().includes(query) ||
-      tool.display_name.toLowerCase().includes(query) ||
-      tool.description.toLowerCase().includes(query) ||
-      tool.type.toLowerCase().includes(query)
-    )
-  })
-
-  // Group tools by category
-  const groupedTools: Record<string, ITool[]> = {}
-  const uncategorizedTools: ITool[] = []
-
-  filteredTools.forEach((tool) => {
-    if (tool.category_id) {
-      const categoryId = tool.category_id.toString()
-      if (!groupedTools[categoryId]) {
-        groupedTools[categoryId] = []
-      }
-      groupedTools[categoryId].push(tool)
-    } else {
-      uncategorizedTools.push(tool)
-    }
-  })
-
   const handleToggleAll = (tools: ITool[], checked: boolean) => {
-    if (checked) {
-      const newSelected = [...selectedTools]
-      tools.forEach((tool) => {
-        if (!newSelected.some((t) => t.id === tool.id)) {
-          newSelected.push(tool)
-        }
-      })
-      setSelectedTools(newSelected)
-    } else {
-      setSelectedTools(
-        selectedTools.filter(
-          (t) => !tools.some((tool) => tool.id === t.id)
-        )
-      )
-    }
+    setSelectedTools(tools)
   }
 
   const handleToggleTool = (tool: ITool, checked: boolean) => {
@@ -141,54 +115,41 @@ export default function ToolSettingsPage() {
         </TabsList>
 
         <TabsContent value="tools" className="space-y-4">
-          <div className="flex flex-col gap-4">
-            <div className="flex gap-2 items-center justify-between">
-              <div className="flex gap-2">
-                <Link href="/settings/tools/create">
-                  <Button variant="outline" size="sm" className="h-8 lg:flex">
-                    <PlusCircleIcon className="mr-2 size-4" />
-                    {t("tools.create.button", "Create Tool")}
-                  </Button>
-                </Link>
-                <ToolImportDialog>
-                  <Button variant="outline" size="sm" className="h-8 lg:flex">
-                    <Upload className="mr-2 size-4" />
-                    {t("tools.import.button", "Import")}
-                  </Button>
-                </ToolImportDialog>
-                <ToolExportDialog selectedToolIds={selectedTools.map((tool: ITool) => tool.id)} />
+          <div className="flex gap-2 items-center justify-between">
+            <div className="flex gap-2">
+              <Link href="/settings/tools/create">
+                <Button variant="outline" size="sm" className="h-8 lg:flex">
+                  <PlusCircleIcon className="mr-2 size-4" />
+                  {t("tools.create.button", "Create Tool")}
+                </Button>
+              </Link>
+              <ToolImportDialog>
+                <Button variant="outline" size="sm" className="h-8 lg:flex">
+                  <Upload className="mr-2 size-4" />
+                  {t("tools.import.button", "Import")}
+                </Button>
+              </ToolImportDialog>
+              <ToolExportDialog selectedToolIds={selectedTools.map((tool: ITool) => tool.id)} />
+            </div>
+
+            {selectedTools.length > 0 && (
+              <div className="flex gap-2 items-center">
+                <span className="text-sm text-muted-foreground">
+                  {t("tools.selected_count", "{{count}} selected", {
+                    count: selectedTools.length,
+                  })}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8"
+                  onClick={() => setAssignCategoryDialogOpen(true)}
+                >
+                  <FolderInput className="mr-2 size-4" />
+                  {t("tools.move_to_category", "Move to Category")}
+                </Button>
               </div>
-
-              {selectedTools.length > 0 && (
-                <div className="flex gap-2 items-center">
-                  <span className="text-sm text-muted-foreground">
-                    {t("tools.selected_count", "{{count}} selected", {
-                      count: selectedTools.length,
-                    })}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8"
-                    onClick={() => setAssignCategoryDialogOpen(true)}
-                  >
-                    <FolderInput className="mr-2 size-4" />
-                    {t("tools.move_to_category", "Move to Category")}
-                  </Button>
-                </div>
-              )}
-            </div>
-
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder={t("tools.search_placeholder", "Search tools by name, type, or description...")}
-                value={searchQuery}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+            )}
           </div>
 
           {loading ? (
@@ -204,28 +165,24 @@ export default function ToolSettingsPage() {
                   <CategorySection
                     key={category.id}
                     category={category}
-                    tools={groupedTools[category.id.toString()] || []}
+                    totalCount={categoryCounts[category.id.toString()] || 0}
                     selectedTools={selectedTools}
                     onToggleAll={handleToggleAll}
                     onToggleTool={handleToggleTool}
+                    refetchTrigger={refetchTrigger}
                   />
                 ))}
 
               {/* Render uncategorized tools */}
-              {uncategorizedTools.length > 0 && (
+              {categoryCounts["null"] > 0 && (
                 <CategorySection
                   category={null}
-                  tools={uncategorizedTools}
+                  totalCount={categoryCounts["null"] || 0}
                   selectedTools={selectedTools}
                   onToggleAll={handleToggleAll}
                   onToggleTool={handleToggleTool}
+                  refetchTrigger={refetchTrigger}
                 />
-              )}
-
-              {allTools.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  {t("tools.empty", "No tools found")}
-                </div>
               )}
             </div>
           )}

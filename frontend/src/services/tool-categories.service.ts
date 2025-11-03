@@ -18,19 +18,19 @@ class ToolCategoriesService extends ApiService {
     per_page?: number
     search?: string
   }): Promise<PaginatedResponse<IToolCategory>> {
-    const response = await this.instance.get("/api/v1/tool-categories", { params })
+    const response = await this.instance.get("/api/v1/tool_categories", { params })
     return response.data
   }
 
   public async getToolCategory(id: number): Promise<IToolCategory> {
-    const response = await this.instance.get(`/api/v1/tool-categories/${id}`)
+    const response = await this.instance.get(`/api/v1/tool_categories/${id}`)
     return response.data
   }
 
   public async createToolCategory(
     data: Partial<IToolCategory>
   ): Promise<IToolCategory> {
-    const response = await this.instance.post("/api/v1/tool-categories", data)
+    const response = await this.instance.post("/api/v1/tool_categories", data)
     return response.data
   }
 
@@ -38,12 +38,12 @@ class ToolCategoriesService extends ApiService {
     id: number,
     data: Partial<IToolCategory>
   ): Promise<IToolCategory> {
-    const response = await this.instance.patch(`/api/v1/tool-categories/${id}`, data)
+    const response = await this.instance.patch(`/api/v1/tool_categories/${id}`, data)
     return response.data
   }
 
   public async deleteToolCategory(id: number): Promise<void> {
-    await this.instance.delete(`/api/v1/tool-categories/${id}`)
+    await this.instance.delete(`/api/v1/tool_categories/${id}`)
   }
 }
 

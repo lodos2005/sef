@@ -45,16 +45,13 @@ export function AssignCategoryDialog({
     setLoading(true)
 
     try {
-      // Update each tool with the new category
+      // Use bulk update endpoint - single request for all tools
       const categoryId = selectedCategoryId === "none" ? null : parseInt(selectedCategoryId)
 
-      await Promise.all(
-        selectedToolIds.map((toolId) =>
-          http.patch(`/tools/${toolId}`, {
-            category_id: categoryId,
-          })
-        )
-      )
+      await http.post("/tools/bulk-update-category", {
+        tool_ids: selectedToolIds,
+        category_id: categoryId,
+      })
 
       toast.success(
         t(

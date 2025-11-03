@@ -22,11 +22,6 @@ func (h *Controller) Index(c fiber.Ctx) error {
 		search.Search(c.Query("search"), db)
 	}
 
-	// Set default sort if not provided
-	if c.Query("sort") == "" {
-		db = db.Order(clause.OrderByColumn{Column: clause.Column{Name: "order"}, Desc: false}).Order("created_at ASC")
-	}
-
 	page, err := paginator.New(db, c).Paginate(&items)
 	if err != nil {
 		return err
@@ -82,16 +77,9 @@ func (h *Controller) Update(c fiber.Ctx) error {
 }
 
 func (h *Controller) Delete(c fiber.Ctx) error {
-	// Check if category has tools
-	var count int64
-	if err := h.DB.Model(&entities.Tool{}).Where("category_id = ?", c.Params("id")).Count(&count).Error; err != nil {
+	// Break relationship with tools by setting category_id to NULL
+	if err := h.DB.Model(&entities.Tool{}).Where("category_id = ?", c.Params("id")).Update("category_id", nil).Error; err != nil {
 		return err
-	}
-
-	if count > 0 {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Cannot delete category with associated tools. Please reassign or delete the tools first.",
-		})
 	}
 
 	if err := h.DB.Delete(&entities.ToolCategory{}, c.Params("id")).Error; err != nil {
