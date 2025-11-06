@@ -9,6 +9,7 @@ import (
 	"sef/internal/validation"
 	"sef/pkg/providers"
 	"sef/pkg/rag"
+	"sef/pkg/toon"
 	"sef/pkg/toolrunners"
 	"strconv"
 	"strings"
@@ -41,7 +42,8 @@ type MessagingServiceInterface interface {
 	GenerateChatResponse(session *entities.Session, messages []providers.ChatMessage, ragResult *rag.AugmentPromptResult, webSearchEnabled bool) (<-chan string, *entities.Message, error)
 	UpdateAssistantMessage(assistantMessage *entities.Message, content string)
 	UpdateAssistantMessageWithCallback(assistantMessage *entities.Message, content string, callback func())
-	ConvertToolsToDefinitions(tools []entities.Tool) []providers.ToolDefinition
+	ConvertToolsToDefinitions(tools []entities.Tool, format string) []providers.ToolDefinition
+	GetWebSearchToolDefinition(format string) providers.ToolDefinition
 	ExecuteToolCall(ctx context.Context, toolCall providers.ToolCall) (string, error)
 }
 
@@ -121,7 +123,7 @@ func (s *MessagingService) LoadSessionWithChatbotToolsAndMessages(sessionID, use
 }
 
 // ConvertToolsToDefinitions converts entity tools to provider tool definitions
-func (s *MessagingService) ConvertToolsToDefinitions(tools []entities.Tool) []providers.ToolDefinition {
+func (s *MessagingService) ConvertToolsToDefinitions(tools []entities.Tool, format string) []providers.ToolDefinition {
 	var definitions []providers.ToolDefinition
 	for _, tool := range tools {
 		// Convert JSONB parameters to OpenAPI JSON Schema format
@@ -165,6 +167,22 @@ func (s *MessagingService) ConvertToolsToDefinitions(tools []entities.Tool) []pr
 			parameters["required"] = required
 		}
 
+		// Convert to TOON format if requested
+		if format == "toon" {
+			toonConverter := toon.NewConverter()
+			toonStr, err := toonConverter.ConvertMapToTOON(parameters)
+			if err != nil {
+				log.Errorf("Error converting parameters to TOON: %v", err)
+				// Fall back to JSON format on error
+			} else {
+				// Store TOON string representation in a special field
+				parameters = map[string]interface{}{
+					"type":         "toon",
+					"toon_content": toonStr,
+				}
+			}
+		}
+
 		definition := providers.ToolDefinition{
 			Type: "function",
 			Function: providers.ToolFunction{
@@ -179,27 +197,45 @@ func (s *MessagingService) ConvertToolsToDefinitions(tools []entities.Tool) []pr
 }
 
 // GetWebSearchToolDefinition returns the tool definition for web search
-func (s *MessagingService) GetWebSearchToolDefinition() providers.ToolDefinition {
+func (s *MessagingService) GetWebSearchToolDefinition(format string) providers.ToolDefinition {
+	parameters := map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"query": map[string]interface{}{
+				"type":        "string",
+				"description": "The search query to execute. Be specific and clear about what you're searching for.",
+			},
+			"num_results": map[string]interface{}{
+				"type":        "number",
+				"description": "Number of search results to return (default: 5, max: 10)",
+				"default":     5,
+			},
+		},
+		"required": []string{"query"},
+	}
+
+	// Convert to TOON format if requested
+	if format == "toon" {
+		toonConverter := toon.NewConverter()
+		toonStr, err := toonConverter.ConvertMapToTOON(parameters)
+		if err != nil {
+			log.Errorf("Error converting web search parameters to TOON: %v", err)
+			// Fall back to JSON format on error
+		} else {
+			// Store TOON string representation in a special field
+			parameters = map[string]interface{}{
+				"type":         "toon",
+				"toon_content": toonStr,
+			}
+		}
+	}
+
 	return providers.ToolDefinition{
 		Type: "function",
 		Function: providers.ToolFunction{
 			Name:        "web_search",
 			Description: "Search the web for current information, news, facts, or any topic. Use this when you need up-to-date information or when the user asks about current events, recent developments, or information you don't have in your training data.",
-			Parameters: map[string]interface{}{
-				"type": "object",
-				"properties": map[string]interface{}{
-					"query": map[string]interface{}{
-						"type":        "string",
-						"description": "The search query to execute. Be specific and clear about what you're searching for.",
-					},
-					"num_results": map[string]interface{}{
-						"type":        "number",
-						"description": "Number of search results to return (default: 5, max: 10)",
-						"default":     5,
-					},
-				},
-				"required": []string{"query"},
-			},
+			Parameters:  parameters,
 		},
 	}
 }
@@ -559,14 +595,32 @@ func (s *MessagingService) GenerateChatResponse(session *entities.Session, messa
 		"messages_count": len(messages),
 	})
 
+	// Get tool format from chatbot settings, default to "json"
+	toolFormat := session.Chatbot.ToolFormat
+	if toolFormat == "" {
+		toolFormat = "json"
+	}
+
 	// Convert tools to definitions
-	toolDefinitions := s.ConvertToolsToDefinitions(session.Chatbot.Tools)
+	toolDefinitions := s.ConvertToolsToDefinitions(session.Chatbot.Tools, toolFormat)
 
 	// Add web search tool if enabled for this message and chatbot supports it
 	if webSearchEnabled && session.Chatbot.WebSearchEnabled {
-		webSearchTool := s.GetWebSearchToolDefinition()
+		webSearchTool := s.GetWebSearchToolDefinition(toolFormat)
 		toolDefinitions = append(toolDefinitions, webSearchTool)
 		log.Info("Web search tool enabled for this message in session:", session.ID)
+	}
+
+	// Log tool definitions for debugging
+	if toolFormat == "toon" && len(toolDefinitions) > 0 {
+		log.Info("=== TOON Format Tool Definitions ===")
+		for i, toolDef := range toolDefinitions {
+			log.Infof("Tool %d: %s", i+1, toolDef.Function.Name)
+			if toonContent, ok := toolDef.Function.Parameters["toon_content"].(string); ok {
+				log.Infof("TOON Content:\n%s", toonContent)
+			}
+		}
+		log.Info("====================================")
 	} // Create output channel
 	outputCh := make(chan string)
 

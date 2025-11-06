@@ -47,6 +47,7 @@ export default function CreateChatbot() {
   const [promptSuggestions, setPromptSuggestions] = useState<string[]>([])
   const [newSuggestion, setNewSuggestion] = useState("")
   const [webSearchEnabled, setWebSearchEnabled] = useState(false)
+  const [toolFormat, setToolFormat] = useState("json")
 
   const formSchema = z
     .object({
@@ -64,8 +65,8 @@ export default function CreateChatbot() {
           message: t("chatbots.validation.description_max"),
         })
         .optional(),
-      provider_id: z.number().min(1, "Lütfen bir sağlayıcı seçin"),
-      model_name: z.string().min(1, "Model adı gereklidir"),
+      provider_id: z.number().min(1, t("chatbots.validation.provider_required")),
+      model_name: z.string().min(1, t("chatbots.validation.model_required")),
       system_prompt: z.string().optional(),
     })
 
@@ -121,6 +122,7 @@ export default function CreateChatbot() {
     const payload = {
       ...values,
       web_search_enabled: webSearchEnabled,
+      tool_format: toolFormat,
       tool_ids: selectedTools,
       document_ids: selectedDocuments,
       prompt_suggestions: promptSuggestions,
@@ -142,6 +144,7 @@ export default function CreateChatbot() {
           setPromptSuggestions([])
           setNewSuggestion("")
           setWebSearchEnabled(false)
+          setToolFormat("json")
         } else {
           toast({
             title: t("error"),
@@ -224,7 +227,7 @@ export default function CreateChatbot() {
                     value={field.value?.toString()}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Bir sağlayıcı seçin" />
+                      <SelectValue placeholder={t("chatbots.create.provider_placeholder")} />
                     </SelectTrigger>
                     <SelectContent>
                       {providers.map((provider) => (
@@ -251,7 +254,7 @@ export default function CreateChatbot() {
                     disabled={!selectedProviderId || models.length === 0}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder={selectedProviderId ? "Bir model seçin" : "Önce bir sağlayıcı seçin"} />
+                      <SelectValue placeholder={selectedProviderId ? t("chatbots.create.model_select_placeholder") : t("chatbots.create.model_select_provider_first")} />
                     </SelectTrigger>
                     <SelectContent>
                       {models.map((model) => (
@@ -298,6 +301,24 @@ export default function CreateChatbot() {
                   onCheckedChange={setWebSearchEnabled}
                 />
               </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="tool_format">
+                {t("chatbots.create.tool_format", "Tool Format")}
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                {t("chatbots.create.tool_format_description", "Choose the format for tool definitions. TOON format uses 30-60% fewer tokens than JSON.")}
+              </p>
+              <Select value={toolFormat} onValueChange={setToolFormat}>
+                <SelectTrigger id="tool_format">
+                  <SelectValue placeholder={t("chatbots.create.tool_format_placeholder", "Select format")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="json">JSON (Standard)</SelectItem>
+                  <SelectItem value="toon">TOON (Token-efficient)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex flex-col gap-2">
@@ -379,7 +400,7 @@ export default function CreateChatbot() {
                       }
                     }}
                   >
-                    {selectedTools.length === tools.length ? "Deselect All" : "Select All"}
+                    {selectedTools.length === tools.length ? t("chatbots.create.tools_deselect_all") : t("chatbots.create.tools_select_all")}
                   </Button>
                 )}
               </div>
@@ -409,7 +430,7 @@ export default function CreateChatbot() {
                   </div>
                 ))}
                 {tools.length === 0 && (
-                  <p className="text-sm text-muted-foreground">Henüz araç tanımlanmamış.</p>
+                  <p className="text-sm text-muted-foreground">{t("chatbots.create.tools_none_available")}</p>
                 )}
               </div>
             </div>
@@ -430,7 +451,7 @@ export default function CreateChatbot() {
                       }
                     }}
                   >
-                    {selectedDocuments.length === documents.length ? "Deselect All" : "Select All"}
+                    {selectedDocuments.length === documents.length ? t("chatbots.create.documents_deselect_all") : t("chatbots.create.documents_select_all")}
                   </Button>
                 )}
               </div>
@@ -460,7 +481,7 @@ export default function CreateChatbot() {
                   </div>
                 ))}
                 {documents.length === 0 && (
-                  <p className="text-sm text-muted-foreground">Henüz doküman tanımlanmamış.</p>
+                  <p className="text-sm text-muted-foreground">{t("chatbots.create.documents_none_available")}</p>
                 )}
               </div>
             </div>
