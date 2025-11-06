@@ -47,6 +47,7 @@ export default function EditChatbot() {
   const [newSuggestion, setNewSuggestion] = useState("")
   const [webSearchEnabled, setWebSearchEnabled] = useState(false)
   const [toolFormat, setToolFormat] = useState("json")
+  const [outputFormat, setOutputFormat] = useState("json")
 
   const formSchema = z
     .object({
@@ -124,6 +125,7 @@ export default function EditChatbot() {
       ...values,
       web_search_enabled: webSearchEnabled,
       tool_format: toolFormat,
+      output_format: outputFormat,
       tool_ids: selectedTools,
       document_ids: selectedDocuments,
       prompt_suggestions: promptSuggestions,
@@ -177,6 +179,7 @@ export default function EditChatbot() {
       setNewSuggestion("")
       setWebSearchEnabled(d.web_search_enabled || false)
       setToolFormat(d.tool_format || "json")
+      setOutputFormat(d.output_format || "json")
       form.reset({
         id: d.id,
         name: d.name,
@@ -330,6 +333,24 @@ export default function EditChatbot() {
               <Select value={toolFormat} onValueChange={setToolFormat}>
                 <SelectTrigger id="tool_format">
                   <SelectValue placeholder={t("chatbots.edit.tool_format_placeholder", "Select format")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="json">JSON (Standard)</SelectItem>
+                  <SelectItem value="toon">TOON (Token-efficient)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="output_format">
+                {t("chatbots.edit.output_format", "Tool Output Format")}
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                {t("chatbots.edit.output_format_description", "Choose the format for tool outputs sent to the LLM. TOON format uses 30-60% fewer tokens than JSON.")}
+              </p>
+              <Select value={outputFormat} onValueChange={setOutputFormat}>
+                <SelectTrigger id="output_format">
+                  <SelectValue placeholder={t("chatbots.edit.output_format_placeholder", "Select format")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="json">JSON (Standard)</SelectItem>

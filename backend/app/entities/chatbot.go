@@ -39,6 +39,7 @@ type Chatbot struct {
 	ModelName         string      `json:"model_name" gorm:"not null"`
 	WebSearchEnabled  bool        `json:"web_search_enabled" gorm:"default:false"`
 	ToolFormat        string      `json:"tool_format" gorm:"default:'json';size:10"`
+	OutputFormat      string      `json:"output_format" gorm:"default:'json';size:10"`
 	PromptSuggestions StringArray `json:"prompt_suggestions" gorm:"type:json"`
 	Sessions          []Session   `json:"sessions,omitempty" gorm:"foreignKey:ChatbotID"`
 	Tools             []Tool      `json:"tools,omitempty" gorm:"many2many:chatbot_tools;"`

@@ -44,7 +44,7 @@ type MessagingServiceInterface interface {
 	UpdateAssistantMessageWithCallback(assistantMessage *entities.Message, content string, callback func())
 	ConvertToolsToDefinitions(tools []entities.Tool, format string) []providers.ToolDefinition
 	GetWebSearchToolDefinition(format string) providers.ToolDefinition
-	ExecuteToolCall(ctx context.Context, toolCall providers.ToolCall) (string, error)
+	ExecuteToolCall(ctx context.Context, toolCall providers.ToolCall, outputFormat string) (string, error)
 }
 
 // ValidateAndParseSessionID validates and parses session ID from string
@@ -241,10 +241,10 @@ func (s *MessagingService) GetWebSearchToolDefinition(format string) providers.T
 }
 
 // ExecuteToolCall executes a tool call and returns the result
-func (s *MessagingService) ExecuteToolCall(ctx context.Context, toolCall providers.ToolCall) (string, error) {
+func (s *MessagingService) ExecuteToolCall(ctx context.Context, toolCall providers.ToolCall, outputFormat string) (string, error) {
 	// Check if this is a web search tool call
 	if toolCall.Function.Name == "web_search" {
-		return s.executeWebSearchTool(ctx, toolCall)
+		return s.executeWebSearchTool(ctx, toolCall, outputFormat)
 	}
 
 	// Find the tool by name (this would need to be optimized in production)
@@ -290,7 +290,23 @@ func (s *MessagingService) ExecuteToolCall(ctx context.Context, toolCall provide
 		return "", fmt.Errorf("tool execution failed: %w", err)
 	}
 
-	// Convert result to string
+	// Convert result based on output format
+	if outputFormat == "toon" {
+		toonConverter := toon.NewConverter()
+		toonStr, err := toonConverter.ConvertToTOON(result)
+		if err != nil {
+			log.Errorf("Error converting tool output to TOON: %v, falling back to JSON", err)
+			// Fall back to JSON if TOON conversion fails
+			resultJSON, jsonErr := json.Marshal(result)
+			if jsonErr != nil {
+				return "", fmt.Errorf("failed to marshal tool result: %w", jsonErr)
+			}
+			return string(resultJSON), nil
+		}
+		return toonStr, nil
+	}
+
+	// Default to JSON format
 	resultJSON, err := json.Marshal(result)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal tool result: %w", err)
@@ -300,7 +316,7 @@ func (s *MessagingService) ExecuteToolCall(ctx context.Context, toolCall provide
 }
 
 // executeWebSearchTool executes a web search tool call
-func (s *MessagingService) executeWebSearchTool(ctx context.Context, toolCall providers.ToolCall) (string, error) {
+func (s *MessagingService) executeWebSearchTool(ctx context.Context, toolCall providers.ToolCall, outputFormat string) (string, error) {
 	// Handle arguments - they might be raw JSON string or parsed map
 	var args map[string]interface{}
 	if rawArgs, ok := toolCall.Function.Arguments["raw"].(string); ok {
@@ -333,7 +349,23 @@ func (s *MessagingService) executeWebSearchTool(ctx context.Context, toolCall pr
 		return "", fmt.Errorf("web search execution failed: %w", err)
 	}
 
-	// Convert result to string
+	// Convert result based on output format
+	if outputFormat == "toon" {
+		toonConverter := toon.NewConverter()
+		toonStr, err := toonConverter.ConvertToTOON(result)
+		if err != nil {
+			log.Errorf("Error converting web search output to TOON: %v, falling back to JSON", err)
+			// Fall back to JSON if TOON conversion fails
+			resultJSON, jsonErr := json.Marshal(result)
+			if jsonErr != nil {
+				return "", fmt.Errorf("failed to marshal web search result: %w", jsonErr)
+			}
+			return string(resultJSON), nil
+		}
+		return toonStr, nil
+	}
+
+	// Default to JSON format
 	resultJSON, err := json.Marshal(result)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal web search result: %w", err)
@@ -464,7 +496,7 @@ func (s *MessagingService) CreateToolMessage(sessionID uint, content string) (*e
 
 // processToolCalls handles the execution of tool calls and returns updated messages
 // Returns: updated messages, shouldStop flag, stop reason
-func (s *MessagingService) processToolCalls(session *entities.Session, toolCalls []providers.ToolCall, messages []providers.ChatMessage, outputCh chan<- string, assistantContent *strings.Builder, toolCallCounter map[string]int) ([]providers.ChatMessage, bool, string) {
+func (s *MessagingService) processToolCalls(session *entities.Session, toolCalls []providers.ToolCall, messages []providers.ChatMessage, outputCh chan<- string, assistantContent *strings.Builder, toolCallCounter map[string]int, outputFormat string) ([]providers.ChatMessage, bool, string) {
 	for _, toolCall := range toolCalls {
 		displayName := toolCall.Function.Name
 		// Extract tool display name from session.Chatbot.Tools
@@ -505,7 +537,7 @@ func (s *MessagingService) processToolCalls(session *entities.Session, toolCalls
 		outputCh <- executingStr
 		assistantContent.WriteString(executingStr)
 
-		toolResult, err := s.ExecuteToolCall(context.Background(), toolCall)
+		toolResult, err := s.ExecuteToolCall(context.Background(), toolCall, outputFormat)
 		if err != nil {
 			log.Error("Tool execution failed:", err)
 			// Provide more user-friendly tool error messages
@@ -599,6 +631,12 @@ func (s *MessagingService) GenerateChatResponse(session *entities.Session, messa
 	toolFormat := session.Chatbot.ToolFormat
 	if toolFormat == "" {
 		toolFormat = "json"
+	}
+
+	// Get output format from chatbot settings, default to "json"
+	outputFormat := session.Chatbot.OutputFormat
+	if outputFormat == "" {
+		outputFormat = "json"
 	}
 
 	// Convert tools to definitions
@@ -774,7 +812,7 @@ func (s *MessagingService) GenerateChatResponse(session *entities.Session, messa
 			// Process tool calls and update messages for next iteration
 			var shouldStop bool
 			var stopReason string
-			currentMessages, shouldStop, stopReason = s.processToolCalls(session, pendingToolCalls, currentMessages, outputCh, &assistantContent, toolCallCounter)
+			currentMessages, shouldStop, stopReason = s.processToolCalls(session, pendingToolCalls, currentMessages, outputCh, &assistantContent, toolCallCounter, outputFormat)
 
 			// If we should stop (e.g., tool call limit exceeded), save message and exit
 			if shouldStop {

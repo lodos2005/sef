@@ -48,6 +48,7 @@ export default function CreateChatbot() {
   const [newSuggestion, setNewSuggestion] = useState("")
   const [webSearchEnabled, setWebSearchEnabled] = useState(false)
   const [toolFormat, setToolFormat] = useState("json")
+  const [outputFormat, setOutputFormat] = useState("json")
 
   const formSchema = z
     .object({
@@ -123,6 +124,7 @@ export default function CreateChatbot() {
       ...values,
       web_search_enabled: webSearchEnabled,
       tool_format: toolFormat,
+      output_format: outputFormat,
       tool_ids: selectedTools,
       document_ids: selectedDocuments,
       prompt_suggestions: promptSuggestions,
@@ -313,6 +315,24 @@ export default function CreateChatbot() {
               <Select value={toolFormat} onValueChange={setToolFormat}>
                 <SelectTrigger id="tool_format">
                   <SelectValue placeholder={t("chatbots.create.tool_format_placeholder", "Select format")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="json">JSON (Standard)</SelectItem>
+                  <SelectItem value="toon">TOON (Token-efficient)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="output_format">
+                {t("chatbots.create.output_format", "Tool Output Format")}
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                {t("chatbots.create.output_format_description", "Choose the format for tool outputs sent to the LLM. TOON format uses 30-60% fewer tokens than JSON.")}
+              </p>
+              <Select value={outputFormat} onValueChange={setOutputFormat}>
+                <SelectTrigger id="output_format">
+                  <SelectValue placeholder={t("chatbots.create.output_format_placeholder", "Select format")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="json">JSON (Standard)</SelectItem>
