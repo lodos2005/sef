@@ -292,6 +292,7 @@ func (s *MessagingService) ExecuteToolCall(ctx context.Context, toolCall provide
 
 	// Convert result based on output format
 	if outputFormat == "toon" {
+		log.Infof("Converting tool output to TOON format for tool: %s", toolCall.Function.Name)
 		toonConverter := toon.NewConverter()
 		toonStr, err := toonConverter.ConvertToTOON(result)
 		if err != nil {
@@ -301,16 +302,24 @@ func (s *MessagingService) ExecuteToolCall(ctx context.Context, toolCall provide
 			if jsonErr != nil {
 				return "", fmt.Errorf("failed to marshal tool result: %w", jsonErr)
 			}
+			log.Infof("Tool output (JSON fallback) length: %d bytes", len(resultJSON))
 			return string(resultJSON), nil
 		}
+		log.Infof("=== TOON Tool Output ===")
+		log.Infof("Tool: %s", toolCall.Function.Name)
+		log.Infof("TOON Output length: %d bytes", len(toonStr))
+		// log.Infof("TOON Content:\n%s", toonStr) // Uncomment for full content logging
+		log.Infof("========================")
 		return toonStr, nil
 	}
 
 	// Default to JSON format
+	log.Infof("Using JSON format for tool output: %s", toolCall.Function.Name)
 	resultJSON, err := json.Marshal(result)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal tool result: %w", err)
 	}
+	log.Infof("Tool output (JSON) length: %d bytes", len(resultJSON))
 
 	return string(resultJSON), nil
 }
@@ -351,6 +360,7 @@ func (s *MessagingService) executeWebSearchTool(ctx context.Context, toolCall pr
 
 	// Convert result based on output format
 	if outputFormat == "toon" {
+		log.Info("Converting web search output to TOON format")
 		toonConverter := toon.NewConverter()
 		toonStr, err := toonConverter.ConvertToTOON(result)
 		if err != nil {
@@ -360,16 +370,23 @@ func (s *MessagingService) executeWebSearchTool(ctx context.Context, toolCall pr
 			if jsonErr != nil {
 				return "", fmt.Errorf("failed to marshal web search result: %w", jsonErr)
 			}
+			log.Infof("Web search output (JSON fallback) length: %d bytes", len(resultJSON))
 			return string(resultJSON), nil
 		}
+		log.Infof("=== TOON Web Search Output ===")
+		log.Infof("TOON Output length: %d bytes", len(toonStr))
+		// log.Infof("TOON Content:\n%s", toonStr) // Uncomment for full content logging
+		log.Infof("===============================")
 		return toonStr, nil
 	}
 
 	// Default to JSON format
+	log.Info("Using JSON format for web search output")
 	resultJSON, err := json.Marshal(result)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal web search result: %w", err)
 	}
+	log.Infof("Web search output (JSON) length: %d bytes", len(resultJSON))
 
 	return string(resultJSON), nil
 }
@@ -638,6 +655,7 @@ func (s *MessagingService) GenerateChatResponse(session *entities.Session, messa
 	if outputFormat == "" {
 		outputFormat = "json"
 	}
+	log.Infof("Tool output format for session %d: %s", session.ID, outputFormat)
 
 	// Convert tools to definitions
 	toolDefinitions := s.ConvertToolsToDefinitions(session.Chatbot.Tools, toolFormat)
@@ -654,9 +672,9 @@ func (s *MessagingService) GenerateChatResponse(session *entities.Session, messa
 		log.Info("=== TOON Format Tool Definitions ===")
 		for i, toolDef := range toolDefinitions {
 			log.Infof("Tool %d: %s", i+1, toolDef.Function.Name)
-			if toonContent, ok := toolDef.Function.Parameters["toon_content"].(string); ok {
-				log.Infof("TOON Content:\n%s", toonContent)
-			}
+			/*if toonContent, ok := toolDef.Function.Parameters["toon_content"].(string); ok {
+				log.Infof("TOON Content:\n%s", toonContent) 
+			}*/ // Uncomment for full content logging
 		}
 		log.Info("====================================")
 	} // Create output channel
