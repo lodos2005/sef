@@ -9,6 +9,7 @@ import (
 	"sef/internal/validation"
 	"sef/pkg/providers"
 	"sef/pkg/rag"
+	"sef/pkg/toon"
 	"sef/pkg/toolrunners"
 	"strconv"
 	"strings"
@@ -41,8 +42,9 @@ type MessagingServiceInterface interface {
 	GenerateChatResponse(session *entities.Session, messages []providers.ChatMessage, ragResult *rag.AugmentPromptResult, webSearchEnabled bool) (<-chan string, *entities.Message, error)
 	UpdateAssistantMessage(assistantMessage *entities.Message, content string)
 	UpdateAssistantMessageWithCallback(assistantMessage *entities.Message, content string, callback func())
-	ConvertToolsToDefinitions(tools []entities.Tool) []providers.ToolDefinition
-	ExecuteToolCall(ctx context.Context, toolCall providers.ToolCall) (string, error)
+	ConvertToolsToDefinitions(tools []entities.Tool, format string) []providers.ToolDefinition
+	GetWebSearchToolDefinition(format string) providers.ToolDefinition
+	ExecuteToolCall(ctx context.Context, toolCall providers.ToolCall, outputFormat string) (string, error)
 }
 
 // ValidateAndParseSessionID validates and parses session ID from string
@@ -121,7 +123,7 @@ func (s *MessagingService) LoadSessionWithChatbotToolsAndMessages(sessionID, use
 }
 
 // ConvertToolsToDefinitions converts entity tools to provider tool definitions
-func (s *MessagingService) ConvertToolsToDefinitions(tools []entities.Tool) []providers.ToolDefinition {
+func (s *MessagingService) ConvertToolsToDefinitions(tools []entities.Tool, format string) []providers.ToolDefinition {
 	var definitions []providers.ToolDefinition
 	for _, tool := range tools {
 		// Convert JSONB parameters to OpenAPI JSON Schema format
@@ -165,6 +167,22 @@ func (s *MessagingService) ConvertToolsToDefinitions(tools []entities.Tool) []pr
 			parameters["required"] = required
 		}
 
+		// Convert to TOON format if requested
+		if format == "toon" {
+			toonConverter := toon.NewConverter()
+			toonStr, err := toonConverter.ConvertMapToTOON(parameters)
+			if err != nil {
+				log.Errorf("Error converting parameters to TOON: %v", err)
+				// Fall back to JSON format on error
+			} else {
+				// Store TOON string representation in a special field
+				parameters = map[string]interface{}{
+					"type":         "toon",
+					"toon_content": toonStr,
+				}
+			}
+		}
+
 		definition := providers.ToolDefinition{
 			Type: "function",
 			Function: providers.ToolFunction{
@@ -179,36 +197,54 @@ func (s *MessagingService) ConvertToolsToDefinitions(tools []entities.Tool) []pr
 }
 
 // GetWebSearchToolDefinition returns the tool definition for web search
-func (s *MessagingService) GetWebSearchToolDefinition() providers.ToolDefinition {
+func (s *MessagingService) GetWebSearchToolDefinition(format string) providers.ToolDefinition {
+	parameters := map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"query": map[string]interface{}{
+				"type":        "string",
+				"description": "The search query to execute. Be specific and clear about what you're searching for.",
+			},
+			"num_results": map[string]interface{}{
+				"type":        "number",
+				"description": "Number of search results to return (default: 5, max: 10)",
+				"default":     5,
+			},
+		},
+		"required": []string{"query"},
+	}
+
+	// Convert to TOON format if requested
+	if format == "toon" {
+		toonConverter := toon.NewConverter()
+		toonStr, err := toonConverter.ConvertMapToTOON(parameters)
+		if err != nil {
+			log.Errorf("Error converting web search parameters to TOON: %v", err)
+			// Fall back to JSON format on error
+		} else {
+			// Store TOON string representation in a special field
+			parameters = map[string]interface{}{
+				"type":         "toon",
+				"toon_content": toonStr,
+			}
+		}
+	}
+
 	return providers.ToolDefinition{
 		Type: "function",
 		Function: providers.ToolFunction{
 			Name:        "web_search",
 			Description: "Search the web for current information, news, facts, or any topic. Use this when you need up-to-date information or when the user asks about current events, recent developments, or information you don't have in your training data.",
-			Parameters: map[string]interface{}{
-				"type": "object",
-				"properties": map[string]interface{}{
-					"query": map[string]interface{}{
-						"type":        "string",
-						"description": "The search query to execute. Be specific and clear about what you're searching for.",
-					},
-					"num_results": map[string]interface{}{
-						"type":        "number",
-						"description": "Number of search results to return (default: 5, max: 10)",
-						"default":     5,
-					},
-				},
-				"required": []string{"query"},
-			},
+			Parameters:  parameters,
 		},
 	}
 }
 
 // ExecuteToolCall executes a tool call and returns the result
-func (s *MessagingService) ExecuteToolCall(ctx context.Context, toolCall providers.ToolCall) (string, error) {
+func (s *MessagingService) ExecuteToolCall(ctx context.Context, toolCall providers.ToolCall, outputFormat string) (string, error) {
 	// Check if this is a web search tool call
 	if toolCall.Function.Name == "web_search" {
-		return s.executeWebSearchTool(ctx, toolCall)
+		return s.executeWebSearchTool(ctx, toolCall, outputFormat)
 	}
 
 	// Find the tool by name (this would need to be optimized in production)
@@ -254,17 +290,42 @@ func (s *MessagingService) ExecuteToolCall(ctx context.Context, toolCall provide
 		return "", fmt.Errorf("tool execution failed: %w", err)
 	}
 
-	// Convert result to string
+	// Convert result based on output format
+	if outputFormat == "toon" {
+		log.Infof("Converting tool output to TOON format for tool: %s", toolCall.Function.Name)
+		toonConverter := toon.NewConverter()
+		toonStr, err := toonConverter.ConvertToTOON(result)
+		if err != nil {
+			log.Errorf("Error converting tool output to TOON: %v, falling back to JSON", err)
+			// Fall back to JSON if TOON conversion fails
+			resultJSON, jsonErr := json.Marshal(result)
+			if jsonErr != nil {
+				return "", fmt.Errorf("failed to marshal tool result: %w", jsonErr)
+			}
+			log.Infof("Tool output (JSON fallback) length: %d bytes", len(resultJSON))
+			return string(resultJSON), nil
+		}
+		log.Infof("=== TOON Tool Output ===")
+		log.Infof("Tool: %s", toolCall.Function.Name)
+		log.Infof("TOON Output length: %d bytes", len(toonStr))
+		// log.Infof("TOON Content:\n%s", toonStr) // Uncomment for full content logging
+		log.Infof("========================")
+		return toonStr, nil
+	}
+
+	// Default to JSON format
+	log.Infof("Using JSON format for tool output: %s", toolCall.Function.Name)
 	resultJSON, err := json.Marshal(result)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal tool result: %w", err)
 	}
+	log.Infof("Tool output (JSON) length: %d bytes", len(resultJSON))
 
 	return string(resultJSON), nil
 }
 
 // executeWebSearchTool executes a web search tool call
-func (s *MessagingService) executeWebSearchTool(ctx context.Context, toolCall providers.ToolCall) (string, error) {
+func (s *MessagingService) executeWebSearchTool(ctx context.Context, toolCall providers.ToolCall, outputFormat string) (string, error) {
 	// Handle arguments - they might be raw JSON string or parsed map
 	var args map[string]interface{}
 	if rawArgs, ok := toolCall.Function.Arguments["raw"].(string); ok {
@@ -297,11 +358,35 @@ func (s *MessagingService) executeWebSearchTool(ctx context.Context, toolCall pr
 		return "", fmt.Errorf("web search execution failed: %w", err)
 	}
 
-	// Convert result to string
+	// Convert result based on output format
+	if outputFormat == "toon" {
+		log.Info("Converting web search output to TOON format")
+		toonConverter := toon.NewConverter()
+		toonStr, err := toonConverter.ConvertToTOON(result)
+		if err != nil {
+			log.Errorf("Error converting web search output to TOON: %v, falling back to JSON", err)
+			// Fall back to JSON if TOON conversion fails
+			resultJSON, jsonErr := json.Marshal(result)
+			if jsonErr != nil {
+				return "", fmt.Errorf("failed to marshal web search result: %w", jsonErr)
+			}
+			log.Infof("Web search output (JSON fallback) length: %d bytes", len(resultJSON))
+			return string(resultJSON), nil
+		}
+		log.Infof("=== TOON Web Search Output ===")
+		log.Infof("TOON Output length: %d bytes", len(toonStr))
+		// log.Infof("TOON Content:\n%s", toonStr) // Uncomment for full content logging
+		log.Infof("===============================")
+		return toonStr, nil
+	}
+
+	// Default to JSON format
+	log.Info("Using JSON format for web search output")
 	resultJSON, err := json.Marshal(result)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal web search result: %w", err)
 	}
+	log.Infof("Web search output (JSON) length: %d bytes", len(resultJSON))
 
 	return string(resultJSON), nil
 }
@@ -428,7 +513,7 @@ func (s *MessagingService) CreateToolMessage(sessionID uint, content string) (*e
 
 // processToolCalls handles the execution of tool calls and returns updated messages
 // Returns: updated messages, shouldStop flag, stop reason
-func (s *MessagingService) processToolCalls(session *entities.Session, toolCalls []providers.ToolCall, messages []providers.ChatMessage, outputCh chan<- string, assistantContent *strings.Builder, toolCallCounter map[string]int) ([]providers.ChatMessage, bool, string) {
+func (s *MessagingService) processToolCalls(session *entities.Session, toolCalls []providers.ToolCall, messages []providers.ChatMessage, outputCh chan<- string, assistantContent *strings.Builder, toolCallCounter map[string]int, outputFormat string) ([]providers.ChatMessage, bool, string) {
 	for _, toolCall := range toolCalls {
 		displayName := toolCall.Function.Name
 		// Extract tool display name from session.Chatbot.Tools
@@ -469,7 +554,7 @@ func (s *MessagingService) processToolCalls(session *entities.Session, toolCalls
 		outputCh <- executingStr
 		assistantContent.WriteString(executingStr)
 
-		toolResult, err := s.ExecuteToolCall(context.Background(), toolCall)
+		toolResult, err := s.ExecuteToolCall(context.Background(), toolCall, outputFormat)
 		if err != nil {
 			log.Error("Tool execution failed:", err)
 			// Provide more user-friendly tool error messages
@@ -559,14 +644,39 @@ func (s *MessagingService) GenerateChatResponse(session *entities.Session, messa
 		"messages_count": len(messages),
 	})
 
+	// Get tool format from chatbot settings, default to "json"
+	toolFormat := session.Chatbot.ToolFormat
+	if toolFormat == "" {
+		toolFormat = "json"
+	}
+
+	// Get output format from chatbot settings, default to "json"
+	outputFormat := session.Chatbot.OutputFormat
+	if outputFormat == "" {
+		outputFormat = "json"
+	}
+	log.Infof("Tool output format for session %d: %s", session.ID, outputFormat)
+
 	// Convert tools to definitions
-	toolDefinitions := s.ConvertToolsToDefinitions(session.Chatbot.Tools)
+	toolDefinitions := s.ConvertToolsToDefinitions(session.Chatbot.Tools, toolFormat)
 
 	// Add web search tool if enabled for this message and chatbot supports it
 	if webSearchEnabled && session.Chatbot.WebSearchEnabled {
-		webSearchTool := s.GetWebSearchToolDefinition()
+		webSearchTool := s.GetWebSearchToolDefinition(toolFormat)
 		toolDefinitions = append(toolDefinitions, webSearchTool)
 		log.Info("Web search tool enabled for this message in session:", session.ID)
+	}
+
+	// Log tool definitions for debugging
+	if toolFormat == "toon" && len(toolDefinitions) > 0 {
+		log.Info("=== TOON Format Tool Definitions ===")
+		for i, toolDef := range toolDefinitions {
+			log.Infof("Tool %d: %s", i+1, toolDef.Function.Name)
+			/*if toonContent, ok := toolDef.Function.Parameters["toon_content"].(string); ok {
+				log.Infof("TOON Content:\n%s", toonContent) 
+			}*/ // Uncomment for full content logging
+		}
+		log.Info("====================================")
 	} // Create output channel
 	outputCh := make(chan string)
 
@@ -720,7 +830,7 @@ func (s *MessagingService) GenerateChatResponse(session *entities.Session, messa
 			// Process tool calls and update messages for next iteration
 			var shouldStop bool
 			var stopReason string
-			currentMessages, shouldStop, stopReason = s.processToolCalls(session, pendingToolCalls, currentMessages, outputCh, &assistantContent, toolCallCounter)
+			currentMessages, shouldStop, stopReason = s.processToolCalls(session, pendingToolCalls, currentMessages, outputCh, &assistantContent, toolCallCounter, outputFormat)
 
 			// If we should stop (e.g., tool call limit exceeded), save message and exit
 			if shouldStop {

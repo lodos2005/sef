@@ -14,6 +14,8 @@ export interface IChatbot {
   model_name: string
   system_prompt?: string
   web_search_enabled?: boolean
+  tool_format?: string
+  output_format?: string
   tools?: ITool[]
   documents?: IDocument[]
   created_at?: string
