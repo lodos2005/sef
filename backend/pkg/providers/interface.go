@@ -67,7 +67,7 @@ func (f *ProviderFactory) NewProvider(providerType string, config map[string]int
 	switch providerType {
 	case "ollama":
 		return NewOllamaProvider(config), nil
-	case "openai":
+	case "openai", "litellm":
 		return NewOpenAIProvider(config), nil
 	default:
 		return nil, fmt.Errorf("unsupported provider type: %s", providerType)

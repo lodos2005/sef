@@ -3,7 +3,7 @@ package settings
 import (
 	"fmt"
 	"sef/app/entities"
-	"sef/pkg/ollama"
+	"sef/pkg/providers"
 	"strconv"
 
 	"github.com/gofiber/fiber/v3"
@@ -97,11 +97,20 @@ func (h *Controller) ListEmbeddingModels(c fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusNotFound, "Provider not found")
 	}
 
-	// Create Ollama client
-	ollamaClient := ollama.NewOllamaClient(provider.BaseURL)
+	// Create embedding provider factory
+	factory := &providers.EmbeddingProviderFactory{}
+	config := map[string]interface{}{
+		"base_url": provider.BaseURL,
+		// "api_key": ...
+	}
+
+	embedProvider, err := factory.NewProvider(provider.Type, config)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, fmt.Sprintf("Failed to create provider: %v", err))
+	}
 
 	// Get all models
-	allModels, err := ollamaClient.ListModels()
+	allModels, err := embedProvider.ListModels()
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, fmt.Sprintf("Failed to list models: %v", err))
 	}

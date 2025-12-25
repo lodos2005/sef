@@ -89,7 +89,7 @@ func (h *Controller) Delete(c fiber.Ctx) error {
 func (h *Controller) Types(c fiber.Ctx) error {
 	// For now, hardcoded list of supported provider types
 	// In the future, this could be dynamic based on available providers
-	types := []string{"ollama", "openai"}
+	types := []string{"ollama", "openai", "litellm"}
 	return c.JSON(fiber.Map{"types": types})
 }
 

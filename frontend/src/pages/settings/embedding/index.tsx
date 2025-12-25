@@ -59,10 +59,12 @@ export default function EmbeddingSettingsPage() {
     try {
       const response = await http.get("/providers")
       // Filter only Ollama providers
-      const ollamaProviders = response.data?.records?.filter(
-        (p: IProvider) => p.type?.toLowerCase() === "ollama"
+      // Filter supported embedding providers
+      const supportedTypes = ["ollama", "litellm"]
+      const embeddingProviders = response.data?.records?.filter(
+        (p: IProvider) => supportedTypes.includes(p.type?.toLowerCase())
       ) || []
-      setProviders(ollamaProviders)
+      setProviders(embeddingProviders)
     } catch (error) {
       console.error("Failed to fetch providers:", error)
     }
@@ -72,7 +74,7 @@ export default function EmbeddingSettingsPage() {
     try {
       const response = await http.get("/settings/embedding")
       setCurrentConfig(response.data)
-      
+
       if (response.data.provider) {
         setSelectedProviderId(response.data.provider.id.toString())
         // Fetch models for this provider
@@ -235,12 +237,12 @@ export default function EmbeddingSettingsPage() {
                 disabled={!selectedProviderId || loadingModels}
               >
                 <SelectTrigger id="model">
-                  <SelectValue 
+                  <SelectValue
                     placeholder={
-                      loadingModels 
-                        ? t("embedding.loading_models") 
+                      loadingModels
+                        ? t("embedding.loading_models")
                         : t("embedding.select_model")
-                    } 
+                    }
                   />
                 </SelectTrigger>
                 <SelectContent>
@@ -273,8 +275,8 @@ export default function EmbeddingSettingsPage() {
             </div>
           </CardContent>
           <CardFooter>
-            <Button 
-              onClick={handleSave} 
+            <Button
+              onClick={handleSave}
               disabled={loading || !selectedProviderId || !selectedModel || !vectorSize}
               className="w-full"
             >
