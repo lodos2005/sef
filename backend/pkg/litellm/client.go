@@ -60,9 +60,8 @@ type EmbeddingResponse struct {
 // GenerateEmbedding generates an embedding vector for the given text
 func (c *LiteLLMClient) GenerateEmbedding(ctx context.Context, model string, text string) ([]float32, error) {
 	req := EmbeddingRequest{
-		Model:          model,
-		Input:          []string{text},
-		EncodingFormat: "float",
+		Model: model,
+		Input: []string{text},
 	}
 
 	reqBody, err := json.Marshal(req)
