@@ -69,11 +69,13 @@ func (c *LiteLLMClient) GenerateEmbedding(ctx context.Context, model string, tex
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	url := c.baseURL + "/embeddings"
+	// Use /v1 prefix as standard for OpenAI-compatible proxies like LiteLLM
+	url := c.baseURL + "/v1/embeddings"
 	// Ensure common LiteLLM/OpenAI v1 structure if needed
 	if !contains(c.baseURL, "/v1") {
 		// LiteLLM usually listens on root but follow best practices
 	}
+
 
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(reqBody))
 	if err != nil {
@@ -93,6 +95,8 @@ func (c *LiteLLMClient) GenerateEmbedding(ctx context.Context, model string, tex
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
+		log.Errorf("LiteLLM Embedding Request - URL: %s, Body: %s", url, string(reqBody))
+
 		log.Errorf("LiteLLM API error (Status %d): %s", resp.StatusCode, string(body))
 		return nil, fmt.Errorf("litellm API error: %s", string(body))
 	}
@@ -146,7 +150,7 @@ func (c *LiteLLMClient) GenerateChatStream(ctx context.Context, model string, me
 		return nil, err
 	}
 
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", c.baseURL+"/chat/completions", bytes.NewBuffer(reqBody))
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", c.baseURL+"/v1/chat/completions", bytes.NewBuffer(reqBody))
 	if err != nil {
 		return nil, err
 	}
@@ -191,7 +195,7 @@ type ListModelsResponse struct {
 
 // ListModels returns available models from LiteLLM
 func (c *LiteLLMClient) ListModels() ([]string, error) {
-	url := c.baseURL + "/models"
+	url := c.baseURL + "/v1/models"
 
 	httpReq, err := http.NewRequest("GET", url, nil)
 	if err != nil {
