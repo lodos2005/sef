@@ -219,6 +219,8 @@
             "description_placeholder": "",
             "base_url": "Temel URL",
             "base_url_placeholder": "http://api.fabrika.com:11434",
+            "api_key": "API Anahtarı",
+            "api_key_placeholder": "sk-...",
             "create": "Oluştur"
         },
         "edit": {

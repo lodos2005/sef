@@ -66,6 +66,7 @@ export default function CreateProvider() {
         .url({
           message: t("providers.validation.base_url"),
         }),
+      api_key: z.string().optional(),
     })
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -75,8 +76,11 @@ export default function CreateProvider() {
       type: "",
       description: "",
       base_url: "",
+      api_key: "",
     },
   })
+
+  const watchType = form.watch("type")
 
   const [open, setOpen] = useState<boolean>(false)
   const [providerTypes, setProviderTypes] = useState<string[]>([])
@@ -205,6 +209,25 @@ export default function CreateProvider() {
                 </div>
               )}
             />
+
+            {(watchType === "openai" || watchType === "litellm") && (
+              <FormField
+                control={form.control}
+                name="api_key"
+                render={({ field }) => (
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="api_key">{t("providers.create.api_key")}</Label>
+                    <Input
+                      id="api_key"
+                      type="password"
+                      placeholder={t("providers.create.api_key_placeholder")}
+                      {...field}
+                    />
+                    <FormMessage className="mt-1" />
+                  </div>
+                )}
+              />
+            )}
 
             <SheetFooter>
               <Button type="submit">

@@ -102,6 +102,7 @@ func (h *Controller) Models(c fiber.Ctx) error {
 	factory := &providers.ProviderFactory{}
 	config := map[string]interface{}{
 		"base_url": provider.BaseURL,
+		"api_key":  provider.ApiKey,
 	}
 
 	llmProvider, err := factory.NewProvider(provider.Type, config)

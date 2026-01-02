@@ -219,6 +219,8 @@
             "description_placeholder": "",
             "base_url": "Base URL",
             "base_url_placeholder": "http://api.fabrika.com:11434",
+            "api_key": "API Key",
+            "api_key_placeholder": "sk-...",
             "create": "Create"
         },
         "edit": {

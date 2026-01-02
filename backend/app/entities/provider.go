@@ -6,4 +6,5 @@ type Provider struct {
 	Type        string `json:"type" gorm:"not null"`
 	Description string `json:"description"`
 	BaseURL     string `json:"base_url" gorm:"not null"`
+	ApiKey      string `json:"api_key"`
 }
