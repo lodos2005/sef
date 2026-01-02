@@ -101,7 +101,7 @@ func (h *Controller) ListEmbeddingModels(c fiber.Ctx) error {
 	factory := &providers.EmbeddingProviderFactory{}
 	config := map[string]interface{}{
 		"base_url": provider.BaseURL,
-		// "api_key": ...
+		"api_key":  provider.ApiKey,
 	}
 
 	embedProvider, err := factory.NewProvider(provider.Type, config)

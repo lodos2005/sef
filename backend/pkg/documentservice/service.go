@@ -92,19 +92,7 @@ func (ds *DocumentService) ProcessDocument(ctx context.Context, document *entiti
 	factory := &providers.EmbeddingProviderFactory{}
 	config := map[string]interface{}{
 		"base_url": provider.BaseURL,
-		"api_key":  "sk-...", // Placeholder or from config if available for OpenAI/LiteLLM
-	}
-
-	// If provider has API key stored (e.g. in Settings or Provider struct), use it.
-	// For now, checking if provider struct has API Key field or if it's in config settings?
-	// The Provider entity in database might have more fields.
-	// Let's rely on config map construction.
-	if provider.Type == "openai" || provider.Type == "litellm" {
-		// Assuming we might store API key in some secure way or config.
-		// For LiteLLM it often just needs BaseURL if it's acting as a proxy without auth or with env auth.
-		// If real OpenAI, we need API Key.
-		// Checking providers.go, NewOpenAIProvider reads "api_key".
-		// We should probably pass more config from provider entity if available.
+		"api_key":  provider.ApiKey,
 	}
 
 	embedProvider, err := factory.NewProvider(provider.Type, config)
@@ -209,7 +197,7 @@ func (ds *DocumentService) SearchDocuments(ctx context.Context, query string, li
 	factory := &providers.EmbeddingProviderFactory{}
 	config := map[string]interface{}{
 		"base_url": provider.BaseURL,
-		// "api_key": ... (add logic to retrieve API key if needed)
+		"api_key":  provider.ApiKey,
 	}
 
 	embedProvider, err := factory.NewProvider(provider.Type, config)
