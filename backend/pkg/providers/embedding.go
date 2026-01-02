@@ -63,6 +63,11 @@ func NewOpenAIEmbeddingProvider(config map[string]interface{}) *OpenAIEmbeddingP
 	}
 
 	client := openai.NewClientWithConfig(configOpenAI)
+	if pType, ok := config["provider"].(string); ok && pType == "litellm" {
+		// No direct way in go-openai to set LiteLLM specific fields in the core client easily
+		// but providing the base_url is the standard way.
+		// If LiteLLM still complains about unmapped provider, it might be due to how it's proxied.
+	}
 	return &OpenAIEmbeddingProvider{
 		client: client,
 	}
@@ -86,7 +91,7 @@ func (o *OpenAIEmbeddingProvider) GenerateEmbedding(ctx context.Context, model s
 }
 
 func (o *OpenAIEmbeddingProvider) ListModels() ([]string, error) {
-	models, err := o.client.ListModels(ctx)
+	models, err := o.client.ListModels(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -117,11 +122,9 @@ func (f *EmbeddingProviderFactory) NewProvider(providerType string, config map[s
 	case "ollama":
 		return NewOllamaEmbeddingProvider(config), nil
 	case "openai", "litellm":
+		config["provider"] = providerType
 		return NewOpenAIEmbeddingProvider(config), nil
 	default:
 		return nil, fmt.Errorf("unsupported embedding provider type: %s", providerType)
 	}
 }
-
-// Helper context for ListModels since interface doesn't have it (my bad on previous analysis, fixing here)
-var ctx = context.Background()
