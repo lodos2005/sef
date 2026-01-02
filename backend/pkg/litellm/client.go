@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v3/log"
@@ -26,7 +27,7 @@ func NewLiteLLMClient(baseURL string, apiKey string) *LiteLLMClient {
 	}
 
 	return &LiteLLMClient{
-		baseURL: baseURL,
+		baseURL: strings.TrimSuffix(baseURL, "/"),
 		apiKey:  apiKey,
 		client: &http.Client{
 			Timeout: 120 * time.Second,
