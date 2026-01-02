@@ -3,6 +3,7 @@ package providers
 import (
 	"context"
 	"fmt"
+	"sef/pkg/litellm"
 	"sef/pkg/ollama"
 	"strings"
 
@@ -35,9 +36,6 @@ func NewOllamaEmbeddingProvider(config map[string]interface{}) *OllamaEmbeddingP
 }
 
 func (o *OllamaEmbeddingProvider) GenerateEmbedding(ctx context.Context, model string, text string) ([]float32, error) {
-	// Ollama client expects []float64, convert if necessary or update client
-	// Based on view_file output of pkg/documentservice/service.go, it seems it returns []float32 effectively
-	// Let's check pkg/ollama/client.go to be sure, but for now assuming it matches
 	return o.client.GenerateEmbedding(ctx, model, text)
 }
 
@@ -45,7 +43,7 @@ func (o *OllamaEmbeddingProvider) ListModels() ([]string, error) {
 	return o.client.ListModels()
 }
 
-// OpenAIEmbeddingProvider implements EmbeddingProvider for OpenAI/LiteLLM
+// OpenAIEmbeddingProvider implements EmbeddingProvider for OpenAI
 type OpenAIEmbeddingProvider struct {
 	client *openai.Client
 }
@@ -63,18 +61,12 @@ func NewOpenAIEmbeddingProvider(config map[string]interface{}) *OpenAIEmbeddingP
 	}
 
 	client := openai.NewClientWithConfig(configOpenAI)
-	if pType, ok := config["provider"].(string); ok && pType == "litellm" {
-		// No direct way in go-openai to set LiteLLM specific fields in the core client easily
-		// but providing the base_url is the standard way.
-		// If LiteLLM still complains about unmapped provider, it might be due to how it's proxied.
-	}
 	return &OpenAIEmbeddingProvider{
 		client: client,
 	}
 }
 
 func (o *OpenAIEmbeddingProvider) GenerateEmbedding(ctx context.Context, model string, text string) ([]float32, error) {
-	// OpenAI embedding request
 	resp, err := o.client.CreateEmbeddings(ctx, openai.EmbeddingRequest{
 		Model: openai.EmbeddingModel(model),
 		Input: []string{text},
@@ -98,20 +90,46 @@ func (o *OpenAIEmbeddingProvider) ListModels() ([]string, error) {
 
 	var modelNames []string
 	for _, model := range models.Models {
-		// Filter for embedding models if possible, but for now return all or filter by name convention
-		// LiteLLM might return all proxies
 		if strings.Contains(strings.ToLower(model.ID), "embed") {
 			modelNames = append(modelNames, model.ID)
 		}
 	}
-	// If no models matched "embed", just return all of them as fallback
 	if len(modelNames) == 0 {
 		for _, model := range models.Models {
 			modelNames = append(modelNames, model.ID)
 		}
 	}
-
 	return modelNames, nil
+}
+
+// LiteLLMEmbeddingProvider implements EmbeddingProvider for LiteLLM
+type LiteLLMEmbeddingProvider struct {
+	client *litellm.LiteLLMClient
+}
+
+// NewLiteLLMEmbeddingProvider creates a new LiteLLM embedding provider
+func NewLiteLLMEmbeddingProvider(config map[string]interface{}) *LiteLLMEmbeddingProvider {
+	baseURL := "http://localhost:4000"
+	if url, ok := config["base_url"].(string); ok && url != "" {
+		baseURL = url
+	}
+
+	apiKey := ""
+	if key, ok := config["api_key"].(string); ok {
+		apiKey = key
+	}
+
+	return &LiteLLMEmbeddingProvider{
+		client: litellm.NewLiteLLMClient(baseURL, apiKey),
+	}
+}
+
+func (o *LiteLLMEmbeddingProvider) GenerateEmbedding(ctx context.Context, model string, text string) ([]float32, error) {
+	return o.client.GenerateEmbedding(ctx, model, text)
+}
+
+func (o *LiteLLMEmbeddingProvider) ListModels() ([]string, error) {
+	return o.client.ListModels()
 }
 
 // Factory for embedding providers
@@ -121,9 +139,10 @@ func (f *EmbeddingProviderFactory) NewProvider(providerType string, config map[s
 	switch providerType {
 	case "ollama":
 		return NewOllamaEmbeddingProvider(config), nil
-	case "openai", "litellm":
-		config["provider"] = providerType
+	case "openai":
 		return NewOpenAIEmbeddingProvider(config), nil
+	case "litellm":
+		return NewLiteLLMEmbeddingProvider(config), nil
 	default:
 		return nil, fmt.Errorf("unsupported embedding provider type: %s", providerType)
 	}
