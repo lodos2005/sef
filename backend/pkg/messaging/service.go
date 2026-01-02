@@ -9,8 +9,8 @@ import (
 	"sef/internal/validation"
 	"sef/pkg/providers"
 	"sef/pkg/rag"
-	"sef/pkg/toon"
 	"sef/pkg/toolrunners"
+	"sef/pkg/toon"
 	"strconv"
 	"strings"
 	"time"
@@ -596,6 +596,7 @@ func (s *MessagingService) GenerateChatResponse(session *entities.Session, messa
 	factory := &providers.ProviderFactory{}
 	providerConfig := map[string]interface{}{
 		"base_url": session.Chatbot.Provider.BaseURL,
+		"api_key":  session.Chatbot.Provider.ApiKey,
 	}
 
 	// Validate provider configuration
@@ -673,7 +674,7 @@ func (s *MessagingService) GenerateChatResponse(session *entities.Session, messa
 		for i, toolDef := range toolDefinitions {
 			log.Infof("Tool %d: %s", i+1, toolDef.Function.Name)
 			/*if toonContent, ok := toolDef.Function.Parameters["toon_content"].(string); ok {
-				log.Infof("TOON Content:\n%s", toonContent) 
+				log.Infof("TOON Content:\n%s", toonContent)
 			}*/ // Uncomment for full content logging
 		}
 		log.Info("====================================")

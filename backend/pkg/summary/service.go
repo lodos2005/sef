@@ -197,6 +197,7 @@ func (s *SummaryService) generateSummaryWithProvider(session *entities.Session, 
 	factory := &providers.ProviderFactory{}
 	providerConfig := map[string]interface{}{
 		"base_url": session.Chatbot.Provider.BaseURL,
+		"api_key":  session.Chatbot.Provider.ApiKey,
 	}
 
 	provider, err := factory.NewProvider(session.Chatbot.Provider.Type, providerConfig)
